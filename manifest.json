@@ -2,9 +2,10 @@
   "name": "SeatSync — ניהול אירועים",
   "short_name": "SeatSync",
   "description": "ניהול אישורי הגעה וסידורי הושבה חכם לאירועים",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#FAFAF8",
+  "background_color": "#D4A808",
   "theme_color": "#D4A808",
   "lang": "he",
   "dir": "rtl",
@@ -12,16 +13,28 @@
   "categories": ["productivity", "business", "utilities"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%23D4A808'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle' fill='white' font-family='Arial'%3E🪑%3C/text%3E%3C/svg%3E",
+      "src": "icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23D4A808'/%3E%3Ctext x='256' y='350' font-size='280' text-anchor='middle' fill='white' font-family='Arial'%3E🪑%3C/text%3E%3C/svg%3E",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [],
@@ -30,15 +43,15 @@
       "name": "מוזמנים",
       "short_name": "מוזמנים",
       "description": "פתח את רשימת המוזמנים",
-      "url": "/index.html#guests",
-      "icons": []
+      "url": "./index.html#guests",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "הושבה",
       "short_name": "הושבה",
       "description": "סידורי הושבה",
-      "url": "/index.html#seating",
-      "icons": []
+      "url": "./index.html#seating",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
     }
   ],
   "related_applications": [],
