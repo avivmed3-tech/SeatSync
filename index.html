@@ -241,6 +241,11 @@
       100% { background-position: 0% 50%; }
     }
 
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
     .animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-out) both; }
     .animate-slide-up { animation: slideUp var(--duration-slow) var(--ease-out) both; }
     .animate-scale-in { animation: scaleIn var(--duration-normal) var(--ease-spring) both; }
@@ -919,7 +924,7 @@
         top: 60px;
         bottom: 0;
         right: 0;
-        width: 220px;
+        width: 200px;
         height: auto;
         flex-direction: column;
         border-top: none;
@@ -959,12 +964,17 @@
       }
 
       .main-content {
-        margin-right: 220px;
+        margin-right: 200px;
         padding-bottom: 40px;
       }
 
       .kpi-grid {
         grid-template-columns: repeat(4, 1fr);
+      }
+
+      /* Wider modals on desktop */
+      .modal-content {
+        max-width: 520px;
       }
     }
 
@@ -972,7 +982,22 @@
       .main-content {
         padding: 32px 40px;
         padding-bottom: 40px;
+        max-width: 1400px;
       }
+
+      .bottom-nav {
+        width: 220px;
+      }
+      .main-content {
+        margin-right: 220px;
+      }
+    }
+
+    @media (min-width: 1280px) {
+      .main-content {
+        padding: 32px 56px;
+      }
+      .dashboard-grid { grid-template-columns: 1fr 1fr; }
     }
 
     /* ============================================
@@ -1479,6 +1504,273 @@
       .round-summary-card { flex-direction: column; align-items: flex-start; gap: 12px; }
       .donut-wrap { flex-direction: column; }
     }
+
+    /* ============================================
+       Seating Module — Phase 4
+       ============================================ */
+    .view-mode-tabs {
+      display: flex;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 2px;
+    }
+    .view-mode-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: calc(var(--radius-sm) - 3px);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-tertiary);
+      transition: all var(--duration-fast) var(--ease-out);
+      white-space: nowrap;
+    }
+    .view-mode-btn:hover { color: var(--text-primary); }
+    .view-mode-btn.active {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* DnD Layout */
+    .seating-layout {
+      display: flex;
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .seating-layout { flex-direction: column; }
+    }
+    .seating-sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    @media (max-width: 768px) {
+      .seating-sidebar { width: 100%; max-height: 300px; }
+    }
+    .sidebar-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-light);
+    }
+    .sidebar-group-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 8px 0 4px;
+      display: flex;
+      align-items: center;
+    }
+    .draggable-guest {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      cursor: grab;
+      transition: all var(--duration-fast);
+      margin-bottom: 4px;
+    }
+    .draggable-guest:hover { border-color: var(--accent); }
+    .draggable-guest.dragging { opacity: 0.4; }
+    .guest-count-chip {
+      margin-right: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-full);
+      padding: 0 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-secondary);
+    }
+
+    .tables-area { flex: 1; min-width: 0; }
+    .table-drop-card {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      transition: all var(--duration-fast);
+    }
+    .table-drop-card.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-light);
+    }
+    .table-drop-card.is-full { opacity: 0.7; }
+    .table-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .table-name-label { font-weight: 700; font-size: 14px; }
+    .seat-counter {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+    }
+    .seat-counter.ok { background: rgba(16,185,129,0.1); color: var(--emerald-500); }
+    .seat-counter.full { background: rgba(239,68,68,0.1); color: var(--red-500); }
+    .assigned-guests-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .assigned-guest-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      background: var(--bg-tertiary);
+      border-radius: var(--radius-sm);
+      cursor: grab;
+    }
+    .drop-hint {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-tertiary);
+      padding: 10px;
+      border: 1.5px dashed var(--border-default);
+      border-radius: var(--radius-sm);
+      margin-top: 4px;
+    }
+
+    /* Floor Plan */
+    .floorplan-wrap {
+      position: relative;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .floorplan-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .floorplan-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all var(--duration-fast);
+    }
+    .floorplan-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+    /* Settings */
+    .settings-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .settings-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      padding: 14px 20px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-light);
+      transition: background var(--duration-fast);
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-row:hover { background: var(--bg-hover); }
+    .settings-row-icon { color: var(--text-secondary); flex-shrink: 0; }
+    .settings-row-label { font-size: 15px; font-weight: 600; }
+    .settings-row-sub { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+
+    /* Toggle Switch */
+    .toggle-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+    .toggle-switch input { display: none; }
+    .toggle-track {
+      position: absolute; inset: 0; background: var(--bg-tertiary); border: 2px solid var(--border-default);
+      border-radius: var(--radius-full); cursor: pointer; transition: all var(--duration-normal);
+    }
+    .toggle-track::after {
+      content: ''; position: absolute; width: 18px; height: 18px; left: 2px; top: 2px;
+      background: var(--text-tertiary); border-radius: 50%; transition: all var(--duration-normal) var(--ease-spring);
+    }
+    .toggle-switch input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+    .toggle-switch input:checked + .toggle-track::after { transform: translateX(20px); background: white; }
+
+    /* Onboarding */
+    .onboarding-overlay {
+      position: fixed; inset: 0; background: var(--bg-overlay); z-index: 500;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      animation: fadeIn var(--duration-fast) var(--ease-out);
+    }
+    .onboarding-card {
+      background: var(--bg-secondary); border-radius: var(--radius-xl); padding: 32px 28px;
+      max-width: 380px; width: 100%; text-align: center; animation: scaleIn var(--duration-normal) var(--ease-spring);
+      box-shadow: var(--shadow-xl);
+    }
+    .onboarding-step-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+    .onboarding-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-default); transition: all var(--duration-normal); }
+    .onboarding-dot.active { background: var(--accent); width: 20px; border-radius: 4px; }
+    .onboarding-icon-wrap { font-size: 48px; margin-bottom: 16px; }
+    .onboarding-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .onboarding-text { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; line-height: 1.7; }
+
+    /* Error boundary */
+    .error-boundary {
+      min-height: 60vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 40px; text-align: center;
+    }
+    .error-boundary-icon { font-size: 48px; margin-bottom: 16px; }
+
+    /* Offline banner */
+    .offline-banner {
+      background: rgba(239,68,68,0.1); color: var(--red-500); text-align: center;
+      padding: 8px; font-size: 13px; font-weight: 600;
+    }
+
+    /* Table type grid in modal */
+    .table-type-grid { display: flex; gap: 8px; }
+    .table-type-btn {
+      flex: 1; padding: 12px 8px; border-radius: var(--radius-sm);
+      border: 2px solid var(--border-default); text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 13px; font-weight: 600; color: var(--text-secondary);
+      transition: all var(--duration-fast); cursor: pointer;
+    }
+    .table-type-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .table-type-btn.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
   </style>
 </head>
 <body>
@@ -1555,6 +1847,19 @@
 
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } = React;
+
+    // ============================================
+    // Responsive Hook
+    // ============================================
+    function useIsMobile(breakpoint = 640) {
+      const [isMobile, setIsMobile] = useState(window.innerWidth < breakpoint);
+      useEffect(() => {
+        const handler = () => setIsMobile(window.innerWidth < breakpoint);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+      }, [breakpoint]);
+      return isMobile;
+    }
 
     // ============================================
     // Icons Helper
@@ -1914,30 +2219,96 @@
     // Auth Page
     // ============================================
     function AuthPage() {
-      const { signIn, signUp } = useContext(SupabaseContext);
+      const { signIn, signUp, client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
-      const [mode, setMode] = useState('login');
+      const [mode, setMode] = useState('login'); // login | register | forgot | magic
       const [email, setEmail] = useState('');
       const [password, setPassword] = useState('');
       const [fullName, setFullName] = useState('');
       const [loading, setLoading] = useState(false);
+      const [showPassword, setShowPassword] = useState(false);
+      const [sentReset, setSentReset] = useState(false);
+      const [sentMagic, setSentMagic] = useState(false);
 
       const handleSubmit = async () => {
-        if (!email || !password) return;
+        if (!email) { addToast('נא להזין אימייל', 'error'); return; }
         setLoading(true);
         try {
           if (mode === 'login') {
+            if (!password) { addToast('נא להזין סיסמה', 'error'); setLoading(false); return; }
             await signIn(email, password);
             addToast('ברוכים הבאים! 🎉', 'success');
-          } else {
-            await signUp(email, password, fullName);
-            addToast('נרשמת בהצלחה! בדקו את המייל לאימות', 'success');
+          } else if (mode === 'register') {
+            if (!password) { addToast('נא להזין סיסמה', 'error'); setLoading(false); return; }
+            if (password.length < 6) { addToast('סיסמה חייבת להכיל לפחות 6 תווים', 'error'); setLoading(false); return; }
+            if (!fullName.trim()) { addToast('נא להזין שם מלא', 'error'); setLoading(false); return; }
+            const { data } = await signUp(email, password, fullName);
+            if (data?.user?.identities?.length === 0) {
+              addToast('אימייל כבר רשום — נסו להתחבר', 'error');
+            } else {
+              addToast('נרשמת בהצלחה! 🎉 בדקו את המייל לאימות', 'success');
+            }
+          } else if (mode === 'forgot') {
+            const { error } = await client.auth.resetPasswordForEmail(email, {
+              redirectTo: window.location.origin + '/index.html'
+            });
+            if (error) throw error;
+            setSentReset(true);
+            addToast('נשלח מייל לאיפוס סיסמה 📧', 'success');
+          } else if (mode === 'magic') {
+            const { error } = await client.auth.signInWithOtp({ email });
+            if (error) throw error;
+            setSentMagic(true);
+            addToast('נשלח לינק התחברות למייל 📧', 'success');
           }
         } catch (err) {
-          addToast(err.message || 'שגיאה בהתחברות', 'error');
+          const msg = err.message || 'שגיאה';
+          if (msg.includes('Invalid login')) addToast('אימייל או סיסמה שגויים', 'error');
+          else if (msg.includes('Email not confirmed')) addToast('נא לאשר את המייל תחילה — בדקו את תיבת הדואר', 'error');
+          else addToast(msg, 'error');
         }
         setLoading(false);
       };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter') handleSubmit();
+      };
+
+      // Success screens
+      if (sentReset) return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
+            <div className="hero-logo" style={{ width: 72, height: 72, borderRadius: 20, margin: '0 auto 20px' }}>
+              <Icon name="Mail" size={36} />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>בדקו את המייל</div>
+            <div style={{ fontSize: 15, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              שלחנו לינק לאיפוס סיסמה ל-<br/><strong style={{ direction: 'ltr', display: 'inline-block' }}>{email}</strong>
+            </div>
+            <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => { setSentReset(false); setMode('login'); }}>
+              <Icon name="ArrowRight" size={18} />חזרה להתחברות
+            </button>
+          </div>
+        </div>
+      );
+
+      if (sentMagic) return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
+            <div className="hero-logo" style={{ width: 72, height: 72, borderRadius: 20, margin: '0 auto 20px' }}>
+              <Icon name="Sparkles" size={36} />
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>לינק קסם נשלח!</div>
+            <div style={{ fontSize: 15, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              שלחנו לינק התחברות ל-<br/><strong style={{ direction: 'ltr', display: 'inline-block' }}>{email}</strong>
+              <br/>לחצו על הלינק כדי להיכנס — בלי סיסמה!
+            </div>
+            <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => { setSentMagic(false); setMode('login'); }}>
+              <Icon name="ArrowRight" size={18} />חזרה להתחברות
+            </button>
+          </div>
+        </div>
+      );
 
       return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -1951,55 +2322,117 @@
             </div>
 
             <div className="card animate-slide-up stagger-2" style={{ marginTop: 10 }}>
-              <div style={{ display: 'flex', gap: 0, marginBottom: 20, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
-                <button
-                  onClick={() => setMode('login')}
-                  style={{
-                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
-                    fontSize: 14, fontWeight: 600,
-                    background: mode === 'login' ? 'var(--bg-secondary)' : 'transparent',
-                    color: mode === 'login' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                    boxShadow: mode === 'login' ? 'var(--shadow-sm)' : 'none',
-                    transition: 'all var(--duration-fast) var(--ease-out)'
-                  }}
-                >
-                  התחברות
-                </button>
-                <button
-                  onClick={() => setMode('register')}
-                  style={{
-                    flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
-                    fontSize: 14, fontWeight: 600,
-                    background: mode === 'register' ? 'var(--bg-secondary)' : 'transparent',
-                    color: mode === 'register' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                    boxShadow: mode === 'register' ? 'var(--shadow-sm)' : 'none',
-                    transition: 'all var(--duration-fast) var(--ease-out)'
-                  }}
-                >
-                  הרשמה
-                </button>
-              </div>
+              {(mode === 'login' || mode === 'register') && (
+                <div style={{ display: 'flex', gap: 0, marginBottom: 20, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
+                  <button
+                    onClick={() => setMode('login')}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
+                      fontSize: 14, fontWeight: 600,
+                      background: mode === 'login' ? 'var(--bg-secondary)' : 'transparent',
+                      color: mode === 'login' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                      boxShadow: mode === 'login' ? 'var(--shadow-sm)' : 'none',
+                      transition: 'all var(--duration-fast) var(--ease-out)'
+                    }}
+                  >
+                    התחברות
+                  </button>
+                  <button
+                    onClick={() => setMode('register')}
+                    style={{
+                      flex: 1, padding: '8px 0', borderRadius: 'var(--radius-sm)',
+                      fontSize: 14, fontWeight: 600,
+                      background: mode === 'register' ? 'var(--bg-secondary)' : 'transparent',
+                      color: mode === 'register' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                      boxShadow: mode === 'register' ? 'var(--shadow-sm)' : 'none',
+                      transition: 'all var(--duration-fast) var(--ease-out)'
+                    }}
+                  >
+                    הרשמה
+                  </button>
+                </div>
+              )}
+
+              {mode === 'forgot' && (
+                <div style={{ marginBottom: 20 }}>
+                  <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 13, marginBottom: 8 }} onClick={() => setMode('login')}>
+                    <Icon name="ArrowRight" size={16} />חזרה
+                  </button>
+                  <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>שכחתי סיסמה</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>נשלח לינק לאיפוס למייל שלכם</div>
+                </div>
+              )}
+
+              {mode === 'magic' && (
+                <div style={{ marginBottom: 20 }}>
+                  <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 13, marginBottom: 8 }} onClick={() => setMode('login')}>
+                    <Icon name="ArrowRight" size={16} />חזרה
+                  </button>
+                  <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>התחברות עם לינק</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>נשלח לינק התחברות למייל — בלי סיסמה</div>
+                </div>
+              )}
 
               {mode === 'register' && (
                 <div className="input-group">
                   <label className="input-label">שם מלא</label>
-                  <input className="input-field" placeholder="ישראל ישראלי" value={fullName} onChange={e => setFullName(e.target.value)} />
+                  <input className="input-field" placeholder="ישראל ישראלי" value={fullName} onChange={e => setFullName(e.target.value)} onKeyDown={handleKeyDown} />
                 </div>
               )}
 
               <div className="input-group">
                 <label className="input-label">אימייל</label>
-                <input className="input-field" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} dir="ltr" style={{ textAlign: 'left' }} />
+                <input className="input-field" type="email" placeholder="email@example.com" value={email} onChange={e => setEmail(e.target.value)} dir="ltr" style={{ textAlign: 'left' }} onKeyDown={handleKeyDown} autoFocus />
               </div>
 
-              <div className="input-group">
-                <label className="input-label">סיסמה</label>
-                <input className="input-field" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" style={{ textAlign: 'left' }} />
-              </div>
+              {(mode === 'login' || mode === 'register') && (
+                <div className="input-group">
+                  <label className="input-label">סיסמה</label>
+                  <div style={{ position: 'relative' }}>
+                    <input className="input-field" type={showPassword ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" style={{ textAlign: 'left', paddingLeft: 44 }} onKeyDown={handleKeyDown} />
+                    <button
+                      onClick={() => setShowPassword(s => !s)}
+                      style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 0 }}
+                      type="button"
+                    >
+                      <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={16} />
+                    </button>
+                  </div>
+                  {mode === 'register' && (
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>לפחות 6 תווים</div>
+                  )}
+                </div>
+              )}
 
               <button className="btn btn-primary" style={{ width: '100%', marginTop: 8 }} onClick={handleSubmit} disabled={loading}>
-                {loading ? '...' : mode === 'login' ? 'התחברות' : 'הרשמה'}
+                {loading ? (
+                  <><Icon name="Loader" size={18} style={{ animation: 'spin 1s linear infinite' }} />{'רגע...'}</>
+                ) : mode === 'login' ? (
+                  <><Icon name="LogIn" size={18} />{'התחברות'}</>
+                ) : mode === 'register' ? (
+                  <><Icon name="UserPlus" size={18} />{'הרשמה'}</>
+                ) : mode === 'forgot' ? (
+                  <><Icon name="Send" size={18} />{'שלח לינק איפוס'}</>
+                ) : (
+                  <><Icon name="Sparkles" size={18} />{'שלח לינק התחברות'}</>
+                )}
               </button>
+
+              {/* Secondary actions */}
+              {mode === 'login' && (
+                <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button className="btn btn-ghost" style={{ width: '100%', fontSize: 13 }} onClick={() => setMode('forgot')}>
+                    <Icon name="Key" size={15} />שכחתי סיסמה
+                  </button>
+                  <div style={{ position: 'relative', textAlign: 'center', margin: '4px 0' }}>
+                    <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 1, background: 'var(--border-default)' }} />
+                    <span style={{ position: 'relative', background: 'var(--bg-secondary)', padding: '0 12px', fontSize: 12, color: 'var(--text-tertiary)' }}>או</span>
+                  </div>
+                  <button className="btn btn-secondary" style={{ width: '100%', fontSize: 13 }} onClick={() => setMode('magic')}>
+                    <Icon name="Sparkles" size={15} />התחברות עם לינק (בלי סיסמה)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2925,6 +3358,7 @@
     function GuestsPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
+      const isMobile = useIsMobile();
 
       // State
       const [guests, setGuests] = useState([]);
@@ -3323,7 +3757,7 @@
           ) : (
             <>
               {/* Desktop Table */}
-              <div className="guests-table-wrapper" style={{ display: window.innerWidth < 640 ? 'none' : 'block' }}>
+              <div className="guests-table-wrapper" style={{ display: isMobile ? 'none' : 'block' }}>
                 <table className="guests-table">
                   <thead>
                     <tr>
@@ -3417,7 +3851,7 @@
               </div>
 
               {/* Mobile Card View */}
-              <div style={{ display: window.innerWidth >= 640 ? 'none' : 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: isMobile ? 'flex' : 'none', flexDirection: 'column', gap: 10 }}>
                 {paginated.map(guest => (
                   <div
                     key={guest.id}
@@ -3544,17 +3978,29 @@
     const DEFAULT_TEMPLATES = {
       wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nנשמח לדעת אם תגיעו:\n{לינק_rsvp}\n\nבברכה ♥',
       bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
+      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
       corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
       reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
+      reminder_table: 'היי {שם} 👋\nתזכורת — האירוע שלנו מתקרב!\n\n📅 {תאריך}\n📍 {מקום}\n🪑 שולחן: {שולחן}\n\nנתראה שם! 🎉',
+      thank_you: 'היי {שם} 💕\nתודה ענקית שחגגתם איתנו!\nהיה מדהים לראות אתכם. מקווים שנהניתם! 🎊\n\nבאהבה ♥',
     };
 
-    function buildMessage(template, guest, event) {
+    function buildMessage(template, guest, event, tablesData) {
+      const invUrl = event.settings?.invitation_url || '';
+      const tableName = (() => {
+        if (!guest.table_id || !tablesData) return '';
+        const t = tablesData.find(t => t.id === guest.table_id);
+        return t ? t.name : '';
+      })();
       return template
         .replace(/\{שם\}/g, guest.name || '')
         .replace(/\{תאריך\}/g, event.event_date ? new Date(event.event_date).toLocaleDateString('he-IL') : '')
         .replace(/\{מקום\}/g, event.venue_name || '')
         .replace(/\{לינק_rsvp\}/g, guest.rsvp_token ? `https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}` : 'לינק יישלח בנפרד')
-        .replace(/\{שם_אירוע\}/g, event.name || '');
+        .replace(/\{שם_אירוע\}/g, event.name || '')
+        .replace(/\{לינק_הזמנה\}/g, invUrl || '')
+        .replace(/\{שולחן\}/g, tableName || 'טרם הוקצה');
     }
 
     function buildWALink(phone, message) {
@@ -3565,12 +4011,143 @@
       return `https://wa.me/${intl.replace('+','')}?text=${encodeURIComponent(message)}`;
     }
 
+    // ============================================
+    // Bulk WhatsApp Sender — Auto-opens links with delay
+    // ============================================
+    function BulkWhatsAppSender({ recipients, buildLink, onSent, onAllDone }) {
+      const [sending, setSending] = useState(false);
+      const [currentIdx, setCurrentIdx] = useState(0);
+      const [paused, setPaused] = useState(false);
+      const [delay, setDelay] = useState(3); // seconds between sends
+      const timerRef = useRef(null);
+      const pausedRef = useRef(false);
+
+      useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+      const startBulkSend = async () => {
+        setSending(true);
+        setCurrentIdx(0);
+        setPaused(false);
+
+        for (let i = 0; i < recipients.length; i++) {
+          // Check if stopped
+          if (pausedRef.current) {
+            setCurrentIdx(i);
+            return;
+          }
+
+          setCurrentIdx(i);
+          const guest = recipients[i];
+          const link = buildLink(guest);
+
+          // Open WhatsApp link
+          window.open(link, '_blank');
+          onSent(guest.id);
+
+          // Wait between sends (except last one)
+          if (i < recipients.length - 1) {
+            await new Promise(resolve => {
+              timerRef.current = setTimeout(resolve, delay * 1000);
+            });
+          }
+        }
+
+        setSending(false);
+        onAllDone();
+      };
+
+      const stopSending = () => {
+        setPaused(true);
+        pausedRef.current = true;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        setSending(false);
+      };
+
+      const resumeSending = async () => {
+        setPaused(false);
+        pausedRef.current = false;
+        setSending(true);
+
+        for (let i = currentIdx; i < recipients.length; i++) {
+          if (pausedRef.current) {
+            setCurrentIdx(i);
+            return;
+          }
+
+          setCurrentIdx(i);
+          const guest = recipients[i];
+          const link = buildLink(guest);
+          window.open(link, '_blank');
+          onSent(guest.id);
+
+          if (i < recipients.length - 1) {
+            await new Promise(resolve => {
+              timerRef.current = setTimeout(resolve, delay * 1000);
+            });
+          }
+        }
+
+        setSending(false);
+        onAllDone();
+      };
+
+      return (
+        <div style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(37,211,102,0.02))', border: '1.5px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-md)', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {!sending ? (
+              <>
+                <button
+                  className="btn"
+                  style={{ background: '#25D366', color: 'white', padding: '10px 20px', boxShadow: '0 2px 8px rgba(37,211,102,0.3)' }}
+                  onClick={paused ? resumeSending : startBulkSend}
+                >
+                  <Icon name={paused ? 'Play' : 'Zap'} size={18} />
+                  {paused ? `המשך שליחה (${recipients.length - currentIdx} נותרו)` : `שלח הכל אוטומטית (${recipients.length})`}
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <span>השהייה:</span>
+                  <select
+                    className="filter-select"
+                    style={{ padding: '4px 8px', fontSize: 12, width: 'auto' }}
+                    value={delay}
+                    onChange={e => setDelay(parseInt(e.target.value))}
+                  >
+                    <option value="2">2 שניות</option>
+                    <option value="3">3 שניות</option>
+                    <option value="5">5 שניות</option>
+                    <option value="8">8 שניות</option>
+                  </select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <Icon name="Loader" size={20} style={{ color: '#25D366', animation: 'spin 1s linear infinite' }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#128C7E' }}>שולח הודעה {currentIdx + 1} מתוך {recipients.length}...</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{recipients[currentIdx]?.name}</div>
+                  </div>
+                </div>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: 13 }} onClick={stopSending}>
+                  <Icon name="Pause" size={16} />עצור
+                </button>
+              </>
+            )}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
+            ⚠️ יש לאשר שליחה בכל חלון WhatsApp שנפתח. על המחשב — מומלץ לעבוד עם WhatsApp Web.
+          </div>
+        </div>
+      );
+    }
+
     function MessagesPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
 
       const [guests, setGuests] = useState([]);
       const [rounds, setRounds] = useState([]);
+      const [tables, setTables] = useState([]);
       const [activeRound, setActiveRound] = useState(null); // null = "new"
       const [loadingGuests, setLoadingGuests] = useState(true);
       const [view, setView] = useState('compose'); // compose | send | history
@@ -3587,7 +4164,7 @@
       useEffect(() => {
         if (!client || !event?.id) return;
         // Load guests
-        client.from('guests').select('id,name,phone,status,confirmed_guests,group_name,rsvp_token')
+        client.from('guests').select('id,name,phone,status,confirmed_guests,group_name,rsvp_token,table_id')
           .eq('event_id', event.id)
           .then(({ data }) => { setGuests(data || []); setLoadingGuests(false); });
         // Load rounds
@@ -3597,6 +4174,10 @@
           .then(({ data }) => {
             setRounds(data || []);
           });
+        // Load tables for {שולחן} variable
+        client.from('tables').select('id,name')
+          .eq('event_id', event.id)
+          .then(({ data }) => { setTables(data || []); });
         // Set default template
         const tpl = DEFAULT_TEMPLATES[event.event_type] || DEFAULT_TEMPLATES.wedding;
         setTemplate(tpl);
@@ -3623,7 +4204,7 @@
         setTimeout(() => { el.focus(); el.setSelectionRange(start + v.length, start + v.length); }, 10);
       };
 
-      const previewMessage = (guest) => buildMessage(template, guest, event);
+      const previewMessage = (guest) => buildMessage(template, guest, event, tables);
 
       const saveRound = async () => {
         if (!template.trim()) return;
@@ -3676,7 +4257,7 @@
       const sentCount = recipients.filter(g => sentSet.has(g.id)).length;
       const sendProgress = recipients.length > 0 ? Math.round((sentCount / recipients.length) * 100) : 0;
 
-      const VARIABLES = ['{שם}', '{תאריך}', '{מקום}', '{לינק_rsvp}', '{שם_אירוע}'];
+      const VARIABLES = ['{שם}', '{תאריך}', '{מקום}', '{לינק_rsvp}', '{שם_אירוע}', '{לינק_הזמנה}', '{שולחן}'];
       const FILTER_OPTIONS = [
         { key: 'all',      label: 'כולם',       count: guests.filter(g => g.phone || g.rsvp_token).length },
         { key: 'pending',  label: 'ממתינים',    count: guests.filter(g => g.status === 'pending').length },
@@ -3688,21 +4269,20 @@
       return (
         <div className="animate-slide-up">
           {/* Header */}
-          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="page-title">הודעות</div>
               <div className="page-subtitle">שליחת הזמנות ומעקב אחרי תגובות</div>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {['compose','send','history'].map(v => (
-                <button
-                  key={v}
-                  className={`btn ${view === v ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px 14px', fontSize: 13 }}
-                  onClick={() => setView(v)}
-                >
-                  <Icon name={v === 'compose' ? 'PenLine' : v === 'send' ? 'Send' : 'History'} size={16} />
-                  {v === 'compose' ? 'עריכה' : v === 'send' ? 'שליחה' : 'היסטוריה'}
+            <div className="view-mode-tabs">
+              {[
+                { v: 'compose', icon: 'PenLine', label: 'עריכה' },
+                { v: 'send', icon: 'Send', label: 'שליחה' },
+                { v: 'history', icon: 'History', label: 'היסטוריה' },
+              ].map(m => (
+                <button key={m.v} className={`view-mode-btn ${view === m.v ? 'active' : ''}`} onClick={() => setView(m.v)}>
+                  <Icon name={m.icon} size={14} />
+                  {m.label}
                 </button>
               ))}
             </div>
@@ -3784,7 +4364,10 @@
                 <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
                   {[
                     { key: 'wedding', label: '💒 חתונה' },
+                    { key: 'brit_mila', label: '👶 ברית' },
                     { key: 'reminder', label: '🔔 תזכורת' },
+                    { key: 'reminder_table', label: '🪑 תזכורת+שולחן' },
+                    { key: 'thank_you', label: '💕 תודה' },
                     { key: 'corporate', label: '🏢 עסקי' },
                   ].map(t => (
                     <button key={t.key} className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => setTemplate(DEFAULT_TEMPLATES[t.key])}>
@@ -3868,7 +4451,19 @@
               {channel === 'whatsapp' && (
                 <div style={{ padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: '#128C7E', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
-                  <div>לחצו על כפתור ה-WhatsApp עבור כל אורח — ייפתח WhatsApp עם ההודעה מוכנה. לאחר השליחה, לחצו ✓ לסימון.</div>
+                  <div>לחצו "שלח הכל אוטומטית" לפתיחת WhatsApp אוטומטית לכל אורח ברצף, או שלחו ידנית אחד-אחד.</div>
+                </div>
+              )}
+
+              {/* Bulk auto-send button */}
+              {channel === 'whatsapp' && recipients.length > 0 && sentCount < recipients.length && (
+                <div style={{ marginBottom: 14 }}>
+                  <BulkWhatsAppSender
+                    recipients={recipients.filter(g => !sentSet.has(g.id) && g.phone)}
+                    buildLink={(guest) => buildWALink(guest.phone, previewMessage(guest))}
+                    onSent={(guestId) => markSent(guestId)}
+                    onAllDone={() => addToast('כל ההודעות נפתחו ב-WhatsApp! ✓', 'success')}
+                  />
                 </div>
               )}
 
@@ -4615,8 +5210,9 @@
                     ref={svgRef}
                     width="100%"
                     height="100%"
+                    style={{ background: event?.settings?.floorplan_url ? 'transparent' : undefined }}
                     onMouseDown={e => {
-                      if (e.target === svgRef.current || e.target.tagName === 'svg') {
+                      if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
                         setIsPanning(true);
                         panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
                       }
@@ -4630,6 +5226,17 @@
                     onMouseLeave={() => setIsPanning(false)}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+                      {/* Floor plan background image */}
+                      {event?.settings?.floorplan_url && (
+                        <image
+                          href={event.settings.floorplan_url}
+                          x="0" y="0"
+                          width="1200" height="800"
+                          preserveAspectRatio="xMidYMid meet"
+                          opacity="0.3"
+                          style={{ pointerEvents: 'none' }}
+                        />
+                      )}
                       {tables.map(table => (
                         <FloorTable
                           key={table.id}
@@ -4692,8 +5299,10 @@
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const [events, setEvents] = useState([]);
+      const [eventStats, setEventStats] = useState({});
       const [loading, setLoading] = useState(true);
       const [showCreate, setShowCreate] = useState(false);
+      const [deleteEventTarget, setDeleteEventTarget] = useState(null);
       const [newEvent, setNewEvent] = useState({ name: '', event_type: 'wedding', event_date: '', venue_name: '' });
 
       useEffect(() => {
@@ -4708,8 +5317,41 @@
           addToast('שגיאה בטעינת אירועים', 'error');
         } else {
           setEvents(data || []);
+          // Fetch guest stats for each event
+          if (data && data.length > 0) {
+            const { data: guests } = await client.from('guests')
+              .select('event_id, status, confirmed_guests')
+              .in('event_id', data.map(e => e.id));
+            if (guests) {
+              const stats = {};
+              guests.forEach(g => {
+                if (!stats[g.event_id]) stats[g.event_id] = { total: 0, confirmed: 0, totalGuests: 0 };
+                stats[g.event_id].total++;
+                if (g.status === 'confirmed') {
+                  stats[g.event_id].confirmed++;
+                  stats[g.event_id].totalGuests += (g.confirmed_guests || 0);
+                }
+              });
+              setEventStats(stats);
+            }
+          }
         }
         setLoading(false);
+      };
+
+      const deleteEvent = async () => {
+        if (!deleteEventTarget) return;
+        const { error } = await client.from('events').delete().eq('id', deleteEventTarget.id);
+        if (error) {
+          addToast('שגיאה במחיקת אירוע: ' + error.message, 'error');
+        } else {
+          setEvents(prev => prev.filter(e => e.id !== deleteEventTarget.id));
+          if (selectedEventId === deleteEventTarget.id) {
+            localStorage.removeItem('seatsync-selected-event');
+          }
+          addToast('האירוע נמחק', 'success');
+        }
+        setDeleteEventTarget(null);
       };
 
       const createEvent = async () => {
@@ -4738,6 +5380,8 @@
         wedding: '💒 חתונה',
         bar_mitzvah: '✡️ בר מצווה',
         bat_mitzvah: '✡️ בת מצווה',
+        brit_mila: '👶 ברית',
+        brit_bat: '👶 בריתה',
         corporate: '🏢 עסקי',
         birthday: '🎂 יום הולדת',
         other: '🎉 אחר',
@@ -4770,6 +5414,8 @@
                     <option value="wedding">חתונה</option>
                     <option value="bar_mitzvah">בר מצווה</option>
                     <option value="bat_mitzvah">בת מצווה</option>
+                    <option value="brit_mila">ברית</option>
+                    <option value="brit_bat">בריתה</option>
                     <option value="corporate">אירוע עסקי</option>
                     <option value="birthday">יום הולדת</option>
                     <option value="other">אחר</option>
@@ -4812,14 +5458,26 @@
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {events.map((ev, idx) => (
+              {events.map((ev, idx) => {
+                const stats = eventStats[ev.id] || { total: 0, confirmed: 0, totalGuests: 0 };
+                return (
                 <div
                   key={ev.id}
                   className={`event-card animate-slide-up stagger-${Math.min(idx + 1, 5)}`}
                   onClick={() => onSelectEvent(ev)}
                   style={{ borderColor: selectedEventId === ev.id ? 'var(--gold-400)' : undefined }}
                 >
-                  <div className="event-card-name">{ev.name}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div className="event-card-name">{ev.name}</div>
+                    <button
+                      className="icon-btn"
+                      style={{ width: 30, height: 30, color: 'var(--red-400)', flexShrink: 0 }}
+                      onClick={e => { e.stopPropagation(); setDeleteEventTarget(ev); }}
+                      title="מחק אירוע"
+                    >
+                      <Icon name="Trash2" size={15} />
+                    </button>
+                  </div>
                   <div className="event-card-meta">
                     <span className="event-card-meta-item">
                       <Icon name="Tag" size={14} />
@@ -4838,10 +5496,50 @@
                       </span>
                     )}
                   </div>
+                  {stats.total > 0 && (
+                    <div className="event-card-stats">
+                      <div className="event-card-stat">
+                        <div className="event-card-stat-value">{stats.total}</div>
+                        <div className="event-card-stat-label">מוזמנים</div>
+                      </div>
+                      <div className="event-card-stat">
+                        <div className="event-card-stat-value" style={{ color: 'var(--emerald-500)' }}>{stats.confirmed}</div>
+                        <div className="event-card-stat-label">אישרו</div>
+                      </div>
+                      <div className="event-card-stat">
+                        <div className="event-card-stat-value" style={{ color: 'var(--gold-500)' }}>{stats.totalGuests}</div>
+                        <div className="event-card-stat-label">נפשות</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
+
+          {/* Delete Event Confirmation */}
+          {deleteEventTarget && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDeleteEventTarget(null)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 380 }}>
+                <div className="confirm-dialog">
+                  <div className="confirm-dialog-icon">
+                    <Icon name="Trash2" size={24} style={{ color: 'var(--red-500)' }} />
+                  </div>
+                  <div className="confirm-dialog-title">מחיקת אירוע</div>
+                  <div className="confirm-dialog-text">
+                    למחוק את "{deleteEventTarget.name}"? כל המוזמנים, השולחנות וההודעות הקשורים לאירוע יימחקו לצמיתות.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                    <button className="btn btn-ghost" onClick={() => setDeleteEventTarget(null)}>ביטול</button>
+                    <button className="btn btn-danger" onClick={deleteEvent} style={{ padding: '10px 24px' }}>
+                      <Icon name="Trash2" size={18} />מחק לצמיתות
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
         </div>
       );
     }
@@ -5038,6 +5736,16 @@
       });
       const [saving, setSaving] = useState(false);
 
+      // Invitation upload
+      const [invitationUrl, setInvitationUrl] = useState(event?.settings?.invitation_url || '');
+      const [uploadingInv, setUploadingInv] = useState(false);
+      const invFileRef = useRef(null);
+
+      // Floor plan upload
+      const [floorplanUrl, setFloorplanUrl] = useState(event?.settings?.floorplan_url || '');
+      const [uploadingFloor, setUploadingFloor] = useState(false);
+      const floorFileRef = useRef(null);
+
       if (!event) return (
         <div className="empty-state animate-slide-up">
           <div className="empty-state-icon"><Icon name="Settings" size={36} /></div>
@@ -5049,6 +5757,7 @@
       const saveEvent = async () => {
         if (!client || !event?.id) return;
         setSaving(true);
+        const settings = { ...(event.settings || {}), invitation_url: invitationUrl, floorplan_url: floorplanUrl };
         const { data, error } = await client.from('events').update({
           ...eventForm,
           event_date: eventForm.event_date || null,
@@ -5056,11 +5765,64 @@
           rsvp_deadline: eventForm.rsvp_deadline || null,
           venue_address: eventForm.venue_address || null,
           message_template: eventForm.message_template || null,
+          settings,
         }).eq('id', event.id).select().single();
 
         if (error) addToast('שגיאה בשמירה: ' + error.message, 'error');
         else { onEventUpdate(data); addToast('הגדרות נשמרו ✓', 'success'); }
         setSaving(false);
+      };
+
+      // Upload file to Supabase Storage
+      const uploadFile = async (file, bucket, folder) => {
+        const ext = file.name.split('.').pop();
+        const fileName = `${event.id}/${folder}_${Date.now()}.${ext}`;
+        // Ensure bucket exists — ignore error if already exists
+        await client.storage.createBucket(bucket, { public: true }).catch(() => {});
+        const { data, error } = await client.storage.from(bucket).upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+        if (error) throw error;
+        const { data: { publicUrl } } = client.storage.from(bucket).getPublicUrl(fileName);
+        return publicUrl;
+      };
+
+      const handleInvitationUpload = async (file) => {
+        if (!file) return;
+        const valid = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (!valid.includes(file.type)) { addToast('פורמט לא נתמך — JPG, PNG, WebP או PDF בלבד', 'error'); return; }
+        if (file.size > 10 * 1024 * 1024) { addToast('הקובץ גדול מדי — עד 10MB', 'error'); return; }
+        setUploadingInv(true);
+        try {
+          const url = await uploadFile(file, 'invitations', 'invitation');
+          setInvitationUrl(url);
+          // Save immediately
+          const settings = { ...(event.settings || {}), invitation_url: url, floorplan_url: floorplanUrl };
+          await client.from('events').update({ settings }).eq('id', event.id);
+          addToast('ההזמנה הועלתה בהצלחה ✓', 'success');
+        } catch (err) {
+          addToast('שגיאה בהעלאה: ' + (err.message || 'נסה שוב'), 'error');
+        }
+        setUploadingInv(false);
+      };
+
+      const handleFloorplanUpload = async (file) => {
+        if (!file) return;
+        const valid = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!valid.includes(file.type)) { addToast('פורמט לא נתמך — JPG, PNG או WebP בלבד', 'error'); return; }
+        if (file.size > 10 * 1024 * 1024) { addToast('הקובץ גדול מדי — עד 10MB', 'error'); return; }
+        setUploadingFloor(true);
+        try {
+          const url = await uploadFile(file, 'floorplans', 'floorplan');
+          setFloorplanUrl(url);
+          const settings = { ...(event.settings || {}), invitation_url: invitationUrl, floorplan_url: url };
+          await client.from('events').update({ settings }).eq('id', event.id);
+          addToast('סקיצת האולם הועלתה ✓', 'success');
+        } catch (err) {
+          addToast('שגיאה בהעלאה: ' + (err.message || 'נסה שוב'), 'error');
+        }
+        setUploadingFloor(false);
       };
 
       const copyRsvpBase = () => {
@@ -5080,6 +5842,8 @@
         { value: 'wedding', label: '💒 חתונה' },
         { value: 'bar_mitzvah', label: '✡️ בר מצווה' },
         { value: 'bat_mitzvah', label: '✡️ בת מצווה' },
+        { value: 'brit_mila', label: '👶 ברית' },
+        { value: 'brit_bat', label: '👶 בריתה' },
         { value: 'corporate', label: '🏢 אירוע עסקי' },
         { value: 'birthday', label: '🎂 יום הולדת' },
         { value: 'other', label: '🎉 אחר' },
@@ -5184,6 +5948,104 @@
 
           {/* App settings */}
           <div className="settings-section">
+            <div className="settings-section-title">הזמנה מעוצבת</div>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+                העלו את ההזמנה המעוצבת שלכם. היא תוצג בדף ה-RSVP ותישלח כלינק עם ההודעה.
+              </div>
+              {invitationUrl ? (
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  {invitationUrl.endsWith('.pdf') ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
+                      <Icon name="FileText" size={24} style={{ color: 'var(--accent)' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>הזמנה (PDF)</div>
+                        <a href={invitationUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', textDecoration: 'underline' }}>
+                          פתח קובץ
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <img src={invitationUrl} alt="הזמנה" style={{ width: '100%', maxHeight: 300, objectFit: 'contain', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }} />
+                  )}
+                  <button
+                    className="icon-btn"
+                    style={{ position: 'absolute', top: 6, left: 6, width: 28, height: 28, background: 'rgba(0,0,0,0.6)', borderRadius: 'var(--radius-full)', color: 'white' }}
+                    onClick={() => { setInvitationUrl(''); }}
+                    title="הסר הזמנה"
+                  >
+                    <Icon name="X" size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="upload-zone"
+                  onClick={() => invFileRef.current?.click()}
+                  style={{ padding: 24 }}
+                >
+                  <input ref={invFileRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={e => handleInvitationUpload(e.target.files[0])} />
+                  {uploadingInv ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                      <Icon name="Loader" size={28} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+                      <div style={{ fontSize: 14 }}>מעלה...</div>
+                    </div>
+                  ) : (
+                    <>
+                      <Icon name="ImagePlus" size={32} style={{ color: 'var(--accent)', marginBottom: 8 }} />
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>העלו הזמנה מעוצבת</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>JPG, PNG, WebP או PDF — עד 10MB</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Floor Plan Upload */}
+          <div className="settings-section">
+            <div className="settings-section-title">סקיצת אולם</div>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+                העלו תוכנית/סקיצה של האולם. היא תוצג כרקע במפת ההושבה כדי לסדר שולחנות במיקום המדויק.
+              </div>
+              {floorplanUrl ? (
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <img src={floorplanUrl} alt="סקיצת אולם" style={{ width: '100%', maxHeight: 250, objectFit: 'contain', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', background: 'white' }} />
+                  <button
+                    className="icon-btn"
+                    style={{ position: 'absolute', top: 6, left: 6, width: 28, height: 28, background: 'rgba(0,0,0,0.6)', borderRadius: 'var(--radius-full)', color: 'white' }}
+                    onClick={() => { setFloorplanUrl(''); }}
+                    title="הסר סקיצה"
+                  >
+                    <Icon name="X" size={14} />
+                  </button>
+                </div>
+              ) : (
+                <div
+                  className="upload-zone"
+                  onClick={() => floorFileRef.current?.click()}
+                  style={{ padding: 24 }}
+                >
+                  <input ref={floorFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFloorplanUpload(e.target.files[0])} />
+                  {uploadingFloor ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                      <Icon name="Loader" size={28} style={{ color: 'var(--accent)', animation: 'spin 1s linear infinite' }} />
+                      <div style={{ fontSize: 14 }}>מעלה...</div>
+                    </div>
+                  ) : (
+                    <>
+                      <Icon name="Map" size={32} style={{ color: 'var(--accent)', marginBottom: 8 }} />
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>העלו סקיצת אולם</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>JPG, PNG או WebP — עד 10MB</div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* App settings (system) */}
+          <div className="settings-section">
             <div className="settings-section-title">הגדרות מערכת</div>
             <div className="settings-row" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
               <div className="settings-row-icon"><Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={18} /></div>
@@ -5212,7 +6074,7 @@
 
           {/* Version */}
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
-            SeatSync v1.0.0 — Phase 6 Complete 🚀
+            SeatSync v2.0.0 — Production Ready 🚀
           </div>
         </div>
       );
@@ -5222,10 +6084,24 @@
     // Phase 6 — Updated App with all features
     // ============================================
     function App() {
-      const { isConfigured, saveConfig, user, loading } = useContext(SupabaseContext);
+      const { isConfigured, saveConfig, user, loading, client } = useContext(SupabaseContext);
       const [currentRoute, setCurrentRoute] = useState(ROUTES.EVENTS);
       const [selectedEvent, setSelectedEvent] = useState(null);
       const [showOnboarding, setShowOnboarding] = useState(false);
+
+      // Restore selected event from localStorage
+      useEffect(() => {
+        const savedEventId = localStorage.getItem('seatsync-selected-event');
+        if (savedEventId && isConfigured && user && client) {
+          client.from('events').select('*').eq('id', savedEventId).single()
+            .then(({ data }) => {
+              if (data) {
+                setSelectedEvent(data);
+                setCurrentRoute(ROUTES.DASHBOARD);
+              }
+            });
+        }
+      }, [isConfigured, user, client]);
 
       // Check if first time
       useEffect(() => {
@@ -5240,6 +6116,7 @@
 
       const handleSelectEvent = (event) => {
         setSelectedEvent(event);
+        localStorage.setItem('seatsync-selected-event', event.id);
         setCurrentRoute(ROUTES.DASHBOARD);
       };
 

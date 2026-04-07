@@ -411,6 +411,7 @@
 
       const eventTypeEmoji = {
         wedding: '\uD83D\uDC8D', bar_mitzvah: '\u2721\uFE0F', bat_mitzvah: '\u2721\uFE0F',
+        brit_mila: '\uD83D\uDC76', brit_bat: '\uD83D\uDC76',
         corporate: '\uD83C\uDFE2', birthday: '\uD83C\uDF82', other: '\uD83C\uDF89',
       };
 
@@ -518,9 +519,51 @@
                   <span style={{ fontSize: 13, color: 'var(--text-3)' }}>{eventData.venue_address}</span>
                 </div>
               )}
+              {(eventData?.venue_name || eventData?.venue_address) && (
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 8 }}>
+                  <a
+                    href={'https://waze.com/ul?q=' + encodeURIComponent(eventData.venue_address || eventData.venue_name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 14px', background: '#33CCFF', color: 'white', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'transform 0.2s' }}
+                  >
+                    🧭 Waze
+                  </a>
+                  <a
+                    href={'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(eventData.venue_address || eventData.venue_name)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '6px 14px', background: '#4285F4', color: 'white', borderRadius: 'var(--radius-full)', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'transform 0.2s' }}
+                  >
+                    📍 Google Maps
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="divider" />
+
+            {/* Show invitation image if uploaded */}
+            {eventData?.settings?.invitation_url && (
+              <div style={{ marginBottom: 16 }}>
+                {eventData.settings.invitation_url.endsWith('.pdf') ? (
+                  <a
+                    href={eventData.settings.invitation_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px', background: 'var(--gold-light)', border: '1px solid rgba(212,168,8,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 14, fontWeight: 700, color: '#8A6D05', textDecoration: 'none' }}
+                  >
+                    📄 לצפייה בהזמנה המלאה
+                  </a>
+                ) : (
+                  <img
+                    src={eventData.settings.invitation_url}
+                    alt="הזמנה"
+                    style={{ width: '100%', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}
+                  />
+                )}
+              </div>
+            )}
 
             <div className="greeting">שלום {guestData?.name}! 👋</div>
             <div className="question">נשמח לדעת — האם תגיעו לאירוע?</div>
