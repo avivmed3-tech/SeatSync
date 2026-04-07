@@ -10,12 +10,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- React + Babel -->
+  <!-- React + Babel — SAME CDN & versions as index.html -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <!-- Supabase -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
+  <!-- Supabase — SAME CDN & version as index.html -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <style>
     :root {
@@ -49,7 +49,6 @@
 
     #root { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 
-    /* Page wrapper */
     .rsvp-page {
       flex: 1;
       display: flex;
@@ -74,18 +73,13 @@
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-
     @keyframes bounceIn {
       0%   { opacity: 0; transform: scale(0.6); }
       60%  { transform: scale(1.1); }
       100% { opacity: 1; transform: scale(1); }
     }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    /* Logo / event header */
     .event-logo {
       width: 64px; height: 64px;
       background: linear-gradient(135deg, #D4A808, #B38D06);
@@ -99,289 +93,171 @@
 
     .event-name {
       font-family: 'Playfair Display', serif;
-      font-size: 22px;
-      font-weight: 700;
-      text-align: center;
-      margin-bottom: 6px;
-      letter-spacing: -0.5px;
+      font-size: 22px; font-weight: 700;
+      text-align: center; margin-bottom: 6px; letter-spacing: -0.5px;
     }
 
     .event-details {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      text-align: center;
-      font-size: 14px;
-      color: var(--text-2);
-      margin-bottom: 20px;
+      display: flex; flex-direction: column; gap: 4px;
+      text-align: center; font-size: 14px; color: var(--text-2); margin-bottom: 20px;
     }
+    .event-detail-row { display: flex; align-items: center; justify-content: center; gap: 6px; }
 
-    .event-detail-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-    }
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
 
-    .divider {
-      height: 1px;
-      background: var(--border);
-      margin: 20px 0;
-    }
+    .greeting { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .question { font-size: 15px; color: var(--text-2); margin-bottom: 20px; line-height: 1.5; }
 
-    .greeting {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 6px;
-    }
-
-    .question {
-      font-size: 15px;
-      color: var(--text-2);
-      margin-bottom: 20px;
-      line-height: 1.5;
-    }
-
-    /* RSVP buttons */
-    .rsvp-btns {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
+    .rsvp-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 
     .rsvp-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      padding: 16px 10px;
-      border-radius: var(--radius-sm);
-      border: 2.5px solid var(--border);
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
-      background: white;
-      color: var(--text-2);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 16px 10px; border-radius: var(--radius-sm);
+      border: 2.5px solid var(--border); font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+      background: white; color: var(--text-2);
     }
-
     .rsvp-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
     .rsvp-btn:active { transform: scale(0.96); }
-
-    .rsvp-btn.selected-confirmed {
-      border-color: var(--emerald);
-      background: rgba(16,185,129,0.06);
-      color: var(--emerald);
-      transform: scale(1.04);
-    }
-    .rsvp-btn.selected-declined {
-      border-color: var(--red);
-      background: rgba(239,68,68,0.06);
-      color: var(--red);
-      transform: scale(1.04);
-    }
-    .rsvp-btn.selected-maybe {
-      border-color: var(--amber);
-      background: rgba(245,158,11,0.06);
-      color: var(--amber);
-      transform: scale(1.04);
-    }
-
+    .rsvp-btn.selected-confirmed { border-color: var(--emerald); background: rgba(16,185,129,0.06); color: var(--emerald); transform: scale(1.04); }
+    .rsvp-btn.selected-declined { border-color: var(--red); background: rgba(239,68,68,0.06); color: var(--red); transform: scale(1.04); }
+    .rsvp-btn.selected-maybe { border-color: var(--amber); background: rgba(245,158,11,0.06); color: var(--amber); transform: scale(1.04); }
     .rsvp-btn-emoji { font-size: 26px; line-height: 1; }
 
-    /* Count control */
     .count-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 16px;
-      background: #F8F9FA;
-      border-radius: var(--radius-sm);
-      margin-bottom: 14px;
-      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; background: #F8F9FA;
+      border-radius: var(--radius-sm); margin-bottom: 14px; border: 1px solid var(--border);
     }
-
     .count-label { font-size: 15px; font-weight: 600; }
-
-    .count-control {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
-
+    .count-control { display: flex; align-items: center; gap: 14px; }
     .count-btn {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      background: white;
-      border: 2px solid var(--border);
-      font-size: 20px;
-      font-weight: 700;
+      width: 36px; height: 36px; border-radius: 50%; background: white;
+      border: 2px solid var(--border); font-size: 20px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      transition: all 0.15s;
-      line-height: 1;
+      cursor: pointer; transition: all 0.15s; line-height: 1;
     }
     .count-btn:hover { border-color: var(--gold); color: var(--gold); }
     .count-btn:active { transform: scale(0.9); }
     .count-btn:disabled { opacity: 0.3; cursor: default; }
-
     .count-value { font-size: 22px; font-weight: 800; min-width: 28px; text-align: center; }
 
-    /* Dietary notes */
-    .field-label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-2);
-      margin-bottom: 6px;
-    }
-
+    .field-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
     .field-input {
-      width: 100%;
-      padding: 10px 14px;
-      background: #F8F9FA;
-      border: 1.5px solid var(--border);
-      border-radius: var(--radius-sm);
-      font-size: 14px;
-      font-family: 'Heebo', sans-serif;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.15s;
-      margin-bottom: 16px;
+      width: 100%; padding: 10px 14px; background: #F8F9FA;
+      border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+      font-size: 14px; font-family: 'Heebo', sans-serif; color: var(--text);
+      outline: none; transition: border-color 0.15s; margin-bottom: 16px;
     }
     .field-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212,168,8,0.12); }
 
-    /* Submit button */
     .submit-btn {
-      width: 100%;
-      padding: 15px;
-      background: linear-gradient(135deg, #D4A808, #B38D06);
-      color: white;
-      border-radius: var(--radius-sm);
-      font-size: 16px;
-      font-weight: 700;
-      font-family: 'Heebo', sans-serif;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 4px 14px rgba(212,168,8,0.35);
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, #D4A808, #B38D06); color: white;
+      border-radius: var(--radius-sm); font-size: 16px; font-weight: 700;
+      font-family: 'Heebo', sans-serif; cursor: pointer; border: none;
+      box-shadow: 0 4px 14px rgba(212,168,8,0.35); transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .submit-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(212,168,8,0.45); }
     .submit-btn:active { transform: scale(0.98); }
     .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
-    /* Loading spinner */
     .spinner {
       width: 20px; height: 20px;
-      border: 2.5px solid rgba(255,255,255,0.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      border: 2.5px solid rgba(255,255,255,0.3); border-top-color: white;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
     }
 
-    /* Success / Error screens */
-    .result-screen {
-      text-align: center;
-      padding: 10px 0 4px;
-    }
-    .result-icon {
-      font-size: 56px;
-      line-height: 1;
-      margin-bottom: 16px;
-      animation: bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
-    }
-    .result-title {
-      font-family: 'Playfair Display', serif;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-    .result-text {
-      font-size: 15px;
-      color: var(--text-2);
-      line-height: 1.6;
-    }
+    .result-screen { text-align: center; padding: 10px 0 4px; }
+    .result-icon { font-size: 56px; line-height: 1; margin-bottom: 16px; animation: bounceIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .result-title { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+    .result-text { font-size: 15px; color: var(--text-2); line-height: 1.6; }
 
-    /* Already answered */
     .answered-notice {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      background: rgba(212,168,8,0.08);
-      border: 1px solid rgba(212,168,8,0.2);
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      color: #8A6D05;
-      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; background: rgba(212,168,8,0.08);
+      border: 1px solid rgba(212,168,8,0.2); border-radius: var(--radius-sm);
+      font-size: 13px; color: #8A6D05; margin-bottom: 16px;
     }
 
-    /* Error state */
-    .error-card {
-      text-align: center;
-      padding: 20px 10px;
-    }
+    .error-card { text-align: center; padding: 20px 10px; }
     .error-icon { font-size: 48px; margin-bottom: 16px; }
     .error-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
-    .error-text { font-size: 14px; color: var(--text-2); }
+    .error-text { font-size: 14px; color: var(--text-2); line-height: 1.6; }
 
-    /* Loading state */
     .loading-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 0;
-      gap: 14px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 40px 0; gap: 14px;
     }
     .loading-spinner {
       width: 40px; height: 40px;
-      border: 3px solid rgba(212,168,8,0.2);
-      border-top-color: var(--gold);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
+      border: 3px solid rgba(212,168,8,0.2); border-top-color: var(--gold);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
     }
 
-    .powered-by {
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-3);
-      margin-top: 16px;
-    }
+    .powered-by { text-align: center; font-size: 12px; color: var(--text-3); margin-top: 16px; }
     .powered-by a { color: var(--gold); text-decoration: none; }
+
+    .debug-info {
+      margin-top: 16px; padding: 12px; background: #FFF3CD;
+      border: 1px solid #FFECB5; border-radius: 8px;
+      font-size: 12px; color: #664D03; direction: ltr; text-align: left; word-break: break-all;
+    }
+    .debug-info summary { cursor: pointer; font-weight: 600; margin-bottom: 6px; }
+    .debug-info pre { white-space: pre-wrap; margin-top: 6px; }
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <!-- Fallback if JS fails completely -->
+    <div class="rsvp-page">
+      <div class="rsvp-card">
+        <div class="loading-wrap">
+          <div class="loading-spinner"></div>
+          <div style="font-size: 14px; color: #5C5C5C;">טוען...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dependency check BEFORE Babel script -->
+  <script>
+    window.__rsvpErrors = [];
+    window.onerror = function(msg, url, line, col, err) {
+      window.__rsvpErrors.push({ msg: msg, line: line, err: String(err) });
+      console.error('[RSVP Error]', msg, 'line:', line, err);
+    };
+
+    (function() {
+      var missing = [];
+      if (typeof React === 'undefined') missing.push('React');
+      if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+      if (typeof Babel === 'undefined') missing.push('Babel');
+      if (typeof supabase === 'undefined') missing.push('Supabase');
+
+      if (missing.length > 0) {
+        document.getElementById('root').innerHTML =
+          '<div class="rsvp-page"><div class="rsvp-card">' +
+          '<div class="error-card">' +
+          '<div class="error-icon">\u26A0\uFE0F</div>' +
+          '<div class="error-title">\u05E9\u05D2\u05D9\u05D0\u05EA \u05D8\u05E2\u05D9\u05E0\u05D4</div>' +
+          '<div class="error-text">\u05DC\u05D0 \u05E0\u05D9\u05EA\u05DF \u05DC\u05D8\u05E2\u05D5\u05DF \u05D0\u05EA \u05D4\u05D3\u05E3. \u05D1\u05D3\u05E7\u05D5 \u05D0\u05EA \u05D7\u05D9\u05D1\u05D5\u05E8 \u05D4\u05D0\u05D9\u05E0\u05D8\u05E8\u05E0\u05D8 \u05D5\u05E0\u05E1\u05D5 \u05E9\u05D5\u05D1.<br/><br/>' +
+          '<small style="direction:ltr;color:#999">Missing: ' + missing.join(', ') + '</small></div>' +
+          '</div></div></div>';
+      }
+    })();
+  </script>
 
   <script type="text/babel">
-    const { useState, useEffect, useCallback } = React;
+    const { useState, useEffect } = React;
 
-    // ── Helpers ──
+    // ── Config ──
     const DEFAULT_SUPABASE_URL = 'https://xryfxjtvqdeijijgiwmb.supabase.co';
     const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyeWZ4anR2cWRlaWppamdpd21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTEzOTQsImV4cCI6MjA5MTA4NzM5NH0.iE1kabdHvYR3wi5GMMXqhkYx6iphU5MbBHKdFXxGN1E';
 
-    function getSupabaseConfig() {
-      // Always return the hardcoded config so RSVP works for guests
-      return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
-    }
-
     function sanitize(v) {
       return String(v || '').trim().replace(/<[^>]*>/g, '').slice(0, 500);
-    }
-
-    // ── Icons (inline SVG for zero deps) ──
-    function CheckIcon() {
-      return (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      );
     }
 
     function SendIcon() {
@@ -392,130 +268,149 @@
       );
     }
 
-    // ── Main RSVP App ──
     function RSVPApp() {
-      const [state, setState] = useState('loading'); // loading | form | success | error | closed
+      const [state, setState] = useState('loading');
       const [guestData, setGuestData] = useState(null);
       const [eventData, setEventData] = useState(null);
       const [errorMsg, setErrorMsg] = useState('');
+      const [debugInfo, setDebugInfo] = useState('');
       const [client, setClient] = useState(null);
 
-      // Form state
-      const [status, setStatus] = useState(null); // confirmed | declined | maybe
+      const [status, setStatus] = useState(null);
       const [count, setCount] = useState(1);
       const [dietary, setDietary] = useState('');
       const [submitting, setSubmitting] = useState(false);
       const [previousStatus, setPreviousStatus] = useState(null);
 
-      // Get token from URL
       const token = new URLSearchParams(window.location.search).get('token');
 
       useEffect(() => {
-        const cfg = getSupabaseConfig();
-        if (!cfg?.url || !cfg?.anonKey) {
-          setState('error');
-          setErrorMsg('האפליקציה לא מוגדרת. אנא פנו למארגן האירוע.');
-          return;
-        }
-        const sb = supabase.createClient(cfg.url, cfg.anonKey);
-        setClient(sb);
-        loadGuestData(sb);
+        loadData();
       }, []);
 
-      const loadGuestData = async (sb) => {
-        if (!token) {
-          setState('error');
-          setErrorMsg('קישור לא תקין. אנא פנו למארגן האירוע.');
-          return;
-        }
+      const loadData = async () => {
+        try {
+          const sb = supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY);
+          setClient(sb);
 
-        // Lookup guest by rsvp_token
-        const { data: guest, error } = await sb
-          .from('guests')
-          .select('*, events(*)')
-          .eq('rsvp_token', token)
-          .single();
+          if (!token) {
+            setState('error');
+            setErrorMsg('קישור לא תקין — חסר טוקן.\nאנא פנו למארגן האירוע לקבלת קישור חדש.');
+            return;
+          }
 
-        if (error || !guest) {
-          setState('error');
-          setErrorMsg('הקישור אינו תקין או שפג תוקפו. אנא פנו למארגן האירוע.');
-          return;
-        }
+          // Query guest + joined event data
+          const { data: guest, error: guestError } = await sb
+            .from('guests')
+            .select('*, events(*)')
+            .eq('rsvp_token', token)
+            .maybeSingle();
 
-        const ev = guest.events;
+          if (guestError) {
+            console.error('Supabase query error:', guestError);
+            setDebugInfo(JSON.stringify({
+              message: guestError.message,
+              code: guestError.code,
+              hint: guestError.hint,
+              details: guestError.details,
+            }, null, 2));
 
-        // Check if RSVP is enabled
-        if (ev && ev.rsvp_enabled === false) {
-          setState('closed');
-          setEventData(ev);
-          setGuestData(guest);
-          return;
-        }
+            if (guestError.code === 'PGRST301' || guestError.code === '42501'
+                || (guestError.message && guestError.message.includes('permission'))) {
+              setState('error');
+              setErrorMsg('אין הרשאת גישה לנתונים.\n\nצריך להוסיף RLS policies ב-Supabase שמאפשרות גישה אנונימית לאורחים לפי rsvp_token.\n\nראו פרטים טכניים למטה.');
+              return;
+            }
 
-        // Check deadline
-        if (ev?.rsvp_deadline) {
-          const deadline = new Date(ev.rsvp_deadline);
-          if (deadline < new Date()) {
+            setState('error');
+            setErrorMsg('שגיאה בטעינת הנתונים.\nאנא נסו שוב מאוחר יותר.');
+            return;
+          }
+
+          if (!guest) {
+            setState('error');
+            setErrorMsg('הקישור אינו תקין או שפג תוקפו.\nאנא פנו למארגן האירוע לקבלת קישור חדש.');
+            setDebugInfo('Token used: ' + token.substring(0, 8) + '...\nNo matching guest found in database.\n\nPossible causes:\n1. RLS blocking anon access - need policy for guests SELECT by rsvp_token\n2. Token does not exist in DB\n3. events table also needs anon SELECT policy for the join');
+            return;
+          }
+
+          const ev = guest.events;
+
+          if (ev && ev.rsvp_enabled === false) {
             setState('closed');
             setEventData(ev);
             setGuestData(guest);
             return;
           }
+
+          if (ev && ev.rsvp_deadline) {
+            const deadline = new Date(ev.rsvp_deadline + 'T23:59:59');
+            if (deadline < new Date()) {
+              setState('closed');
+              setEventData(ev);
+              setGuestData(guest);
+              return;
+            }
+          }
+
+          setGuestData(guest);
+          setEventData(ev);
+
+          if (guest.status && guest.status !== 'pending') {
+            setPreviousStatus(guest.status);
+            setStatus(guest.status);
+            setCount(guest.confirmed_guests || 1);
+            setDietary(guest.dietary_notes || '');
+          } else {
+            setCount(guest.expected_guests || 1);
+          }
+
+          setState('form');
+        } catch (err) {
+          console.error('RSVP loadData catch:', err);
+          setState('error');
+          setErrorMsg('שגיאה בטעינת הדף.\nאנא רעננו ונסו שוב.');
+          setDebugInfo(String(err));
         }
-
-        setGuestData(guest);
-        setEventData(ev);
-
-        // Pre-fill if already answered
-        if (guest.status && guest.status !== 'pending') {
-          setPreviousStatus(guest.status);
-          setStatus(guest.status);
-          setCount(guest.confirmed_guests || 1);
-          setDietary(guest.dietary_notes || '');
-        } else {
-          setCount(guest.expected_guests || 1);
-        }
-
-        setState('form');
       };
 
       const handleSubmit = async () => {
-        if (!status) return;
-        if (!client || !guestData) return;
+        if (!status || !client || !guestData) return;
         setSubmitting(true);
 
-        const cleanDietary = sanitize(dietary);
-        const safeCount = Math.max(0, Math.min(20, parseInt(count) || 0));
+        try {
+          const cleanDietary = sanitize(dietary);
+          const safeCount = Math.max(0, Math.min(20, parseInt(count) || 0));
 
-        const update = {
-          status,
-          confirmed_guests: status === 'declined' ? 0 : safeCount,
-          dietary_notes: cleanDietary,
-          updated_at: new Date().toISOString(),
-        };
+          const { error } = await client
+            .from('guests')
+            .update({
+              status: status,
+              confirmed_guests: status === 'declined' ? 0 : safeCount,
+              dietary_notes: cleanDietary,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('rsvp_token', token);
 
-        const { error } = await client
-          .from('guests')
-          .update(update)
-          .eq('rsvp_token', token);
-
-        if (error) {
-          setSubmitting(false);
+          if (error) {
+            console.error('RSVP update error:', error);
+            setSubmitting(false);
+            alert(error.code === '42501' || (error.message && error.message.includes('permission'))
+              ? 'אין הרשאה לעדכן. צריך RLS policy לעדכון אנונימי.'
+              : 'שגיאה בשמירה. אנא נסו שוב.');
+            return;
+          }
+          setState('success');
+        } catch (err) {
+          console.error('RSVP submit catch:', err);
           alert('שגיאה בשמירה. אנא נסו שוב.');
-          return;
         }
-
-        setState('success');
         setSubmitting(false);
       };
 
       const eventTypeEmoji = {
-        wedding: '💍',
-        bar_mitzvah: '✡️',
-        bat_mitzvah: '✡️',
-        corporate: '🏢',
-        birthday: '🎂',
-        other: '🎉',
+        wedding: '\uD83D\uDC8D', bar_mitzvah: '\u2721\uFE0F', bat_mitzvah: '\u2721\uFE0F',
+        corporate: '\uD83C\uDFE2', birthday: '\uD83C\uDF82', other: '\uD83C\uDF89',
       };
 
       // ── LOADING ──
@@ -537,8 +432,14 @@
             <div className="error-card">
               <div className="error-icon">😕</div>
               <div className="error-title">לא ניתן לטעון</div>
-              <div className="error-text">{errorMsg}</div>
+              <div className="error-text" style={{ whiteSpace: 'pre-line' }}>{errorMsg}</div>
             </div>
+            {debugInfo && (
+              <details className="debug-info">
+                <summary>פרטים טכניים (למארגן)</summary>
+                <pre>{debugInfo}</pre>
+              </details>
+            )}
           </div>
         </div>
       );
@@ -589,7 +490,6 @@
       return (
         <div className="rsvp-page">
           <div className="rsvp-card">
-            {/* Event header */}
             <div className="event-logo">{eventTypeEmoji[eventData?.event_type] || '🎉'}</div>
             <div className="event-name">{eventData?.name}</div>
             <div className="event-details">
@@ -621,79 +521,50 @@
 
             <div className="divider" />
 
-            {/* Guest greeting */}
             <div className="greeting">שלום {guestData?.name}! 👋</div>
             <div className="question">נשמח לדעת — האם תגיעו לאירוע?</div>
 
-            {/* Previously answered notice */}
             {previousStatus && (
               <div className="answered-notice">
                 ✏️ ענית בעבר: <strong>{previousStatus === 'confirmed' ? 'מגיע/ה' : previousStatus === 'declined' ? 'לא מגיע/ה' : 'אולי'}</strong>. ניתן לשנות את תשובתך.
               </div>
             )}
 
-            {/* Status buttons */}
             <div className="rsvp-btns">
-              <button
-                className={`rsvp-btn ${status === 'confirmed' ? 'selected-confirmed' : ''}`}
-                onClick={() => setStatus('confirmed')}
-              >
-                <span className="rsvp-btn-emoji">✅</span>
-                <span>מגיע/ה</span>
+              <button className={`rsvp-btn ${status === 'confirmed' ? 'selected-confirmed' : ''}`} onClick={() => setStatus('confirmed')}>
+                <span className="rsvp-btn-emoji">✅</span><span>מגיע/ה</span>
               </button>
-              <button
-                className={`rsvp-btn ${status === 'maybe' ? 'selected-maybe' : ''}`}
-                onClick={() => setStatus('maybe')}
-              >
-                <span className="rsvp-btn-emoji">🤔</span>
-                <span>אולי</span>
+              <button className={`rsvp-btn ${status === 'maybe' ? 'selected-maybe' : ''}`} onClick={() => setStatus('maybe')}>
+                <span className="rsvp-btn-emoji">🤔</span><span>אולי</span>
               </button>
-              <button
-                className={`rsvp-btn ${status === 'declined' ? 'selected-declined' : ''}`}
-                onClick={() => setStatus('declined')}
-              >
-                <span className="rsvp-btn-emoji">❌</span>
-                <span>לא מגיע/ה</span>
+              <button className={`rsvp-btn ${status === 'declined' ? 'selected-declined' : ''}`} onClick={() => setStatus('declined')}>
+                <span className="rsvp-btn-emoji">❌</span><span>לא מגיע/ה</span>
               </button>
             </div>
 
-            {/* Count (only if coming) */}
             {status === 'confirmed' && (
               <div className="count-row">
                 <span className="count-label">כמה אתם?</span>
                 <div className="count-control">
-                  <button className="count-btn" disabled={count <= 1} onClick={() => setCount(c => Math.max(1, c-1))}>−</button>
+                  <button className="count-btn" disabled={count <= 1} onClick={() => setCount(function(c) { return Math.max(1, c-1); })}>−</button>
                   <span className="count-value">{count}</span>
-                  <button className="count-btn" disabled={count >= 20} onClick={() => setCount(c => Math.min(20, c+1))}>+</button>
+                  <button className="count-btn" disabled={count >= 20} onClick={() => setCount(function(c) { return Math.min(20, c+1); })}>+</button>
                 </div>
               </div>
             )}
 
-            {/* Dietary notes */}
             {status && status !== 'declined' && (
               <div>
                 <label className="field-label">הערות תזונה (אופציונלי)</label>
-                <input
-                  className="field-input"
-                  type="text"
-                  placeholder="צמחוני, ללא גלוטן, אלרגיה לבוטנים..."
-                  value={dietary}
-                  onChange={e => setDietary(e.target.value)}
-                  maxLength={200}
-                />
+                <input className="field-input" type="text" placeholder="צמחוני, ללא גלוטן, אלרגיה לבוטנים..." value={dietary} onChange={function(e) { setDietary(e.target.value); }} maxLength={200} />
               </div>
             )}
 
-            {/* Submit */}
-            <button
-              className="submit-btn"
-              onClick={handleSubmit}
-              disabled={!status || submitting}
-            >
+            <button className="submit-btn" onClick={handleSubmit} disabled={!status || submitting}>
               {submitting ? (
-                <><div className="spinner" />שומר...</>
+                <React.Fragment><div className="spinner" />שומר...</React.Fragment>
               ) : (
-                <><SendIcon />שלח תשובה</>
+                <React.Fragment><SendIcon />שלח תשובה</React.Fragment>
               )}
             </button>
 
