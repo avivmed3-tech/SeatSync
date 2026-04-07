@@ -5,11 +5,11 @@
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#D4A808",
+  "background_color": "#FAFAF8",
   "theme_color": "#D4A808",
   "lang": "he",
   "dir": "rtl",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "categories": ["productivity", "business", "utilities"],
   "icons": [
     {

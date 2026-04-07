@@ -3,7 +3,7 @@
 // Cache Strategy: Cache-first for assets, Network-first for API
 // ============================================
 
-const CACHE_VERSION = 'seatsync-v1.0.0';
+const CACHE_VERSION = 'seatsync-v2.1.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 

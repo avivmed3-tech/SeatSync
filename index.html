@@ -29,6 +29,10 @@
   <!-- SheetJS for Excel import/export -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- jsPDF + html2canvas for PDF export -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
   <style>
     /* ============================================
        SeatSync Design System
@@ -1777,6 +1781,48 @@
       border: 2px solid var(--blue-400);
       background: rgba(59,130,246,0.05);
     }
+
+    /* PWA Install Banner */
+    .pwa-install-banner {
+      position: fixed;
+      bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px);
+      left: 16px;
+      right: 16px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-xl);
+      z-index: 150;
+      animation: slideUp 0.4s var(--ease-spring) both;
+    }
+    .pwa-install-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(212,168,8,0.3);
+    }
+    .pwa-install-text { flex: 1; min-width: 0; }
+    .pwa-install-title { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+    .pwa-install-sub { font-size: 12px; color: var(--text-secondary); }
+    .pwa-install-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+    @media (min-width: 768px) {
+      .pwa-install-banner {
+        bottom: 24px;
+        left: auto;
+        right: 24px;
+        width: 340px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -3405,6 +3451,13 @@
         if (!event?.id) return;
         fetchGuests();
       }, [client, event?.id]);
+
+      // Keyboard shortcut: N → add guest (triggered from App)
+      useEffect(() => {
+        const handler = () => setShowAdd(true);
+        window.addEventListener('seatsync:add-guest', handler);
+        return () => window.removeEventListener('seatsync:add-guest', handler);
+      }, []);
 
       const fetchGuests = async () => {
         if (!client || !event?.id) return;
@@ -5088,7 +5141,131 @@
         svgRef.current?.addEventListener('touchend', onEnd);
       };
 
-      // Export seating to Excel
+      // Export seating list to PDF
+      const exportPDF = async () => {
+        try {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+          // Hebrew font support via built-in — use LTR layout with English fallback for font
+          // Title
+          doc.setFontSize(20);
+          doc.setFont('helvetica', 'bold');
+          const eventName = event?.name || 'SeatSync';
+          doc.text(eventName, 105, 20, { align: 'center' });
+
+          if (event?.event_date) {
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'normal');
+            doc.text(new Date(event.event_date).toLocaleDateString('he-IL'), 105, 28, { align: 'center' });
+          }
+
+          doc.setFontSize(10);
+          doc.text(`Generated: ${new Date().toLocaleDateString('he-IL')}`, 105, 34, { align: 'center' });
+
+          // Horizontal line
+          doc.setDrawColor(212, 168, 8);
+          doc.setLineWidth(0.8);
+          doc.line(15, 38, 195, 38);
+
+          let y = 46;
+          const pageH = 285;
+
+          // For each table, list guests
+          tables.forEach((table, ti) => {
+            const tGuests = guests.filter(g => g.table_id === table.id);
+            const occupied = tGuests.reduce((s, g) => s + (g.confirmed_guests || 1), 0);
+
+            // Page break if needed
+            if (y > pageH - 30) {
+              doc.addPage();
+              y = 20;
+            }
+
+            // Table header
+            doc.setFillColor(212, 168, 8);
+            doc.setTextColor(255, 255, 255);
+            doc.roundedRect(15, y, 180, 8, 2, 2, 'F');
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Table ${ti + 1}: ${table.name}  (${occupied}/${table.seats})`, 105, y + 5.5, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+            y += 11;
+
+            if (tGuests.length === 0) {
+              doc.setFont('helvetica', 'italic');
+              doc.setFontSize(9);
+              doc.setTextColor(140, 140, 140);
+              doc.text('Empty table', 20, y + 4);
+              doc.setTextColor(0, 0, 0);
+              y += 9;
+            } else {
+              // Guest rows in 2 columns
+              const col1x = 20, col2x = 110;
+              tGuests.forEach((g, gi) => {
+                if (y > pageH - 10) { doc.addPage(); y = 20; }
+                const isCol2 = gi % 2 === 1;
+                const x = isCol2 ? col2x : col1x;
+                if (!isCol2 || gi === tGuests.length - 1) {
+                  // Alternating row bg
+                  if (Math.floor(gi / 2) % 2 === 0) {
+                    doc.setFillColor(250, 249, 245);
+                    doc.rect(15, y - 1, 180, 7, 'F');
+                  }
+                }
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                const guestLabel = `${g.name}  (${g.group_name || ''})  x${g.confirmed_guests || 1}`;
+                doc.text(guestLabel, x, y + 4);
+                if (isCol2 || gi === tGuests.length - 1) y += 7;
+              });
+            }
+            y += 4;
+          });
+
+          // Summary at end
+          if (y > pageH - 20) { doc.addPage(); y = 20; }
+          doc.setDrawColor(212, 168, 8);
+          doc.line(15, y, 195, y);
+          y += 6;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          const totalSeated = guests.filter(g => g.table_id).length;
+          doc.text(`Total: ${totalSeated} / ${guests.length} guests seated  |  ${tables.length} tables`, 105, y, { align: 'center' });
+
+          doc.save(`seatsync-seating-${(event?.name || 'event').replace(/\s+/g,'-')}.pdf`);
+          addToast('PDF ייוצא בהצלחה ✓', 'success');
+        } catch (err) {
+          console.error('PDF export error:', err);
+          addToast('שגיאה בייצוא PDF — נסו שוב', 'error');
+        }
+      };
+
+      // Export floor plan SVG as PDF
+      const exportFloorPlanPDF = async () => {
+        const svgEl = svgRef.current;
+        if (!svgEl) { addToast('פתחו את מפת הושבה תחילה', 'error'); return; }
+        try {
+          addToast('מייצא מפה...', 'info');
+          const canvas = await window.html2canvas(svgEl.closest('.floorplan-wrap') || svgEl.parentElement, {
+            scale: 2,
+            backgroundColor: '#FAFAF8',
+            logging: false,
+          });
+          const imgData = canvas.toDataURL('image/png');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+          doc.setFontSize(14);
+          doc.setFont('helvetica', 'bold');
+          doc.text(event?.name || 'Floor Plan', 148.5, 12, { align: 'center' });
+          doc.addImage(imgData, 'PNG', 10, 18, 277, 180);
+          doc.save(`seatsync-floorplan-${(event?.name || 'event').replace(/\s+/g,'-')}.pdf`);
+          addToast('מפת הושבה יוצאה ✓', 'success');
+        } catch (err) {
+          console.error('Floor plan PDF error:', err);
+          addToast('שגיאה בייצוא מפה', 'error');
+        }
+      };
       const exportSeating = () => {
         const rows = guests.map(g => {
           const table = tables.find(t => t.id === g.table_id);
@@ -5124,10 +5301,20 @@
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportSeating}>
-                <Icon name="Download" size={18} />
-                <span className="hide-mobile">ייצוא</span>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportSeating} title="ייצוא לאקסל">
+                <Icon name="FileSpreadsheet" size={18} />
+                <span className="hide-mobile">אקסל</span>
               </button>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportPDF} title="ייצוא רשימת הושבה PDF">
+                <Icon name="FileText" size={18} />
+                <span className="hide-mobile">PDF</span>
+              </button>
+              {viewMode === 'floor' && (
+                <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportFloorPlanPDF} title="ייצוא מפת הושבה PDF">
+                  <Icon name="Map" size={18} />
+                  <span className="hide-mobile">מפה</span>
+                </button>
+              )}
               <button className="btn btn-primary" onClick={() => setShowAddTable(true)}>
                 <Icon name="Plus" size={18} />
                 <span className="hide-mobile">שולחן חדש</span>
@@ -5755,9 +5942,14 @@
     // ============================================
     // Top Bar
     // ============================================
-    function TopBar({ event, onSettings }) {
+    function TopBar({ event, onSettings, currentRoute, onNavigate }) {
       const { theme, toggleTheme } = useContext(ThemeContext);
       const { user } = useContext(SupabaseContext);
+
+      const ROUTE_LABELS = {
+        events: 'אירועים', dashboard: 'דשבורד', guests: 'מוזמנים',
+        messages: 'הודעות', seating: 'הושבה', settings: 'הגדרות',
+      };
 
       return (
         <div className="top-bar">
@@ -5773,32 +5965,48 @@
                     <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(212,168,8,0.35)"/>
                   </filter>
                 </defs>
-                {/* Background rounded square */}
                 <rect width="34" height="34" rx="9" fill="url(#logoGrad)" filter="url(#logoShadow)"/>
-                {/* Table top (oval) */}
                 <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.22)" stroke="white" strokeWidth="1.5"/>
-                {/* Table leg */}
                 <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
-                {/* Two seat dots (chairs) */}
                 <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
                 <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
-                {/* Subtle tick/check accent */}
                 <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
               </svg>
             </div>
-            <span className="top-bar-logo-text">SeatSync</span>
-            {event && (
-              <span style={{ fontSize: 13, color: 'var(--text-tertiary)', marginRight: 4, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                / {event.name}
+            {/* Desktop breadcrumbs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span
+                className="top-bar-logo-text"
+                style={{ cursor: event ? 'pointer' : 'default' }}
+                onClick={() => event && onNavigate && onNavigate(ROUTES.EVENTS)}
+                title={event ? 'חזרה לאירועים' : ''}
+              >
+                SeatSync
               </span>
-            )}
+              {event && (
+                <>
+                  <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 2px' }}>›</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                    {event.name}
+                  </span>
+                  {currentRoute && currentRoute !== ROUTES.EVENTS && currentRoute !== ROUTES.DASHBOARD && (
+                    <>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 2px' }}>›</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                        {ROUTE_LABELS[currentRoute] || currentRoute}
+                      </span>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
           <div className="top-bar-actions">
             <button className="icon-btn" onClick={toggleTheme} aria-label="החלפת מצב תצוגה" title={theme === 'dark' ? 'מצב יום' : 'מצב לילה'}>
               <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={20} />
             </button>
             {user && onSettings && (
-              <button className="icon-btn" onClick={onSettings} title="הגדרות">
+              <button className="icon-btn" onClick={onSettings} title="הגדרות (S)">
                 <Icon name="Settings" size={20} />
               </button>
             )}
@@ -5879,6 +6087,77 @@
       return (
         <div className="offline-banner">
           📡 אין חיבור לאינטרנט — נתונים עשויים להיות לא מעודכנים
+        </div>
+      );
+    }
+
+    // ============================================
+    // PWA Install Banner
+    // ============================================
+    function PWAInstallBanner() {
+      const [deferredPrompt, setDeferredPrompt] = useState(null);
+      const [show, setShow] = useState(false);
+      const [dismissed, setDismissed] = useState(() =>
+        localStorage.getItem('seatsync-pwa-dismissed') === '1'
+      );
+
+      useEffect(() => {
+        // Already installed — don't show
+        if (window.matchMedia('(display-mode: standalone)').matches) return;
+        if (dismissed) return;
+
+        const handler = (e) => {
+          e.preventDefault();
+          setDeferredPrompt(e);
+          // Show banner after 3 seconds so it's not intrusive
+          setTimeout(() => setShow(true), 3000);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+      }, [dismissed]);
+
+      const handleInstall = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+          setShow(false);
+          setDeferredPrompt(null);
+        }
+      };
+
+      const handleDismiss = () => {
+        setShow(false);
+        setDismissed(true);
+        localStorage.setItem('seatsync-pwa-dismissed', '1');
+      };
+
+      if (!show || !deferredPrompt) return null;
+
+      return (
+        <div className="pwa-install-banner" role="dialog" aria-label="התקנת האפליקציה">
+          <div className="pwa-install-icon">
+            <svg width="24" height="24" viewBox="0 0 34 34" fill="none">
+              <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth="1.5"/>
+              <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
+              <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+              <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+              <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div className="pwa-install-text">
+            <div className="pwa-install-title">התקינו את SeatSync</div>
+            <div className="pwa-install-sub">גישה מהירה ישר מהמסך הראשי</div>
+          </div>
+          <div className="pwa-install-actions">
+            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={handleDismiss}>
+              לא עכשיו
+            </button>
+            <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={handleInstall}>
+              <Icon name="Download" size={15} />
+              התקן
+            </button>
+          </div>
         </div>
       );
     }
@@ -5990,6 +6269,13 @@
         else { onEventUpdate(data); addToast('הגדרות נשמרו ✓', 'success'); }
         setSaving(false);
       };
+
+      // Ctrl+S shortcut to save settings
+      useEffect(() => {
+        const handler = () => saveEvent();
+        window.addEventListener('seatsync:save-settings', handler);
+        return () => window.removeEventListener('seatsync:save-settings', handler);
+      }, [eventForm, invitationUrl, floorplanUrl]);
 
       // Upload file to Supabase Storage
       const uploadFile = async (file, bucket, folder) => {
@@ -6348,16 +6634,39 @@
         setCurrentRoute(ROUTES.EVENTS);
       };
 
-      // Keyboard shortcut: / → focus search (if on guests page)
+      // Keyboard shortcuts (desktop)
       useEffect(() => {
         const handler = (e) => {
-          if (e.key === 'Escape') {
-            // Close any open modal — handled by modals themselves
+          // Ignore if typing in an input/textarea
+          const tag = document.activeElement?.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+          if (!user) return;
+
+          switch(e.key) {
+            case 'Escape': break; // handled by modals
+            case 'n': case 'N':
+              if (currentRoute === ROUTES.GUESTS) {
+                // Trigger add guest — dispatch a custom event
+                window.dispatchEvent(new CustomEvent('seatsync:add-guest'));
+              }
+              break;
+            case '1': setCurrentRoute(ROUTES.EVENTS); break;
+            case '2': if (selectedEvent) setCurrentRoute(ROUTES.DASHBOARD); break;
+            case '3': if (selectedEvent) setCurrentRoute(ROUTES.GUESTS); break;
+            case '4': if (selectedEvent) setCurrentRoute(ROUTES.MESSAGES); break;
+            case '5': if (selectedEvent) setCurrentRoute(ROUTES.SEATING); break;
+            case 's': case 'S':
+              if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('seatsync:save-settings'));
+              }
+              break;
+            default: break;
           }
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
-      }, []);
+      }, [user, currentRoute, selectedEvent]);
 
       if (!isConfigured) return <ConfigModal onSave={saveConfig} />;
 
@@ -6403,8 +6712,9 @@
       return (
         <ErrorBoundary>
           <OfflineBanner />
+          <PWAInstallBanner />
           {showOnboarding && user && <OnboardingModal onDone={doneOnboarding} />}
-          <TopBar event={selectedEvent} onSettings={() => setCurrentRoute(ROUTES.SETTINGS)} />
+          <TopBar event={selectedEvent} onSettings={() => setCurrentRoute(ROUTES.SETTINGS)} currentRoute={currentRoute} onNavigate={setCurrentRoute} />
           <main className="main-content">
             <ErrorBoundary key={currentRoute}>
               {renderPage()}
