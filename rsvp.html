@@ -363,11 +363,12 @@
     const { useState, useEffect, useCallback } = React;
 
     // ── Helpers ──
+    const DEFAULT_SUPABASE_URL = 'https://xryfxjtvqdeijijgiwmb.supabase.co';
+    const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyeWZ4anR2cWRlaWppamdpd21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTEzOTQsImV4cCI6MjA5MTA4NzM5NH0.iE1kabdHvYR3wi5GMMXqhkYx6iphU5MbBHKdFXxGN1E';
+
     function getSupabaseConfig() {
-      try {
-        const saved = localStorage.getItem('seatsync-supabase');
-        return saved ? JSON.parse(saved) : null;
-      } catch { return null; }
+      // Always return the hardcoded config so RSVP works for guests
+      return { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
     }
 
     function sanitize(v) {

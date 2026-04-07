@@ -1542,10 +1542,29 @@
     // ============================================
     const SupabaseContext = createContext();
 
+    // ── Default Supabase config ──
+    const DEFAULT_SUPABASE_URL = 'https://xryfxjtvqdeijijgiwmb.supabase.co';
+    const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyeWZ4anR2cWRlaWppamdpd21iIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MTEzOTQsImV4cCI6MjA5MTA4NzM5NH0.iE1kabdHvYR3wi5GMMXqhkYx6iphU5MbBHKdFXxGN1E';
+
     function SupabaseProvider({ children }) {
       const [config, setConfig] = useState(() => {
         const saved = localStorage.getItem('seatsync-supabase');
-        return saved ? JSON.parse(saved) : null;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            // Fix old incorrect URL if stored
+            if (parsed.url && !parsed.url.includes('xryfxjtvqdeijijgiwmb')) {
+              const fixed = { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
+              localStorage.setItem('seatsync-supabase', JSON.stringify(fixed));
+              return fixed;
+            }
+            return parsed;
+          } catch { /* fall through */ }
+        }
+        // Auto-configure with default credentials
+        const defaultConfig = { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
+        localStorage.setItem('seatsync-supabase', JSON.stringify(defaultConfig));
+        return defaultConfig;
       });
       const [client, setClient] = useState(null);
       const [user, setUser] = useState(null);
@@ -1556,8 +1575,17 @@
           const sb = supabase.createClient(config.url, config.anonKey);
           setClient(sb);
 
-          sb.auth.getSession().then(({ data: { session } }) => {
+          // Timeout — if no response in 8s, stop loading and show error
+          const timeout = setTimeout(() => {
+            setLoading(false);
+          }, 8000);
+
+          sb.auth.getSession().then(({ data: { session }, error }) => {
+            clearTimeout(timeout);
             setUser(session?.user ?? null);
+            setLoading(false);
+          }).catch(() => {
+            clearTimeout(timeout);
             setLoading(false);
           });
 
@@ -1565,7 +1593,7 @@
             setUser(session?.user ?? null);
           });
 
-          return () => subscription.unsubscribe();
+          return () => { subscription.unsubscribe(); clearTimeout(timeout); };
         } else {
           setLoading(false);
         }
@@ -1661,10 +1689,58 @@
     function ConfigModal({ onSave }) {
       const [url, setUrl] = useState('');
       const [key, setKey] = useState('');
+      const [testing, setTesting] = useState(false);
+      const [error, setError] = useState('');
+      const [showKey, setShowKey] = useState(false);
 
-      const handleSave = () => {
-        if (!url.trim() || !key.trim()) return;
-        onSave(url.trim(), key.trim());
+      const validate = () => {
+        const cleanUrl = url.trim().replace(/\/$/, '');
+        const cleanKey = key.trim();
+
+        if (!cleanUrl) return 'נא להזין Project URL';
+        if (!cleanUrl.startsWith('https://')) return 'ה-URL חייב להתחיל ב-https://';
+        if (!cleanUrl.includes('.supabase.co')) return 'ה-URL נראה שגוי — צריך להיות https://xxxxx.supabase.co';
+        if (cleanUrl.includes('/rest/') || cleanUrl.includes('/auth/') || cleanUrl.includes('/realtime/'))
+          return 'הזן רק את כתובת הבסיס: https://xxxxx.supabase.co (בלי /rest/v1 וכו\')';
+        if (!cleanKey) return 'נא להזין את ה-Anon Key';
+        if (!cleanKey.startsWith('eyJ')) return 'ה-Anon Key חייב להתחיל ב-eyJ';
+        if (cleanKey.length < 100) return 'ה-Anon Key נראה קצר מדי — ודא שהעתקת את המפתח המלא';
+        return null;
+      };
+
+      const handleSave = async () => {
+        setError('');
+        const validationError = validate();
+        if (validationError) { setError(validationError); return; }
+
+        const cleanUrl = url.trim().replace(/\/$/, '');
+        const cleanKey = key.trim();
+
+        setTesting(true);
+        try {
+          // Test the connection with a real request
+          const testClient = supabase.createClient(cleanUrl, cleanKey);
+          const result = await Promise.race([
+            testClient.auth.getSession(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 7000))
+          ]);
+
+          if (result && result.error && result.error.message !== 'Auth session missing!') {
+            setError('שגיאת חיבור: ' + result.error.message);
+            setTesting(false);
+            return;
+          }
+
+          // Success
+          onSave(cleanUrl, cleanKey);
+        } catch (e) {
+          if (e.message === 'timeout') {
+            setError('תם הזמן — לא ניתן להתחבר לשרת. ודא שה-URL נכון ושה-Data API פעיל ב-Supabase.');
+          } else {
+            setError('שגיאה: ' + (e.message || 'בדוק את הפרטים ונסה שוב'));
+          }
+          setTesting(false);
+        }
       };
 
       return (
@@ -1678,6 +1754,7 @@
               <div className="modal-subtitle">הזינו את פרטי הפרויקט שלכם כדי להתחיל</div>
             </div>
 
+            {/* URL field */}
             <div className="input-group">
               <label className="input-label">Project URL</label>
               <input
@@ -1685,33 +1762,79 @@
                 type="url"
                 placeholder="https://xxxxx.supabase.co"
                 value={url}
-                onChange={e => setUrl(e.target.value)}
+                onChange={e => { setUrl(e.target.value); setError(''); }}
                 dir="ltr"
                 style={{ textAlign: 'left' }}
+                disabled={testing}
               />
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                מ-Supabase → Settings → API → Project URL (רק עד .supabase.co)
+              </div>
             </div>
 
+            {/* Anon Key field */}
             <div className="input-group">
-              <label className="input-label">Anon Key</label>
-              <input
-                className="input-field"
-                type="password"
-                placeholder="eyJ..."
-                value={key}
-                onChange={e => setKey(e.target.value)}
-                dir="ltr"
-                style={{ textAlign: 'left' }}
-              />
+              <label className="input-label">Anon Key (public)</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="input-field"
+                  type={showKey ? 'text' : 'password'}
+                  placeholder="eyJ..."
+                  value={key}
+                  onChange={e => { setKey(e.target.value); setError(''); }}
+                  dir="ltr"
+                  style={{ textAlign: 'left', paddingLeft: 44 }}
+                  disabled={testing}
+                />
+                <button
+                  onClick={() => setShowKey(s => !s)}
+                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', padding: 0 }}
+                  type="button"
+                >
+                  <Icon name={showKey ? 'EyeOff' : 'Eye'} size={16} />
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                מ-Supabase → Settings → API → anon public (המפתח הארוך שמתחיל ב-eyJ)
+              </div>
             </div>
 
+            {/* Error message */}
+            {error && (
+              <div style={{
+                background: 'rgba(239,68,68,0.08)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 10,
+                padding: '12px 14px',
+                marginBottom: 16,
+                fontSize: 13,
+                color: 'var(--red-500)',
+                display: 'flex',
+                gap: 8,
+                alignItems: 'flex-start',
+              }}>
+                <Icon name="AlertCircle" size={16} style={{ flexShrink: 0, marginTop: 1 }} />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {/* Info */}
             <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
               <Icon name="Shield" size={14} />
               <span>המפתח נשמר רק בדפדפן שלך (localStorage). אנו משתמשים ב-anon key בלבד.</span>
             </div>
 
-            <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSave}>
-              <Icon name="Link" size={18} />
-              התחבר
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%' }}
+              onClick={handleSave}
+              disabled={testing}
+            >
+              {testing ? (
+                <><Icon name="Loader" size={18} style={{ animation: 'spin 1s linear infinite' }} />בודק חיבור...</>
+              ) : (
+                <><Icon name="Link" size={18} />התחבר</>
+              )}
             </button>
           </div>
         </div>
@@ -4875,8 +4998,9 @@
       };
 
       const clearSupabase = () => {
-        if (!confirm('מחק הגדרות Supabase? תצטרך להתחבר מחדש.')) return;
-        localStorage.removeItem('seatsync-supabase');
+        if (!confirm('אפס חיבור Supabase? ייעשה שימוש בהגדרות ברירת המחדל.')) return;
+        const defaultConfig = { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
+        localStorage.setItem('seatsync-supabase', JSON.stringify(defaultConfig));
         window.location.reload();
       };
 
