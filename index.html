@@ -287,16 +287,10 @@
     .top-bar-logo-icon {
       width: 34px;
       height: 34px;
-      background: linear-gradient(135deg, var(--gold-400), var(--gold-600));
-      border-radius: var(--radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-weight: 800;
-      font-size: 14px;
-      letter-spacing: -0.5px;
-      box-shadow: 0 2px 8px rgba(212, 168, 8, 0.3);
+      flex-shrink: 0;
     }
 
     .top-bar-logo-text {
@@ -1771,6 +1765,18 @@
     }
     .table-type-btn:hover { border-color: var(--accent); color: var(--text-primary); }
     .table-type-btn.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+    /* Touch DnD highlight (mobile) */
+    .table-drop-card.touch-over {
+      border-color: var(--gold-400) !important;
+      background: var(--accent-light) !important;
+      transform: scale(1.02);
+      box-shadow: 0 0 0 3px rgba(212,168,8,0.25);
+    }
+    .seating-sidebar.touch-over {
+      border: 2px solid var(--blue-400);
+      background: rgba(59,130,246,0.05);
+    }
   </style>
 </head>
 <body>
@@ -4641,7 +4647,7 @@
     }
 
     // Floor plan SVG table node (draggable on canvas)
-    function FloorTable({ table, guests, onDragTable, selected, onClick }) {
+    function FloorTable({ table, guests, onDragTable, onTouchTable, selected, onClick }) {
       const tGuests = guests.filter(g => g.table_id === table.id);
       const occupied = tGuests.reduce((s,g) => s + (g.confirmed_guests || 1), 0);
       const isFull = occupied >= table.seats;
@@ -4655,6 +4661,7 @@
           transform={`translate(${table.position_x || 80}, ${table.position_y || 80})`}
           style={{ cursor: 'grab', userSelect: 'none' }}
           onMouseDown={e => { e.stopPropagation(); onDragTable(table, e); }}
+          onTouchStart={e => { e.stopPropagation(); onTouchTable && onTouchTable(table, e); }}
           onClick={() => onClick(table)}
         >
           {table.table_type === 'round' ? (
@@ -4799,6 +4806,7 @@
       const [viewMode, setViewMode] = useState('list'); // list | dnd | floor
       const [showAddTable, setShowAddTable] = useState(false);
       const [editTable, setEditTable] = useState(null);
+      const [deleteTableTarget, setDeleteTableTarget] = useState(null); // Bug fix 2.2: confirmation before delete
       const [selectedFloorTable, setSelectedFloorTable] = useState(null);
       const [draggingGuest, setDraggingGuest] = useState(null);
 
@@ -4870,14 +4878,22 @@
         if (!error) { setTables(prev => prev.map(t => t.id === editTable.id ? data : t)); setEditTable(null); addToast('עודכן ✓', 'success'); }
       };
 
-      // Delete table — unassign guests
-      const handleDeleteTable = async (tableId) => {
+      // Delete table — show confirmation first (Bug fix 2.2)
+      const confirmDeleteTable = (tableId) => {
+        const table = tables.find(t => t.id === tableId);
+        setDeleteTableTarget(table || { id: tableId });
+      };
+
+      const handleDeleteTable = async () => {
+        if (!deleteTableTarget) return;
+        const tableId = deleteTableTarget.id;
         await client.from('guests').update({ table_id: null, seat_index: null }).eq('table_id', tableId);
         await client.from('tables').delete().eq('id', tableId);
         setTables(prev => prev.filter(t => t.id !== tableId));
         setGuests(prev => prev.map(g => g.table_id === tableId ? { ...g, table_id: null } : g));
         addToast('שולחן נמחק', 'success');
         if (selectedFloorTable?.id === tableId) setSelectedFloorTable(null);
+        setDeleteTableTarget(null);
       };
 
       // Assign guest to table
@@ -4894,7 +4910,7 @@
         }
       };
 
-      // DnD handlers
+      // DnD handlers (mouse - desktop)
       const handleDragStart = (e, guest) => {
         e.dataTransfer.setData('guestId', guest.id);
         setDraggingGuest(guest.id);
@@ -4914,7 +4930,98 @@
         setDraggingGuest(null);
       };
 
-      // Floor plan: drag tables
+      // ─── Touch DnD (mobile — iPhone/Android) ───────────────────────────────
+      const touchDragRef = useRef(null);   // { guestId, guestName, ghostEl }
+
+      const handleTouchStart = (e, guest) => {
+        // Only handle single-finger drags
+        if (e.touches.length !== 1) return;
+        const touch = e.touches[0];
+
+        // Create ghost element that follows the finger
+        const ghost = document.createElement('div');
+        ghost.id = 'touch-drag-ghost';
+        ghost.textContent = guest.name;
+        Object.assign(ghost.style, {
+          position: 'fixed',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          background: 'var(--gold-400)',
+          color: '#1A1A1A',
+          padding: '8px 14px',
+          borderRadius: '20px',
+          fontSize: '13px',
+          fontWeight: '700',
+          fontFamily: 'Heebo, sans-serif',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+          opacity: '0.95',
+          transform: 'translate(-50%, -50%)',
+          left: touch.clientX + 'px',
+          top: touch.clientY + 'px',
+          transition: 'none',
+          whiteSpace: 'nowrap',
+        });
+        document.body.appendChild(ghost);
+
+        touchDragRef.current = { guestId: guest.id, ghostEl: ghost };
+        setDraggingGuest(guest.id);
+      };
+
+      const handleTouchMove = (e) => {
+        if (!touchDragRef.current) return;
+        e.preventDefault(); // prevent page scroll while dragging
+        const touch = e.touches[0];
+        const ghost = touchDragRef.current.ghostEl;
+        if (ghost) {
+          ghost.style.left = touch.clientX + 'px';
+          ghost.style.top = touch.clientY + 'px';
+        }
+        // Highlight the drop target under the finger
+        ghost.style.display = 'none';
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        ghost.style.display = '';
+        const dropCard = el?.closest('[data-table-id]');
+        // Remove previous highlights
+        document.querySelectorAll('.table-drop-card.touch-over').forEach(n => n.classList.remove('touch-over'));
+        document.querySelectorAll('.seating-sidebar.touch-over').forEach(n => n.classList.remove('touch-over'));
+        if (dropCard) {
+          dropCard.classList.add('touch-over');
+        } else if (el?.closest('.seating-sidebar')) {
+          el.closest('.seating-sidebar').classList.add('touch-over');
+        }
+      };
+
+      const handleTouchEnd = (e) => {
+        if (!touchDragRef.current) return;
+        const touch = e.changedTouches[0];
+        const { guestId, ghostEl } = touchDragRef.current;
+
+        // Hide ghost FIRST so elementFromPoint can see what's underneath
+        if (ghostEl) ghostEl.style.display = 'none';
+
+        // Remove highlights
+        document.querySelectorAll('.table-drop-card.touch-over').forEach(n => n.classList.remove('touch-over'));
+        document.querySelectorAll('.seating-sidebar.touch-over').forEach(n => n.classList.remove('touch-over'));
+
+        // Find drop target (ghost is hidden, so this works correctly)
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dropCard = el?.closest('[data-table-id]');
+        if (dropCard) {
+          const tableId = dropCard.dataset.tableId;
+          assignGuest(guestId, tableId);
+        } else if (el?.closest('.seating-sidebar')) {
+          assignGuest(guestId, null);
+        }
+
+        // Remove ghost from DOM
+        if (ghostEl && ghostEl.parentNode) ghostEl.parentNode.removeChild(ghostEl);
+
+        touchDragRef.current = null;
+        setDraggingGuest(null);
+      };
+      // ───────────────────────────────────────────────────────────────────────
+
+      // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
         e.preventDefault();
@@ -4943,6 +5050,42 @@
 
         document.addEventListener('mousemove', onMove);
         document.addEventListener('mouseup', onUp);
+      };
+
+      // Floor plan: drag tables (touch — mobile)
+      const handleTableTouchStart = (table, e) => {
+        if (viewMode !== 'floor') return;
+        if (e.touches.length !== 1) return;
+        e.stopPropagation();
+        const touch = e.touches[0];
+        const startX = touch.clientX;
+        const startY = touch.clientY;
+        const startPosX = table.position_x || 100;
+        const startPosY = table.position_y || 100;
+
+        const onMove = (me) => {
+          if (me.touches.length !== 1) return;
+          me.preventDefault();
+          const t = me.touches[0];
+          const dx = (t.clientX - startX) / zoom;
+          const dy = (t.clientY - startY) / zoom;
+          setTables(prev => prev.map(tb => tb.id === table.id
+            ? { ...tb, position_x: startPosX + dx, position_y: startPosY + dy }
+            : tb
+          ));
+        };
+
+        const onEnd = async () => {
+          svgRef.current?.removeEventListener('touchmove', onMove);
+          svgRef.current?.removeEventListener('touchend', onEnd);
+          const updated = tables.find(t => t.id === table.id);
+          if (updated) {
+            await client.from('tables').update({ position_x: updated.position_x, position_y: updated.position_y }).eq('id', table.id);
+          }
+        };
+
+        svgRef.current?.addEventListener('touchmove', onMove, { passive: false });
+        svgRef.current?.addEventListener('touchend', onEnd);
       };
 
       // Export seating to Excel
@@ -5073,7 +5216,7 @@
                             <button className="icon-btn" style={{ width: 32, height: 32 }} onClick={() => setEditTable(table)}>
                               <Icon name="Pencil" size={15} />
                             </button>
-                            <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--red-400)' }} onClick={() => handleDeleteTable(table.id)}>
+                            <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--red-400)' }} onClick={() => confirmDeleteTable(table.id)}>
                               <Icon name="Trash2" size={15} />
                             </button>
                           </div>
@@ -5141,6 +5284,10 @@
                               draggable
                               onDragStart={e => handleDragStart(e, g)}
                               onDragEnd={() => setDraggingGuest(null)}
+                              onTouchStart={e => handleTouchStart(e, g)}
+                              onTouchMove={handleTouchMove}
+                              onTouchEnd={handleTouchEnd}
+                              style={{ touchAction: 'none' }}
                             >
                               <Icon name="GripVertical" size={14} style={{ color: 'var(--text-tertiary)' }} />
                               {g.name}
@@ -5162,6 +5309,7 @@
                         return (
                           <div
                             key={table.id}
+                            data-table-id={table.id}
                             className={`table-drop-card ${isFull ? 'is-full' : ''}`}
                             onDragOver={e => { if (!isFull) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); } }}
                             onDragLeave={e => e.currentTarget.classList.remove('drag-over')}
@@ -5182,6 +5330,10 @@
                                   draggable
                                   onDragStart={e => handleDragStart(e, g)}
                                   onDragEnd={() => setDraggingGuest(null)}
+                                  onTouchStart={e => handleTouchStart(e, g)}
+                                  onTouchMove={handleTouchMove}
+                                  onTouchEnd={handleTouchEnd}
+                                  style={{ touchAction: 'none' }}
                                 >
                                   <span style={{ width: 7, height: 7, borderRadius: '50%', background: getGroupColor(g.group_name) }} />
                                   <span style={{ flex: 1, fontSize: 12 }}>{g.name}</span>
@@ -5210,7 +5362,7 @@
                     ref={svgRef}
                     width="100%"
                     height="100%"
-                    style={{ background: event?.settings?.floorplan_url ? 'transparent' : undefined }}
+                    style={{ background: event?.settings?.floorplan_url ? 'transparent' : undefined, touchAction: 'none' }}
                     onMouseDown={e => {
                       if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
                         setIsPanning(true);
@@ -5224,6 +5376,23 @@
                     }}
                     onMouseUp={() => setIsPanning(false)}
                     onMouseLeave={() => setIsPanning(false)}
+                    onTouchStart={e => {
+                      if (e.touches.length === 1) {
+                        const t = e.touches[0];
+                        if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
+                          setIsPanning(true);
+                          panStart.current = { x: t.clientX - pan.x, y: t.clientY - pan.y };
+                        }
+                      }
+                    }}
+                    onTouchMove={e => {
+                      if (isPanning && panStart.current && e.touches.length === 1) {
+                        e.preventDefault();
+                        const t = e.touches[0];
+                        setPan({ x: t.clientX - panStart.current.x, y: t.clientY - panStart.current.y });
+                      }
+                    }}
+                    onTouchEnd={() => setIsPanning(false)}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                       {/* Floor plan background image */}
@@ -5244,6 +5413,7 @@
                           guests={guests}
                           selected={selectedFloorTable?.id === table.id}
                           onDragTable={handleTableMouseDown}
+                          onTouchTable={handleTableTouchStart}
                           onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
                         />
                       ))}
@@ -5270,7 +5440,7 @@
                         <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
                           <Icon name="Pencil" size={13}/>ערוך
                         </button>
-                        <button className="btn btn-danger" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{handleDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null);}}>
+                        <button className="btn btn-danger" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
                           <Icon name="Trash2" size={13}/>מחק
                         </button>
                       </div>
@@ -5288,6 +5458,29 @@
           {editTable && (
             <TableModal table={editTable} eventId={event.id} onSave={handleEditTable} onClose={() => setEditTable(null)} />
           )}
+
+          {/* Bug fix 2.2: Delete table confirmation dialog */}
+          {deleteTableTarget && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setDeleteTableTarget(null)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 360 }}>
+                <div className="confirm-dialog">
+                  <div className="confirm-dialog-icon">
+                    <Icon name="Trash2" size={24} style={{ color: 'var(--red-500)' }} />
+                  </div>
+                  <div className="confirm-dialog-title">מחיקת שולחן</div>
+                  <div className="confirm-dialog-text">
+                    למחוק את "{deleteTableTarget.name}"? האורחים המושבים בו יחזרו לרשימת הלא-מושבים.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                    <button className="btn btn-ghost" onClick={() => setDeleteTableTarget(null)}>ביטול</button>
+                    <button className="btn btn-danger" onClick={handleDeleteTable} style={{ padding: '10px 24px' }}>
+                      <Icon name="Trash2" size={18} />מחק שולחן
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -5295,7 +5488,7 @@
     // ============================================
     // Events List Page
     // ============================================
-    function EventsPage({ onSelectEvent, selectedEventId }) {
+    function EventsPage({ onSelectEvent, selectedEventId, onClearSelectedEvent }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const [events, setEvents] = useState([]);
@@ -5348,6 +5541,8 @@
           setEvents(prev => prev.filter(e => e.id !== deleteEventTarget.id));
           if (selectedEventId === deleteEventTarget.id) {
             localStorage.removeItem('seatsync-selected-event');
+            // Bug fix 2.1: clear parent state so TopBar + pages reset
+            if (onClearSelectedEvent) onClearSelectedEvent();
           }
           addToast('האירוע נמחק', 'success');
         }
@@ -5567,7 +5762,30 @@
       return (
         <div className="top-bar">
           <div className="top-bar-logo">
-            <div className="top-bar-logo-icon">SS</div>
+            <div className="top-bar-logo-icon">
+              <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <linearGradient id="logoGrad" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#F5C518"/>
+                    <stop offset="100%" stopColor="#B38D06"/>
+                  </linearGradient>
+                  <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(212,168,8,0.35)"/>
+                  </filter>
+                </defs>
+                {/* Background rounded square */}
+                <rect width="34" height="34" rx="9" fill="url(#logoGrad)" filter="url(#logoShadow)"/>
+                {/* Table top (oval) */}
+                <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.22)" stroke="white" strokeWidth="1.5"/>
+                {/* Table leg */}
+                <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
+                {/* Two seat dots (chairs) */}
+                <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+                <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+                {/* Subtle tick/check accent */}
+                <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
+              </svg>
+            </div>
             <span className="top-bar-logo-text">SeatSync</span>
             {event && (
               <span style={{ fontSize: 13, color: 'var(--text-tertiary)', marginRight: 4, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -6124,6 +6342,12 @@
         setSelectedEvent(updatedEvent);
       };
 
+      // Bug fix 2.1: clear selected event when deleted
+      const handleClearSelectedEvent = () => {
+        setSelectedEvent(null);
+        setCurrentRoute(ROUTES.EVENTS);
+      };
+
       // Keyboard shortcut: / → focus search (if on guests page)
       useEffect(() => {
         const handler = (e) => {
@@ -6160,7 +6384,7 @@
       const renderPage = () => {
         switch (currentRoute) {
           case ROUTES.EVENTS:
-            return <EventsPage onSelectEvent={handleSelectEvent} selectedEventId={selectedEvent?.id} />;
+            return <EventsPage onSelectEvent={handleSelectEvent} selectedEventId={selectedEvent?.id} onClearSelectedEvent={handleClearSelectedEvent} />;
           case ROUTES.DASHBOARD:
             return <DashboardPage event={selectedEvent} onGoToGuests={() => setCurrentRoute(ROUTES.GUESTS)} />;
           case ROUTES.GUESTS:
