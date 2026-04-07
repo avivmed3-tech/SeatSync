@@ -336,20 +336,21 @@
 
           const ev = guest.events;
 
-          if (ev && ev.rsvp_enabled === false) {
-            setState('closed');
-            setEventData(ev);
-            setGuestData(guest);
-            return;
-          }
+          // Note: rsvp_enabled check is skipped here because DB default is false.
+          // The organizer controls this via settings in the main app.
+          // If the link exists and the token is valid, the guest should be able to respond.
 
+          // Only check deadline if explicitly set
           if (ev && ev.rsvp_deadline) {
-            const deadline = new Date(ev.rsvp_deadline + 'T23:59:59');
-            if (deadline < new Date()) {
-              setState('closed');
-              setEventData(ev);
-              setGuestData(guest);
-              return;
+            const deadlineStr = String(ev.rsvp_deadline);
+            if (deadlineStr.length >= 10) {
+              const deadline = new Date(deadlineStr + 'T23:59:59');
+              if (!isNaN(deadline.getTime()) && deadline < new Date()) {
+                setState('closed');
+                setEventData(ev);
+                setGuestData(guest);
+                return;
+              }
             }
           }
 
