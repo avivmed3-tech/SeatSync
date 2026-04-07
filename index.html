@@ -18,16 +18,16 @@
   <!-- React + Babel -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
 
   <!-- Supabase -->
-  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
 
   <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.396.0/dist/umd/lucide.min.js"></script>
 
   <!-- SheetJS for Excel import/export -->
-  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
     /* ============================================
@@ -1485,6 +1485,24 @@
   <div id="root"></div>
 
   <script>
+    // Verify all libraries loaded
+    var missing = [];
+    if (typeof React === 'undefined') missing.push('React');
+    if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+    if (typeof supabase === 'undefined') missing.push('Supabase');
+    if (typeof lucide === 'undefined') missing.push('Lucide Icons');
+    if (missing.length > 0) {
+      document.getElementById('root').innerHTML = '<div style="color:#ef4444;padding:30px;font-family:monospace;direction:ltr;text-align:left;font-size:14px;background:#1a1a2e;min-height:100vh;">'
+        + '<h2 style="color:#f59e0b;">Libraries Failed to Load</h2>'
+        + '<p>Missing: ' + missing.join(', ') + '</p>'
+        + '<p style="margin-top:10px;">Try refreshing or check your internet connection.</p>'
+        + '<button onclick="location.reload()" style="margin-top:20px;padding:12px 24px;background:#D4A808;color:#1a1a1a;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;">🔄 Refresh</button>'
+        + '</div>';
+      throw new Error('Missing libraries: ' + missing.join(', '));
+    }
+  </script>
+
+  <script>
     // Force clear any old broken Supabase config
     try {
       var oldCfg = localStorage.getItem('seatsync-supabase');
@@ -1500,17 +1518,42 @@
     window.onerror = function(msg, src, line, col, err) {
       var el = document.getElementById('root');
       if (el) {
-        el.innerHTML = '<div style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;">'
-          + '<h2 style="color:#f59e0b;">SeatSync Error</h2>'
-          + '<p>' + msg + '</p>'
-          + '<p>Line: ' + line + ', Col: ' + col + '</p>'
-          + '<p>' + (err && err.stack ? err.stack : '') + '</p>'
+        el.innerHTML = '<div style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;overflow:auto;">'
+          + '<h2 style="color:#f59e0b;margin-bottom:10px;">SeatSync Error</h2>'
+          + '<p><b>Message:</b> ' + msg + '</p>'
+          + '<p><b>Source:</b> ' + (src || 'unknown') + '</p>'
+          + '<p><b>Line:</b> ' + line + ', <b>Col:</b> ' + col + '</p>'
+          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;max-height:50vh;overflow:auto;">' + (err && err.stack ? err.stack : 'No stack trace') + '</pre>'
           + '</div>';
       }
+      return true;
     };
+    window.addEventListener('unhandledrejection', function(event) {
+      var el = document.getElementById('root');
+      if (el && !el.querySelector('.error-shown')) {
+        el.innerHTML = '<div class="error-shown" style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;">'
+          + '<h2 style="color:#f59e0b;">SeatSync Promise Error</h2>'
+          + '<p>' + (event.reason ? (event.reason.message || event.reason) : 'Unknown promise rejection') + '</p>'
+          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;">' + (event.reason && event.reason.stack ? event.reason.stack : '') + '</pre>'
+          + '</div>';
+      }
+    });
+
+    // Timeout: if nothing rendered in 10s, show a diagnostic message
+    setTimeout(function() {
+      var el = document.getElementById('root');
+      if (el && el.children.length === 0) {
+        el.innerHTML = '<div style="color:#f59e0b;padding:40px;font-family:Heebo,sans-serif;text-align:center;direction:rtl;">'
+          + '<h2>⏳ האפליקציה לא נטענה</h2>'
+          + '<p style="color:#94A3B8;margin-top:10px;">ייתכן שיש בעיה בטעינת הספריות החיצוניות (React, Babel, Supabase).</p>'
+          + '<p style="color:#94A3B8;">נסו לרענן את הדף (Ctrl+Shift+R) או לפתוח ב-Chrome Desktop ולבדוק את ה-Console (F12).</p>'
+          + '<button onclick="localStorage.clear();location.reload();" style="margin-top:20px;padding:12px 24px;background:#D4A808;color:#1a1a1a;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;">🔄 נקה מטמון ורענן</button>'
+          + '</div>';
+      }
+    }, 10000);
   </script>
 
-  <script type="text/babel" data-type="module">
+  <script type="text/babel">
     const { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } = React;
 
     // ============================================
@@ -2917,10 +2960,9 @@
         }, 300);
       };
 
-      if (!event) return <NeedEventState />;
-
       // Fetch guests
       useEffect(() => {
+        if (!event?.id) return;
         fetchGuests();
       }, [client, event?.id]);
 
@@ -2994,6 +3036,8 @@
       const existingPhones = useMemo(() =>
         guests.map(g => ({ id: g.id, phone: VALIDATION.normalizePhone(g.phone) }))
       , [guests]);
+
+      if (!event) return <NeedEventState />;
 
       // Sort handler
       const handleSort = (col) => {
@@ -3539,7 +3583,6 @@
       const [saving, setSaving] = useState(false);
 
       const templateRef = useRef(null);
-      if (!event) return <NeedEventState />;
 
       useEffect(() => {
         if (!client || !event?.id) return;
@@ -3567,6 +3610,8 @@
           return g.status === recipientFilter;
         });
       }, [guests, recipientFilter]);
+
+      if (!event) return <NeedEventState />;
 
       const insertVariable = (v) => {
         const el = templateRef.current;
@@ -4172,11 +4217,12 @@
       // Table drag on floor plan
       const tableDragRef = useRef(null);
 
-      if (!event) return <NeedEventState />;
-
       useEffect(() => {
+        if (!event?.id) return;
         fetchAll();
       }, [client, event?.id]);
+
+      if (!event) return <NeedEventState />;
 
       const fetchAll = async () => {
         if (!client || !event?.id) return;
