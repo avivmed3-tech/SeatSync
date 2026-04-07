@@ -1484,6 +1484,32 @@
 <body>
   <div id="root"></div>
 
+  <script>
+    // Force clear any old broken Supabase config
+    try {
+      var oldCfg = localStorage.getItem('seatsync-supabase');
+      if (oldCfg) {
+        var parsed = JSON.parse(oldCfg);
+        if (parsed.url && parsed.url.indexOf('xryfxjtvqdeijijgiwmb') === -1) {
+          localStorage.removeItem('seatsync-supabase');
+        }
+      }
+    } catch(e) { localStorage.removeItem('seatsync-supabase'); }
+
+    // Global error handler to show JS errors on screen
+    window.onerror = function(msg, src, line, col, err) {
+      var el = document.getElementById('root');
+      if (el) {
+        el.innerHTML = '<div style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;">'
+          + '<h2 style="color:#f59e0b;">SeatSync Error</h2>'
+          + '<p>' + msg + '</p>'
+          + '<p>Line: ' + line + ', Col: ' + col + '</p>'
+          + '<p>' + (err && err.stack ? err.stack : '') + '</p>'
+          + '</div>';
+      }
+    };
+  </script>
+
   <script type="text/babel" data-type="module">
     const { useState, useEffect, useCallback, useRef, createContext, useContext, useMemo } = React;
 
@@ -1559,7 +1585,7 @@
               return fixed;
             }
             return parsed;
-          } catch { /* fall through */ }
+          } catch (e) { /* fall through */ }
         }
         // Auto-configure with default credentials
         const defaultConfig = { url: DEFAULT_SUPABASE_URL, anonKey: DEFAULT_SUPABASE_ANON_KEY };
