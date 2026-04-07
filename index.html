@@ -3553,7 +3553,7 @@
         .replace(/\{שם\}/g, guest.name || '')
         .replace(/\{תאריך\}/g, event.event_date ? new Date(event.event_date).toLocaleDateString('he-IL') : '')
         .replace(/\{מקום\}/g, event.venue_name || '')
-        .replace(/\{לינק_rsvp\}/g, guest.rsvp_token ? `https://seatsync.app/rsvp?token=${guest.rsvp_token}` : 'לינק יישלח בנפרד')
+        .replace(/\{לינק_rsvp\}/g, guest.rsvp_token ? `https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}` : 'לינק יישלח בנפרד')
         .replace(/\{שם_אירוע\}/g, event.name || '');
     }
 
@@ -3935,7 +3935,7 @@
                               <button
                                 className="btn btn-secondary"
                                 style={{ padding: '5px 12px', fontSize: 12 }}
-                                onClick={() => { navigator.clipboard?.writeText(`https://seatsync.app/rsvp?token=${guest.rsvp_token}`); markSent(guest.id); addToast('לינק הועתק ✓', 'success'); }}
+                                onClick={() => { navigator.clipboard?.writeText(`https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}`); markSent(guest.id); addToast('לינק הועתק ✓', 'success'); }}
                               >
                                 <Icon name="Copy" size={14} />
                                 העתק לינק
