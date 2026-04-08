@@ -1003,6 +1003,11 @@
       .dashboard-grid { grid-template-columns: 1fr 1fr; }
     }
 
+    /* Global responsive utility */
+    @media (max-width: 640px) {
+      .hide-mobile { display: none !important; }
+    }
+
     /* ============================================
        Guests Module Styles
        ============================================ */
@@ -2126,6 +2131,7 @@
       const signOut = useCallback(async () => {
         if (!client) return;
         await client.auth.signOut();
+        localStorage.removeItem('seatsync-selected-event');
         setUser(null);
       }, [client]);
 
@@ -2220,6 +2226,53 @@
         <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan }}>
           {children}
         </PlanContext.Provider>
+      );
+    }
+
+    // ============================================
+    // PWA Install Context — shared between banner + settings
+    // ============================================
+    const PWAInstallContext = createContext();
+
+    function PWAInstallProvider({ children }) {
+      const [deferredPrompt, setDeferredPrompt] = useState(null);
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const [isStandalone, setIsStandalone] = useState(
+        window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+      );
+
+      useEffect(() => {
+        if (isStandalone) return;
+        const handler = (e) => {
+          e.preventDefault();
+          setDeferredPrompt(e);
+        };
+        window.addEventListener('beforeinstallprompt', handler);
+        // Listen for successful install
+        window.addEventListener('appinstalled', () => {
+          setIsStandalone(true);
+          setDeferredPrompt(null);
+        });
+        return () => window.removeEventListener('beforeinstallprompt', handler);
+      }, []);
+
+      const triggerInstall = useCallback(async () => {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            setDeferredPrompt(null);
+            setIsStandalone(true);
+          }
+          return outcome;
+        }
+        return null;
+      }, [deferredPrompt]);
+
+      return (
+        <PWAInstallContext.Provider value={{ deferredPrompt, triggerInstall, isIOS, isStandalone }}>
+          {children}
+        </PWAInstallContext.Provider>
       );
     }
 
@@ -3877,12 +3930,12 @@
       return (
         <div className="animate-slide-up">
           {/* Header */}
-          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="page-title">מוזמנים</div>
               <div className="page-subtitle">{stats.total} מוזמנים · {stats.totalGuests} אישרו הגעה</div>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
               <button className="btn btn-secondary" onClick={handleExport} title="ייצוא לאקסל" style={{ padding: '10px 14px' }}>
                 <Icon name="Download" size={18} />
                 <span className="hide-mobile">ייצוא</span>
@@ -5303,8 +5356,8 @@
         <g
           transform={`translate(${table.position_x || 80}, ${table.position_y || 80})`}
           style={{ cursor: locked ? 'default' : 'grab', userSelect: 'none' }}
-          onMouseDown={e => { e.stopPropagation(); onDragTable(table, e); }}
-          onTouchStart={e => { e.stopPropagation(); onTouchTable && onTouchTable(table, e); }}
+          onMouseDown={e => { if (locked) return; e.stopPropagation(); onDragTable(table, e); }}
+          onTouchStart={e => { if (locked || !onTouchTable) return; e.stopPropagation(); onTouchTable(table, e); }}
           onClick={() => onClick(table)}
         >
           {table.table_type === 'round' ? (
@@ -5890,14 +5943,14 @@
       return (
         <div className="animate-slide-up">
           {/* Header */}
-          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="page-title">סידורי הושבה</div>
               <div className="page-subtitle">
                 {tables.length} שולחנות · {totalSeats} מקומות · {assignedCount}/{guests.filter(g=>g.status!=='declined').length} מושבים
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportSeating} title="ייצוא לאקסל">
                 <Icon name="FileSpreadsheet" size={18} />
                 <span className="hide-mobile">אקסל</span>
@@ -6738,67 +6791,107 @@
     }
 
     // ============================================
+    // PWA Install Row — for Settings page
+    // ============================================
+    function PWAInstallRow() {
+      const { deferredPrompt, triggerInstall, isIOS, isStandalone } = useContext(PWAInstallContext);
+      const [showGuide, setShowGuide] = useState(false);
+
+      if (isStandalone) {
+        return (
+          <div className="settings-row">
+            <div className="settings-row-icon" style={{ color: 'var(--emerald-500)' }}><Icon name="Smartphone" size={18} /></div>
+            <div style={{ flex: 1 }}>
+              <div className="settings-row-label">האפליקציה מותקנת</div>
+              <div className="settings-row-sub">אתם משתמשים בגרסה המותקנת — מעולה!</div>
+            </div>
+            <Icon name="CheckCircle" size={18} style={{ color: 'var(--emerald-500)' }} />
+          </div>
+        );
+      }
+
+      const handleClick = async () => {
+        if (deferredPrompt) {
+          await triggerInstall();
+        } else {
+          setShowGuide(true);
+        }
+      };
+
+      return (
+        <>
+          <div className="settings-row" onClick={handleClick} style={{ cursor: 'pointer' }}>
+            <div className="settings-row-icon" style={{ color: 'var(--accent)' }}><Icon name="Download" size={18} /></div>
+            <div style={{ flex: 1 }}>
+              <div className="settings-row-label">התקנת האפליקציה</div>
+              <div className="settings-row-sub">
+                {deferredPrompt ? 'התקינו ישירות למסך הבית' : isIOS ? 'הוסיפו למסך הבית דרך Safari' : 'הוסיפו למסך הבית'}
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 12 }} onClick={e => { e.stopPropagation(); handleClick(); }}>
+              <Icon name="Download" size={14} />התקן
+            </button>
+          </div>
+
+          {showGuide && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowGuide(false)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 380, textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📱</div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>התקנת SeatSync</div>
+                {isIOS ? (
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 2, marginBottom: 20, textAlign: 'right' }}>
+                    <div><strong>1.</strong> פתחו את האתר ב-<strong>Safari</strong> (לא Chrome)</div>
+                    <div><strong>2.</strong> לחצו על כפתור <strong>השיתוף</strong> ⬆️ בתחתית המסך</div>
+                    <div><strong>3.</strong> גללו ולחצו <strong>"הוסף למסך הבית"</strong></div>
+                    <div><strong>4.</strong> לחצו <strong>"הוסף"</strong> בפינה הימנית העליונה</div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 2, marginBottom: 20, textAlign: 'right' }}>
+                    <div><strong>1.</strong> לחצו על <strong>⋮</strong> (3 נקודות) בפינה הימנית העליונה של Chrome</div>
+                    <div><strong>2.</strong> בחרו <strong>"התקן אפליקציה"</strong> או <strong>"הוסף למסך הבית"</strong></div>
+                    <div><strong>3.</strong> אשרו את ההתקנה</div>
+                    <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', fontSize: 12 }}>
+                      💡 <strong>טיפ:</strong> אם לא רואים את האפשרות, נסו לרענן את הדף ולחכות כמה שניות
+                    </div>
+                  </div>
+                )}
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShowGuide(false)}>
+                  הבנתי!
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
+    // ============================================
     // PWA Install Banner
     // ============================================
     function PWAInstallBanner() {
-      const [deferredPrompt, setDeferredPrompt] = useState(null);
+      const { deferredPrompt, triggerInstall, isIOS, isStandalone } = useContext(PWAInstallContext);
       const [show, setShow] = useState(false);
       const [showIOSGuide, setShowIOSGuide] = useState(false);
 
-      // Detect platform
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-        || window.navigator.standalone === true;
-
       useEffect(() => {
-        // Already running as installed PWA — hide
         if (isStandalone) return;
-
-        // On Android/Chrome — listen for the native prompt event
-        const handler = (e) => {
-          e.preventDefault();
-          setDeferredPrompt(e);
-          setTimeout(() => setShow(true), 2000);
-        };
-        window.addEventListener('beforeinstallprompt', handler);
-
-        // If no beforeinstallprompt fires within 4 seconds AND not installed,
-        // show a manual install guide (iOS never fires this event, and Android
-        // may not re-fire after uninstall for a while)
-        const fallbackTimer = setTimeout(() => {
-          if (!isStandalone) {
-            setShow(true); // show even without deferredPrompt — will show manual instructions
-          }
-        }, 4000);
-
-        return () => {
-          window.removeEventListener('beforeinstallprompt', handler);
-          clearTimeout(fallbackTimer);
-        };
-      }, []);
+        // Show banner after a short delay
+        const timer = setTimeout(() => setShow(true), 3000);
+        return () => clearTimeout(timer);
+      }, [isStandalone]);
 
       const handleInstall = async () => {
         if (deferredPrompt) {
-          // Native install prompt available (Chrome Android)
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          if (outcome === 'accepted') {
-            setShow(false);
-            setDeferredPrompt(null);
-          }
-        } else if (isIOS) {
-          // iOS — show guide
-          setShowIOSGuide(true);
+          const outcome = await triggerInstall();
+          if (outcome === 'accepted') setShow(false);
         } else {
-          // Android without prompt / Desktop — show guide
+          // iOS or Android without prompt — show manual guide
           setShowIOSGuide(true);
         }
       };
 
       const handleDismiss = () => {
         setShow(false);
-        // Use sessionStorage so it only dismisses for this session
-        // Next time user opens the site, banner will appear again
         sessionStorage.setItem('seatsync-pwa-dismissed', '1');
       };
 
@@ -6976,6 +7069,7 @@
           {/* System settings — always visible */}
           <div className="settings-section">
             <div className="settings-section-title">הגדרות מערכת</div>
+            <PWAInstallRow />
             <div className="settings-row" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
               <div className="settings-row-icon"><Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={18} /></div>
               <div style={{ flex: 1 }}>
@@ -7399,6 +7493,7 @@
           {/* App settings (system) */}
           <div className="settings-section">
             <div className="settings-section-title">הגדרות מערכת</div>
+            <PWAInstallRow />
             <div className="settings-row" onClick={toggleTheme} style={{ cursor: 'pointer' }}>
               <div className="settings-row-icon"><Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={18} /></div>
               <div style={{ flex: 1 }}>
@@ -7557,11 +7652,14 @@
       useEffect(() => {
         const savedEventId = localStorage.getItem('seatsync-selected-event');
         if (savedEventId && isConfigured && user && client) {
-          client.from('events').select('*').eq('id', savedEventId).single()
+          client.from('events').select('*').eq('id', savedEventId).eq('user_id', user.id).single()
             .then(({ data }) => {
               if (data) {
                 setSelectedEvent(data);
                 setCurrentRoute(ROUTES.DASHBOARD);
+              } else {
+                // Event doesn't belong to this user or was deleted — clean up
+                localStorage.removeItem('seatsync-selected-event');
               }
             });
         }
@@ -7700,13 +7798,15 @@
     function Root() {
       return (
         <ThemeProvider>
-          <SupabaseProvider>
-            <PlanProvider>
-              <ToastProvider>
-                <App />
-              </ToastProvider>
-            </PlanProvider>
-          </SupabaseProvider>
+          <PWAInstallProvider>
+            <SupabaseProvider>
+              <PlanProvider>
+                <ToastProvider>
+                  <App />
+                </ToastProvider>
+              </PlanProvider>
+            </SupabaseProvider>
+          </PWAInstallProvider>
         </ThemeProvider>
       );
     }
