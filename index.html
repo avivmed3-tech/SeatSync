@@ -4293,15 +4293,77 @@
       return msg.trim();
     }
 
-    // Build WhatsApp image share link — opens WA with image pre-loaded
-    function buildWAImageLink(phone, imageUrl) {
-      const raw = String(phone || '').replace(/[^0-9+]/g, '');
-      let intl = raw;
-      if (raw.startsWith('0')) intl = '+972' + raw.slice(1);
-      else if (!raw.startsWith('+')) intl = '+972' + raw;
-      // WhatsApp doesn't support sending images via wa.me text param.
-      // Instead, we use the Web Share API or just send the URL as text.
-      return `https://wa.me/${intl.replace('+','')}?text=${encodeURIComponent(imageUrl)}`;
+    // Share invitation image + message text together via Web Share API
+    // On mobile: opens share sheet with image file + text (user picks WhatsApp → sends both)
+    // On desktop: falls back to wa.me link (text only) since Web Share with files is not supported
+    async function shareInvitationWithMessage(imageUrl, messageText) {
+      try {
+        // Get cached image file
+        const file = await getInvitationFile(imageUrl);
+
+        // Try Web Share API with file + text together
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            text: messageText,
+          });
+          return 'shared';
+        }
+
+        return 'unsupported';
+      } catch (err) {
+        if (err.name === 'AbortError') return 'cancelled';
+        console.error('Share failed:', err);
+        return 'error';
+      }
+    }
+
+    // Share image only (no text) — for cases where user wants separate messages
+    async function shareImageOnly(imageUrl) {
+      try {
+        const file = await getInvitationFile(imageUrl);
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          return 'shared';
+        }
+        // Fallback: download
+        const url = URL.createObjectURL(file);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return 'downloaded';
+      } catch (err) {
+        if (err.name === 'AbortError') return 'cancelled';
+        return 'error';
+      }
+    }
+
+    // Cache the invitation blob so we don't re-fetch for every guest
+    let _invitationCache = { url: null, file: null };
+    async function getInvitationFile(imageUrl) {
+      if (_invitationCache.url === imageUrl && _invitationCache.file) {
+        return _invitationCache.file;
+      }
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const ext = imageUrl.split('.').pop()?.split('?')[0] || 'jpg';
+      const mimeType = blob.type || `image/${ext === 'png' ? 'png' : 'jpeg'}`;
+      const file = new File([blob], `invitation.${ext}`, { type: mimeType });
+      _invitationCache = { url: imageUrl, file };
+      return file;
+    }
+
+    // Check if Web Share with files is supported
+    function canShareFiles() {
+      if (!navigator.canShare) return false;
+      try {
+        const testFile = new File(['test'], 'test.png', { type: 'image/png' });
+        return navigator.canShare({ files: [testFile] });
+      } catch { return false; }
     }
 
     function buildWALink(phone, message) {
@@ -4508,6 +4570,148 @@
       );
     }
 
+    // ============================================
+    // Image Share Step — shares image + RSVP text together via Web Share API
+    // On mobile: one tap → share sheet → WhatsApp → image + text sent together
+    // On desktop: falls back to wa.me text link (no image) since Web Share files not supported
+    // ============================================
+    function ImageShareStep({ invitationUrl, recipients, sentSet, sentCount, onMarkSent, onMarkAllSent, addToast, event, tables, template }) {
+      const [sharing, setSharing] = useState(false);
+      const [sharingGuest, setSharingGuest] = useState(null);
+      const [imageReady, setImageReady] = useState(false);
+      const [shareSupported, setShareSupported] = useState(false);
+      const isMobile = useIsMobile();
+
+      useEffect(() => {
+        setShareSupported(canShareFiles());
+        getInvitationFile(invitationUrl).then(() => setImageReady(true)).catch(() => setImageReady(false));
+      }, [invitationUrl]);
+
+      const handleShare = async (guest) => {
+        setSharing(true);
+        setSharingGuest(guest.id);
+        const msg = buildMessage(template, guest, event, tables);
+
+        if (shareSupported) {
+          // Mobile: share image + text together
+          const result = await shareInvitationWithMessage(invitationUrl, msg);
+          if (result === 'shared') {
+            onMarkSent(guest.id);
+            addToast(`נשלח ל-${guest.name} ✓`, 'success');
+          } else if (result === 'cancelled') {
+            // User cancelled share sheet — do nothing
+          } else {
+            addToast('שגיאה בשיתוף — נסו שוב', 'error');
+          }
+        } else {
+          // Desktop: open wa.me with text, image can't be sent programmatically
+          const waLink = buildWALink(guest.phone, msg);
+          window.open(waLink, '_blank');
+          setTimeout(() => onMarkSent(guest.id), 1500);
+        }
+        setSharing(false);
+        setSharingGuest(null);
+      };
+
+      // Download image for desktop users to attach manually
+      const handleDownloadImage = async () => {
+        const result = await shareImageOnly(invitationUrl);
+        if (result === 'downloaded') addToast('התמונה הורדה — צרפו אותה ב-WhatsApp Web', 'info');
+        else if (result === 'shared') addToast('הזמנה שותפה ✓', 'success');
+      };
+
+      const progress = recipients.length > 0 ? Math.round((sentCount / recipients.length) * 100) : 0;
+
+      return (
+        <div>
+          {/* Progress */}
+          <div className="round-summary-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+              <img src={invitationUrl} alt="הזמנה" style={{ width: 48, height: 48, borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>שליחת הזמנה + הודעה</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {shareSupported ? 'תמונה + טקסט נשלחים ביחד בהודעה אחת' : 'טקסט נשלח דרך WhatsApp Web'}
+                </div>
+              </div>
+            </div>
+            <div className="round-stat">
+              <div className="round-stat-value" style={{ color: '#25D366' }}>{sentCount}</div>
+              <div className="round-stat-label">נשלחו</div>
+            </div>
+            <div style={{ flex: 1, minWidth: 100 }}>
+              <div className="send-progress"><div className="send-progress-bar" style={{ width: `${progress}%` }} /></div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{progress}%</div>
+            </div>
+            <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={onMarkAllSent}>סמן הכל</button>
+          </div>
+
+          {/* Instructions */}
+          <div style={{ marginBottom: 12, padding: '10px 14px', background: shareSupported ? 'rgba(37,211,102,0.08)' : 'rgba(59,130,246,0.08)', border: `1px solid ${shareSupported ? 'rgba(37,211,102,0.2)' : 'rgba(59,130,246,0.2)'}`, borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 18, lineHeight: 1 }}>{shareSupported ? '📱' : '🖥️'}</span>
+            <div>
+              {shareSupported
+                ? <>לחצו <strong>"שלח"</strong> — ייפתח חלון שיתוף עם <strong>התמונה + ההודעה ביחד</strong>. בחרו WhatsApp → בחרו את איש הקשר → שלחו. אחרי השליחה חזרו לכאן לאורח הבא.</>
+                : <>בדסקטופ — לחצו <strong>"הורד הזמנה"</strong> פעם אחת, ואז <strong>"שלח"</strong> לכל אורח לפתיחת WhatsApp Web עם ההודעה. צרפו את התמונה ידנית.</>
+              }
+            </div>
+          </div>
+
+          {/* Desktop: download image button */}
+          {!shareSupported && (
+            <div style={{ marginBottom: 14, display: 'flex', gap: 10 }}>
+              <button className="btn btn-secondary" onClick={handleDownloadImage} disabled={!imageReady}>
+                <Icon name="Download" size={18} />הורד תמונת הזמנה (פעם אחת)
+              </button>
+              <BulkWhatsAppSender
+                recipients={recipients.filter(g => !sentSet.has(g.id) && g.phone)}
+                buildLink={(guest) => buildWALink(guest.phone, buildMessage(template, guest, event, tables))}
+                onSent={(guestId) => onMarkSent(guestId)}
+                onAllDone={() => addToast('כל ההודעות נפתחו! ✓', 'success')}
+              />
+            </div>
+          )}
+
+          {/* Recipient list */}
+          <div className="recipient-list">
+            {recipients.map((guest, idx) => {
+              const isSent = sentSet.has(guest.id);
+              const isCurrentlySharing = sharingGuest === guest.id;
+              return (
+                <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
+                  </div>
+                  <StatusBadge status={guest.status} small />
+                  {isSent ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--emerald-500)', fontSize: 13, fontWeight: 600 }}><Icon name="CheckCircle2" size={16} />נשלח</div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        className="wa-link-btn"
+                        onClick={() => handleShare(guest)}
+                        disabled={sharing || !imageReady || (!guest.phone && !shareSupported)}
+                        style={{ opacity: (sharing && !isCurrentlySharing) ? 0.5 : 1 }}
+                      >
+                        {isCurrentlySharing
+                          ? <><Icon name="Loader" size={14} style={{ animation: 'spin 1s linear infinite' }} /> שולח...</>
+                          : <>{shareSupported ? '🖼️💬' : '💬'} שלח</>}
+                      </button>
+                      <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--emerald-500)' }} title="סמן כנשלח" onClick={() => onMarkSent(guest.id)}>
+                        <Icon name="Check" size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
     function MessagesPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
@@ -4530,9 +4734,6 @@
       const [selectedAction, setSelectedAction] = useState(null);
       // Send mode: 'text_only' | 'image_then_text'
       const [sendMode, setSendMode] = useState('text_only');
-      // Image step tracking: which guests got image sent
-      const [imageSentSet, setImageSentSet] = useState(new Set());
-      const [sendStep, setSendStep] = useState('image'); // 'image' | 'text' — only used in image_then_text mode
 
       const templateRef = useRef(null);
       const invitationUrl = event?.settings?.invitation_url || '';
@@ -4593,8 +4794,6 @@
           setRounds(prev => [data, ...prev]);
           setActiveRound(data);
           setView('send');
-          setSendStep('image');
-          setImageSentSet(new Set());
           setSentSet(new Set());
           addToast(`סבב ${roundNum} נשמר ✓`, 'success');
         } else {
@@ -4625,19 +4824,8 @@
         addToast(`סומנו ${recipients.length} הודעות כנשלחו ✓`, 'success');
       };
 
-      const markImageSent = (guestId) => {
-        setImageSentSet(s => new Set([...s, guestId]));
-      };
-
-      const markAllImagesSent = () => {
-        setImageSentSet(new Set(recipients.map(g => g.id)));
-        addToast('כל ההזמנות סומנו כנשלחו ✓', 'success');
-      };
-
       const sentCount = recipients.filter(g => sentSet.has(g.id)).length;
       const sendProgress = recipients.length > 0 ? Math.round((sentCount / recipients.length) * 100) : 0;
-      const imageSentCount = recipients.filter(g => imageSentSet.has(g.id)).length;
-      const imageProgress = recipients.length > 0 ? Math.round((imageSentCount / recipients.length) * 100) : 0;
 
       const VARIABLES = ['{שם}', '{תאריך}', '{מקום}', '{לינק_rsvp}', '{שם_אירוע}', '{שולחן}'];
       const FILTER_OPTIONS = [
@@ -4651,8 +4839,6 @@
       const handleQuickAction = (action) => {
         setSelectedAction(action);
         setSentSet(new Set());
-        setImageSentSet(new Set());
-        setSendStep('image');
         switch (action) {
           case 'invite':
             setTemplate(DEFAULT_TEMPLATES[event.event_type] || DEFAULT_TEMPLATES.wedding);
@@ -4751,7 +4937,7 @@
                               <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(r.sent_at).toLocaleDateString('he-IL')} · {r.total_sent || 0} נשלחו</div>
                             </div>
                           </div>
-                          <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); setSentSet(new Set()); setImageSentSet(new Set()); setSendStep('image'); }}>
+                          <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); setSentSet(new Set()); }}>
                             <Icon name="RotateCw" size={14} />שלח שוב
                           </button>
                         </div>
@@ -4772,7 +4958,7 @@
                 {!isPro && rounds.length >= limits.messageRounds && <ProBadge style={{ marginRight: 4 }} />}
               </button>
               {rounds.map(r => (
-                <button key={r.id} className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`} onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setSentSet(new Set()); setImageSentSet(new Set()); setSendStep('image'); }}>
+                <button key={r.id} className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`} onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setSentSet(new Set()); }}>
                   <Icon name="MessageSquare" size={13} />סבב {r.round_number} <span style={{ fontSize: 11, opacity: 0.8 }}>({r.total_sent || 0})</span>
                 </button>
               ))}
@@ -4905,103 +5091,24 @@
           {/* ── SEND VIEW ── */}
           {view === 'send' && (
             <div>
-              {/* Two-step mode indicator */}
+              {/* When invitation image exists and sendMode is image_then_text: use ImageShareStep */}
               {sendMode === 'image_then_text' && invitationUrl && (
-                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                  <button
-                    className={`send-mode-btn ${sendStep === 'image' ? 'active' : ''}`}
-                    onClick={() => setSendStep('image')}
-                    style={{ flex: 1, borderColor: sendStep === 'image' ? '#25D366' : undefined }}
-                  >
-                    <span style={{ fontSize: 16 }}>🖼️</span>
-                    <span>שלב 1: שלח הזמנה</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>{imageSentCount}/{recipients.length}</span>
-                  </button>
-                  <button
-                    className={`send-mode-btn ${sendStep === 'text' ? 'active' : ''}`}
-                    onClick={() => setSendStep('text')}
-                    style={{ flex: 1, borderColor: sendStep === 'text' ? '#25D366' : undefined }}
-                  >
-                    <span style={{ fontSize: 16 }}>💬</span>
-                    <span>שלב 2: שלח הודעה</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>{sentCount}/{recipients.length}</span>
-                  </button>
-                </div>
+                <ImageShareStep
+                  invitationUrl={invitationUrl}
+                  recipients={recipients}
+                  sentSet={sentSet}
+                  sentCount={sentCount}
+                  onMarkSent={markSent}
+                  onMarkAllSent={markAllSent}
+                  addToast={addToast}
+                  event={event}
+                  tables={tables}
+                  template={template}
+                />
               )}
 
-              {/* IMAGE STEP — send invitation image */}
-              {sendMode === 'image_then_text' && invitationUrl && sendStep === 'image' && (
-                <div>
-                  <div className="round-summary-card" style={{ background: 'rgba(37,211,102,0.04)', borderColor: 'rgba(37,211,102,0.2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
-                      <img src={invitationUrl} alt="הזמנה" style={{ width: 48, height: 48, borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>שלחו את תמונת ההזמנה</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>לחצו על כל אורח כדי לפתוח WhatsApp עם התמונה</div>
-                      </div>
-                    </div>
-                    <div className="round-stat">
-                      <div className="round-stat-value" style={{ color: '#25D366' }}>{imageSentCount}</div>
-                      <div className="round-stat-label">נשלחו</div>
-                    </div>
-                    <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllImagesSent}>סמן הכל</button>
-                  </div>
-
-                  <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
-                    <div>לחצו על כפתור "שלח הזמנה" — WhatsApp ייפתח עם תמונת ההזמנה. שלחו ולחצו חזרה. אחרי שתסיימו את כולם, עברו ל<strong>שלב 2</strong> לשליחת הודעה עם לינק אישור הגעה.</div>
-                  </div>
-
-                  {/* Bulk image sender */}
-                  {recipients.filter(g => !imageSentSet.has(g.id) && g.phone).length > 0 && (
-                    <div style={{ marginBottom: 14 }}>
-                      <BulkWhatsAppSender
-                        recipients={recipients.filter(g => !imageSentSet.has(g.id) && g.phone)}
-                        buildLink={(guest) => buildWAImageLink(guest.phone, invitationUrl)}
-                        onSent={(guestId) => markImageSent(guestId)}
-                        onAllDone={() => addToast('כל ההזמנות נפתחו ב-WhatsApp! ✓', 'success')}
-                      />
-                    </div>
-                  )}
-
-                  <div className="recipient-list">
-                    {recipients.map((guest, idx) => {
-                      const isSent = imageSentSet.has(guest.id);
-                      const waLink = buildWAImageLink(guest.phone, invitationUrl);
-                      return (
-                        <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
-                          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
-                          </div>
-                          {isSent ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--emerald-500)', fontSize: 13, fontWeight: 600 }}><Icon name="CheckCircle2" size={16} />נשלח</div>
-                          ) : guest.phone ? (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <a href={waLink} target="_blank" rel="noopener noreferrer" className="wa-link-btn" onClick={() => setTimeout(() => markImageSent(guest.id), 1500)}>🖼️ שלח הזמנה</a>
-                              <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--emerald-500)' }} title="סמן כנשלח" onClick={() => markImageSent(guest.id)}><Icon name="Check" size={16} /></button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>אין טלפון</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {imageSentCount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
-                      <button className="btn btn-primary" style={{ padding: '12px 32px' }} onClick={() => setSendStep('text')}>
-                        <Icon name="ArrowLeft" size={18} />המשך לשלב 2 — שליחת הודעה
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TEXT STEP — send message with RSVP link (or only step if text_only mode) */}
-              {(sendMode === 'text_only' || sendStep === 'text') && (
+              {/* Text-only mode — regular wa.me flow */}
+              {(sendMode === 'text_only' || !invitationUrl) && (
                 <div>
                   <div className="round-summary-card">
                     <div className="round-stat">
@@ -5347,6 +5454,7 @@
       const [selectedFloorTable, setSelectedFloorTable] = useState(null);
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
+      const [tablesLocked, setTablesLocked] = useState(false); // lock table positions on floor plan
 
       // Floor plan state
       const [zoom, setZoom] = useState(1);
@@ -5562,6 +5670,7 @@
       // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
+        if (tablesLocked) return; // tables are locked — don't allow dragging
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
@@ -5593,6 +5702,7 @@
       // Floor plan: drag tables (touch — mobile)
       const handleTableTouchStart = (table, e) => {
         if (viewMode !== 'floor') return;
+        if (tablesLocked) return; // tables are locked
         if (e.touches.length !== 1) return;
         e.stopPropagation();
         const touch = e.touches[0];
@@ -5873,6 +5983,14 @@
                 </div>
                 {viewMode === 'floor' && (
                   <div style={{ display: 'flex', gap: 4, marginRight: 'auto' }}>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 10px', background: tablesLocked ? 'var(--accent-light)' : undefined, borderColor: tablesLocked ? 'var(--accent)' : undefined, color: tablesLocked ? 'var(--accent)' : undefined }}
+                      onClick={() => setTablesLocked(l => !l)}
+                      title={tablesLocked ? 'שחרר נעילת שולחנות' : 'נעל מיקום שולחנות'}
+                    >
+                      <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={16} />
+                    </button>
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => setZoom(z => Math.min(2, z + 0.2))}>
                       <Icon name="ZoomIn" size={16} />
                     </button>
@@ -6607,7 +6725,7 @@
       const [deferredPrompt, setDeferredPrompt] = useState(null);
       const [show, setShow] = useState(false);
       const [dismissed, setDismissed] = useState(() =>
-        localStorage.getItem('seatsync-pwa-dismissed') === '1'
+        sessionStorage.getItem('seatsync-pwa-dismissed') === '1'
       );
 
       useEffect(() => {
@@ -6638,7 +6756,7 @@
       const handleDismiss = () => {
         setShow(false);
         setDismissed(true);
-        localStorage.setItem('seatsync-pwa-dismissed', '1');
+        sessionStorage.setItem('seatsync-pwa-dismissed', '1');
       };
 
       if (!show || !deferredPrompt) return null;
