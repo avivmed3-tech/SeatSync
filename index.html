@@ -922,15 +922,19 @@
         top: 60px;
         bottom: 0;
         right: 0;
+        left: auto;
         width: 200px;
         height: auto;
         flex-direction: column;
         border-top: none;
-        border-left: 1px solid var(--border-default);
+        border-left: none;
+        border-right: none;
+        border-inline-start: 1px solid var(--border-default);
         padding: 16px 8px;
         padding-bottom: 0;
         gap: 2px;
         justify-content: flex-start;
+        align-items: stretch;
       }
 
       .bottom-nav-item {
@@ -941,16 +945,17 @@
         padding: 10px 14px;
         border-radius: var(--radius-sm);
         font-size: 14px;
+        text-align: right;
       }
 
       .bottom-nav-item::before {
         top: 50%;
-        left: auto;
-        right: 0;
+        left: 0;
+        right: auto;
         transform: translateY(-50%) scaleY(0);
         width: 3px;
         height: 24px;
-        border-radius: 3px 0 0 3px;
+        border-radius: 0 3px 3px 0;
       }
 
       .bottom-nav-item.active::before {
@@ -1471,6 +1476,25 @@
     .channel-btn:hover { border-color: var(--border-focus); color: var(--text-primary); }
     .channel-btn.active-wa { border-color: #25D366; background: rgba(37,211,102,0.08); color: #128C7E; }
     .channel-btn.active-rsvp { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+    /* Quick Message Actions */
+    .quick-actions-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+    @media (min-width: 768px) { .quick-actions-grid { grid-template-columns: repeat(4, 1fr); } }
+    .quick-action-card {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 16px 12px; border-radius: var(--radius-md);
+      border: 2px solid var(--border-default); background: var(--bg-secondary);
+      cursor: pointer; transition: all var(--duration-fast) var(--ease-out);
+      text-align: center;
+    }
+    .quick-action-card:hover { border-color: var(--border-focus); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+    .quick-action-card.active { border-color: var(--accent); background: var(--accent-light); }
+    .quick-action-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+    .quick-action-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+    .quick-action-sub { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
 
     /* ============================================
        Dashboard Phase 3 Styles
@@ -3801,7 +3825,12 @@
       // Import guests in bulk
       const handleImportBulk = async (rows) => {
         if (!rows.length) return;
-        const { data, error } = await client.from('guests').insert(rows).select();
+        // Generate RSVP tokens for each imported guest
+        const rowsWithTokens = rows.map(row => ({
+          ...row,
+          rsvp_token: generateToken(),
+        }));
+        const { data, error } = await client.from('guests').insert(rowsWithTokens).select();
         if (error) addToast('שגיאה בייבוא: ' + error.message, 'error');
         else {
           setGuests(prev => [...(data || []), ...prev]);
@@ -4220,12 +4249,12 @@
 
     // Default message templates
     const DEFAULT_TEMPLATES = {
-      wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
-      bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
-      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
-      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
+      wedding: '{לינק_הזמנה}\n\nשלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
+      bar_mitzvah: '{לינק_הזמנה}\n\nשלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
+      brit_mila: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      brit_bat: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      corporate: '{לינק_הזמנה}\n\nשלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
+      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\n{לינק_הזמנה}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
       reminder_table: 'היי {שם} 👋\nתזכורת — האירוע שלנו מתקרב!\n\n📅 {תאריך}\n📍 {מקום}\n🪑 שולחן: {שולחן}\n\nנתראה שם! 🎉',
       thank_you: 'היי {שם} 💕\nתודה ענקית שחגגתם איתנו!\nהיה מדהים לראות אתכם. מקווים שנהניתם! 🎊\n\nבאהבה ♥',
     };
@@ -4246,13 +4275,14 @@
         .replace(/\{שם_אירוע\}/g, event.name || '')
         .replace(/\{שולחן\}/g, tableName || 'טרם הוקצה');
 
-      // {לינק_הזמנה}: include only if there's a URL, otherwise remove cleanly.
-      // Note: WhatsApp does not render Supabase Storage URLs as image previews.
-      // The invitation image is shown inside the RSVP page itself.
       if (invUrl) {
+        // Replace {לינק_הזמנה} with the actual URL.
+        // The template puts it FIRST and ALONE on line 1 (e.g. "{לינק_הזמנה}\n\nשלום...").
+        // WhatsApp shows a preview/inline image for the FIRST URL in a message.
+        // A direct .png/.jpg URL from Supabase Storage renders as an image preview.
         msg = msg.replace(/\{לינק_הזמנה\}/g, invUrl);
       } else {
-        // Remove placeholder + surrounding blank lines
+        // No invitation uploaded — remove placeholder + surrounding blank lines cleanly
         msg = msg.replace(/\{לינק_הזמנה\}\n\n/g, '');
         msg = msg.replace(/\n\n\{לינק_הזמנה\}/g, '');
         msg = msg.replace(/\{לינק_הזמנה\}/g, '');
@@ -4475,7 +4505,7 @@
       const [tables, setTables] = useState([]);
       const [activeRound, setActiveRound] = useState(null); // null = "new"
       const [loadingGuests, setLoadingGuests] = useState(true);
-      const [view, setView] = useState('history'); // start on history — shows quick actions + past rounds
+      const [view, setView] = useState('actions'); // actions | compose | send | history
       const [upsellFeature, setUpsellFeature] = useState(null);
 
       // Compose state
@@ -4484,6 +4514,7 @@
       const [recipientFilter, setRecipientFilter] = useState('all');
       const [sentSet, setSentSet] = useState(new Set());
       const [saving, setSaving] = useState(false);
+      const [selectedAction, setSelectedAction] = useState(null); // 'invite' | 'reminder' | 'thank_you' | 'custom'
 
       const templateRef = useRef(null);
 
@@ -4504,9 +4535,6 @@
         client.from('tables').select('id,name')
           .eq('event_id', event.id)
           .then(({ data }) => { setTables(data || []); });
-        // Set default template
-        const tpl = DEFAULT_TEMPLATES[event.event_type] || DEFAULT_TEMPLATES.wedding;
-        setTemplate(tpl);
       }, [client, event?.id]);
 
       // Filtered recipients
@@ -4592,16 +4620,61 @@
         { key: 'confirmed',label: 'מגיעים',     count: guests.filter(g => g.status === 'confirmed').length },
       ];
 
+      // Quick action handler
+      const handleQuickAction = (action) => {
+        setSelectedAction(action);
+        setSentSet(new Set());
+        switch (action) {
+          case 'invite':
+            setTemplate(DEFAULT_TEMPLATES[event.event_type] || DEFAULT_TEMPLATES.wedding);
+            setRecipientFilter('all');
+            setChannel('whatsapp');
+            break;
+          case 'reminder':
+            setTemplate(DEFAULT_TEMPLATES.reminder);
+            setRecipientFilter('pending');
+            setChannel('whatsapp');
+            break;
+          case 'reminder_table':
+            setTemplate(DEFAULT_TEMPLATES.reminder_table);
+            setRecipientFilter('confirmed');
+            setChannel('whatsapp');
+            break;
+          case 'thank_you':
+            setTemplate(DEFAULT_TEMPLATES.thank_you);
+            setRecipientFilter('confirmed');
+            setChannel('whatsapp');
+            break;
+          case 'custom':
+            setTemplate('');
+            setRecipientFilter('all');
+            setChannel('whatsapp');
+            break;
+          default:
+            break;
+        }
+        setView('compose');
+      };
+
+      // Quick actions data
+      const QUICK_ACTIONS = [
+        { key: 'invite', icon: '🎉', label: 'שלח הזמנות', sub: 'לכל המוזמנים', bg: 'rgba(37,211,102,0.1)', filterLabel: 'כולם' },
+        { key: 'reminder', icon: '🔔', label: 'תזכורת', sub: 'למי שלא אישר', bg: 'rgba(59,130,246,0.1)', filterLabel: 'ממתינים' },
+        { key: 'reminder_table', icon: '🪑', label: 'תזכורת+שולחן', sub: 'למגיעים עם פרטי שולחן', bg: 'rgba(245,158,11,0.1)', filterLabel: 'מגיעים' },
+        { key: 'thank_you', icon: '💕', label: 'תודה', sub: 'לכל מי שהגיע', bg: 'rgba(244,114,182,0.1)', filterLabel: 'מגיעים' },
+      ];
+
       return (
         <div className="animate-slide-up">
           {/* Header */}
           <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="page-title">הודעות</div>
-              <div className="page-subtitle">שליחת הזמנות ומעקב אחרי תגובות</div>
+              <div className="page-subtitle">שליחת הזמנות, תזכורות ותודות</div>
             </div>
             <div className="view-mode-tabs">
               {[
+                { v: 'actions', icon: 'Zap', label: 'פעולות' },
                 { v: 'compose', icon: 'PenLine', label: 'עריכה' },
                 { v: 'send', icon: 'Send', label: 'שליחה' },
                 { v: 'history', icon: 'History', label: 'היסטוריה' },
@@ -4614,35 +4687,130 @@
             </div>
           </div>
 
-          {/* Round tabs */}
-          <div className="round-tabs">
-            <button
-              className={`round-tab ${activeRound === null ? 'active' : ''}`}
-              onClick={() => {
-                if (!isPro && rounds.length >= limits.messageRounds) { setUpsellFeature('messageRounds'); return; }
-                setActiveRound(null); setView('compose');
-              }}
-              title={!isPro && rounds.length >= limits.messageRounds ? 'דורש תוכנית Pro' : 'סבב הודעות חדש'}
-            >
-              <Icon name="Plus" size={14} />
-              סבב חדש
-              {!isPro && rounds.length >= limits.messageRounds && <ProBadge style={{ marginRight: 4 }} />}
-            </button>
-            {rounds.map(r => (
-              <button
-                key={r.id}
-                className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`}
-                onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); }}
+          {/* ── QUICK ACTIONS VIEW ── */}
+          {view === 'actions' && (
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: 'var(--text-primary)' }}>מה תרצו לשלוח?</div>
+              <div className="quick-actions-grid">
+                {QUICK_ACTIONS.map(a => (
+                  <div
+                    key={a.key}
+                    className={`quick-action-card ${selectedAction === a.key ? 'active' : ''}`}
+                    onClick={() => handleQuickAction(a.key)}
+                  >
+                    <div className="quick-action-icon" style={{ background: a.bg }}>{a.icon}</div>
+                    <div className="quick-action-label">{a.label}</div>
+                    <div className="quick-action-sub">{a.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Custom message option */}
+              <div
+                className="card"
+                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}
+                onClick={() => handleQuickAction('custom')}
               >
-                <Icon name="MessageSquare" size={13} />
-                סבב {r.round_number}
-                <span style={{ fontSize: 11, opacity: 0.8 }}>({r.total_sent || 0})</span>
+                <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon name="PenLine" size={20} style={{ color: 'var(--accent)' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>הודעה מותאמת אישית</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>כתבו תבנית חופשית ובחרו נמענים</div>
+                </div>
+                <Icon name="ChevronLeft" size={18} style={{ color: 'var(--text-tertiary)' }} />
+              </div>
+
+              {/* SMS Info Card */}
+              <div className="card" style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.04)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon name="MessageSquare" size={18} style={{ color: 'var(--blue-500)' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>💡 טיפ: שליחה מהירה ב-WhatsApp</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                      במצב שליחה, לחצו <strong>"שלח הכל אוטומטית"</strong> — המערכת תפתח WhatsApp עם ההודעה מוכנה לכל אורח ברצף אוטומטי.
+                      בדסקטופ אפשר גם לפתוח את כל הטאבים בבת אחת!
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 6 }}>
+                      🔜 <strong>SMS אוטומטי</strong> — בקרוב! שליחת SMS בבאלק בלי צורך באישור ידני (Twilio / MessageBird)
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Previous rounds */}
+              {rounds.length > 0 && (
+                <div style={{ marginTop: 20 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>סבבים קודמים</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {rounds.slice(0, 3).map(r => (
+                      <div key={r.id} className="card" style={{ padding: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: 'var(--accent)', flexShrink: 0 }}>
+                              {r.round_number}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 13 }}>סבב {r.round_number}</div>
+                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                                {new Date(r.sent_at).toLocaleDateString('he-IL')} · {r.total_sent || 0} נשלחו
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ fontSize: 12, padding: '6px 12px' }}
+                            onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); setSentSet(new Set()); }}
+                          >
+                            <Icon name="RotateCw" size={14} />שלח שוב
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {rounds.length > 3 && (
+                      <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setView('history')}>
+                        הצג את כל {rounds.length} הסבבים →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Round tabs - shown in compose and send views */}
+          {(view === 'compose' || view === 'send') && (
+            <div className="round-tabs">
+              <button
+                className={`round-tab ${activeRound === null ? 'active' : ''}`}
+                onClick={() => {
+                  if (!isPro && rounds.length >= limits.messageRounds) { setUpsellFeature('messageRounds'); return; }
+                  setActiveRound(null); setView('compose');
+                }}
+                title={!isPro && rounds.length >= limits.messageRounds ? 'דורש תוכנית Pro' : 'סבב הודעות חדש'}
+              >
+                <Icon name="Plus" size={14} />
+                סבב חדש
+                {!isPro && rounds.length >= limits.messageRounds && <ProBadge style={{ marginRight: 4 }} />}
               </button>
-            ))}
-          </div>
+              {rounds.map(r => (
+                <button
+                  key={r.id}
+                  className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`}
+                  onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setSentSet(new Set()); }}
+                >
+                  <Icon name="MessageSquare" size={13} />
+                  סבב {r.round_number}
+                  <span style={{ fontSize: 11, opacity: 0.8 }}>({r.total_sent || 0})</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Free plan round limit notice */}
-          {!isPro && rounds.length >= limits.messageRounds && activeRound !== null && (
+          {(view === 'compose' || view === 'send') && !isPro && rounds.length >= limits.messageRounds && activeRound !== null && (
             <div className="plan-limit-bar">
               <Icon name="Info" size={16} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
               <span style={{ flex: 1 }}>תוכנית Free מאפשרת סבב הודעות אחד בלבד</span>
@@ -4655,6 +4823,22 @@
           {/* ── COMPOSE VIEW ── */}
           {view === 'compose' && (
             <div style={{ display: 'grid', gap: 16 }}>
+              {/* Back to actions + current action indicator */}
+              {selectedAction && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => { setView('actions'); setSelectedAction(null); }}>
+                    <Icon name="ArrowRight" size={16} />חזרה
+                  </button>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                    {selectedAction === 'invite' && '🎉 שליחת הזמנות'}
+                    {selectedAction === 'reminder' && '🔔 שליחת תזכורת'}
+                    {selectedAction === 'reminder_table' && '🪑 תזכורת + שולחן'}
+                    {selectedAction === 'thank_you' && '💕 הודעת תודה'}
+                    {selectedAction === 'custom' && '✏️ הודעה מותאמת'}
+                  </span>
+                </div>
+              )}
+
               {/* Channel selection */}
               <div className="card">
                 <div className="card-title" style={{ marginBottom: 12 }}>ערוץ שליחה</div>
@@ -4757,17 +4941,10 @@
 
                 {/* Tip: invitation uploaded — explain WhatsApp preview */}
                 {template.includes('{לינק_הזמנה}') && event?.settings?.invitation_url && (
-                  <div style={{ marginTop: 10, padding: '12px 14px', background: 'rgba(37,211,102,0.07)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-sm)', fontSize: 13, lineHeight: 1.6 }}>
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>✅ הזמנה מועלית — כך שולחים נכון:</div>
-                    <div style={{ color: 'var(--text-secondary)' }}>
-                      WhatsApp לא מציג preview לקישורי Storage. במקום זאת:
-                      <ol style={{ margin: '8px 0 0 0', paddingRight: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <li><strong>שלב 1 —</strong> שלחו את תמונת ההזמנה <strong>ידנית</strong> לאורח דרך WhatsApp (העלאת תמונה רגילה)</li>
-                        <li><strong>שלב 2 —</strong> שלחו את ההודעה עם הטקסט ולינק ה-RSVP דרך האפליקציה</li>
-                      </ol>
-                      <div style={{ marginTop: 8, padding: '6px 10px', background: 'rgba(37,211,102,0.1)', borderRadius: 6 }}>
-                        💡 <strong>טיפ:</strong> הסירו את {'{לינק_הזמנה}'} מהתבנית — הוא מוסיף קישור ארוך שלא נראה יפה. ההזמנה תוצג בדף ה-RSVP שהאורח יפתח.
-                      </div>
+                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(37,211,102,0.07)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, lineHeight: 1.2, flexShrink: 0 }}>✅</span>
+                    <div>
+                      <strong>הזמנה מועלית!</strong> — WhatsApp יציג <strong>תצוגה מקדימה ויזואלית</strong> של ההזמנה ישירות בגוף ההודעה.
                     </div>
                   </div>
                 )}
@@ -4937,189 +5114,53 @@
 
           {/* ── HISTORY VIEW ── */}
           {view === 'history' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-              {/* ── Quick Send shortcuts ── */}
-              <div className="card" style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.06), rgba(37,211,102,0.02))', border: '1.5px solid rgba(37,211,102,0.2)' }}>
-                <div className="card-title" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Icon name="Zap" size={18} style={{ color: '#25D366' }} />
-                  שליחה מהירה
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-                  {/* Reminder */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>🔔 תזכורת לממתינים</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {guests.filter(g => g.status === 'pending').length} אורחים שלא הגיבו עדיין
-                      </div>
-                    </div>
-                    <button
-                      className="btn btn-primary"
-                      style={{ padding: '8px 16px', fontSize: 13, flexShrink: 0 }}
-                      disabled={guests.filter(g => g.status === 'pending' && g.phone).length === 0}
-                      onClick={() => {
-                        setTemplate(DEFAULT_TEMPLATES.reminder);
-                        setRecipientFilter('pending');
-                        setChannel('whatsapp');
-                        setActiveRound(null);
-                        setView('compose');
-                        addToast('תבנית תזכורת נטענה ✓', 'success');
-                      }}
-                    >
-                      <Icon name="Send" size={15} />
-                      שלח תזכורת
-                    </button>
-                  </div>
-
-                  {/* Thank you */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>💕 תודה למגיעים</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        {guests.filter(g => g.status === 'confirmed').length} אורחים שאישרו הגעה
-                      </div>
-                    </div>
-                    <button
-                      className="btn btn-secondary"
-                      style={{ padding: '8px 16px', fontSize: 13, flexShrink: 0 }}
-                      disabled={guests.filter(g => g.status === 'confirmed' && g.phone).length === 0}
-                      onClick={() => {
-                        setTemplate(DEFAULT_TEMPLATES.thank_you);
-                        setRecipientFilter('confirmed');
-                        setChannel('whatsapp');
-                        setActiveRound(null);
-                        setView('compose');
-                        addToast('תבנית תודה נטענה ✓', 'success');
-                      }}
-                    >
-                      <Icon name="Heart" size={15} />
-                      שלח תודה
-                    </button>
-                  </div>
-
-                  {/* Table reminder */}
-                  {guests.filter(g => g.table_id).length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>🪑 תזכורת עם שולחן</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                          {guests.filter(g => g.table_id).length} אורחים עם שולחן מוקצה
-                        </div>
-                      </div>
-                      <button
-                        className="btn btn-secondary"
-                        style={{ padding: '8px 16px', fontSize: 13, flexShrink: 0 }}
-                        onClick={() => {
-                          setTemplate(DEFAULT_TEMPLATES.reminder_table);
-                          setRecipientFilter('confirmed');
-                          setChannel('whatsapp');
-                          setActiveRound(null);
-                          setView('compose');
-                          addToast('תבנית תזכורת+שולחן נטענה ✓', 'success');
-                        }}
-                      >
-                        <Icon name="Armchair" size={15} />
-                        שלח עם שולחן
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Sent rounds history ── */}
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-secondary)', marginBottom: -4 }}>
-                <Icon name="History" size={16} style={{ display: 'inline', marginLeft: 6, verticalAlign: 'middle' }} />
-                סבבים שנשלחו
-              </div>
-
+            <div>
               {rounds.length === 0 ? (
-                <div className="empty-state" style={{ padding: 32 }}>
-                  <div className="empty-state-icon"><Icon name="MessageSquare" size={32} /></div>
-                  <div className="empty-state-title">לא נשלחו הודעות עדיין</div>
-                  <div className="empty-state-text">לאחר שתשלחו סבב ראשון, הוא יופיע כאן עם פירוט לכל אורח</div>
+                <div className="empty-state" style={{ padding: 40 }}>
+                  <div className="empty-state-icon"><Icon name="History" size={32} /></div>
+                  <div className="empty-state-title">אין היסטוריה</div>
+                  <div className="empty-state-text">לאחר שתשלחו סבב הודעות, הוא יופיע כאן</div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {rounds.map(r => {
-                    const roundLabel = r.round_number === 99 ? '🔔 תזכורת אוטומטית' :
-                                       r.round_number === 100 ? '💕 תודה אוטומטית' :
-                                       `סבב ${r.round_number}`;
-                    const filterLabel = { all: 'כולם', pending: 'ממתינים', maybe: 'אולי', declined: 'לא מגיעים', confirmed: 'מגיעים' }[r.target_filter] || r.target_filter;
-                    const channelLabel = r.channel === 'whatsapp' ? '💬 WhatsApp' : r.channel === 'sms' ? '📱 SMS' : '🔗 RSVP';
-
-                    return (
-                      <div key={r.id} className="card">
-                        {/* Header */}
-                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 'var(--radius-sm)', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: 'var(--accent)', flexShrink: 0 }}>
-                              {r.round_number === 99 ? '🔔' : r.round_number === 100 ? '💕' : r.round_number}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 700, fontSize: 15 }}>{roundLabel}</div>
-                              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
-                                <span>{new Date(r.sent_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })}</span>
-                                <span>·</span>
-                                <span>{new Date(r.sent_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</span>
-                                <span>·</span>
-                                <span>{channelLabel}</span>
-                                <span>·</span>
-                                <span>נמענים: {filterLabel}</span>
-                              </div>
-                            </div>
+                  {rounds.map(r => (
+                    <div key={r.id} className="card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: 'var(--accent)' }}>
+                            {r.round_number}
                           </div>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ fontSize: 12, padding: '6px 12px', flexShrink: 0 }}
-                            onClick={() => {
-                              setActiveRound(r);
-                              setTemplate(r.message_template);
-                              setChannel(r.channel || 'whatsapp');
-                              setRecipientFilter(r.target_filter || 'all');
-                              setSentSet(new Set());
-                              setView('compose');
-                              addToast(`סבב ${r.round_number} נטען לעריכה ✓`, 'success');
-                            }}
-                          >
-                            <Icon name="RotateCw" size={14} />
-                            שלח שוב
-                          </button>
-                        </div>
-
-                        {/* Stats */}
-                        <div style={{ display: 'flex', gap: 16, marginBottom: 12, padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-                          <div className="round-stat">
-                            <div className="round-stat-value" style={{ color: '#25D366' }}>{r.total_sent || 0}</div>
-                            <div className="round-stat-label">נשלחו</div>
-                          </div>
-                          <div className="round-stat">
-                            <div className="round-stat-value" style={{ color: 'var(--blue-500)' }}>
-                              {guests.filter(g => {
-                                const f = r.target_filter;
-                                if (f === 'all') return true;
-                                return g.status === f;
-                              }).length}
+                          <div>
+                            <div style={{ fontWeight: 700 }}>סבב {r.round_number}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                              {new Date(r.sent_at).toLocaleDateString('he-IL')} · {r.channel === 'whatsapp' ? '💬 WhatsApp' : '🔗 RSVP Link'}
                             </div>
-                            <div className="round-stat-label">קהל יעד</div>
-                          </div>
-                          <div className="round-stat">
-                            <div className="round-stat-value" style={{ color: 'var(--emerald-500)' }}>
-                              {guests.filter(g => g.status === 'confirmed').length}
-                            </div>
-                            <div className="round-stat-label">מגיעים כרגע</div>
                           </div>
                         </div>
-
-                        {/* Message preview */}
-                        <div style={{ padding: '10px 14px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-line', maxHeight: 120, overflow: 'hidden', position: 'relative', borderRight: '3px solid var(--accent)' }}>
-                          {r.message_template}
-                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 32, background: 'linear-gradient(transparent, var(--bg-tertiary))' }} />
+                        <button
+                          className="btn btn-secondary"
+                          style={{ fontSize: 12, padding: '6px 12px' }}
+                          onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); }}
+                        >
+                          <Icon name="RotateCw" size={14} />
+                          שלח שוב
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 20 }}>
+                        <div className="round-stat">
+                          <div className="round-stat-value" style={{ color: 'var(--accent)' }}>{r.total_sent || 0}</div>
+                          <div className="round-stat-label">נשלחו</div>
+                        </div>
+                        <div className="round-stat">
+                          <div className="round-stat-value" style={{ color: 'var(--blue-500)' }}>{({ all: guests.length, pending: guests.filter(g => g.status === 'pending').length, maybe: guests.filter(g => g.status === 'maybe').length, declined: guests.filter(g => g.status === 'declined').length, confirmed: guests.filter(g => g.status === 'confirmed').length })[r.target_filter] || '—'}</div>
+                          <div className="round-stat-label">קהל יעד</div>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'pre-line', maxHeight: 100, overflow: 'hidden', position: 'relative' }}>
+                        {r.message_template}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -6459,8 +6500,8 @@
                 <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
               </svg>
             </div>
-            {/* Breadcrumbs — forced LTR so "SeatSync › Event › Page" reads left-to-right */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, direction: 'ltr' }}>
+            {/* Desktop breadcrumbs */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <span
                 className="top-bar-logo-text"
                 style={{ cursor: event ? 'pointer' : 'default' }}
@@ -6471,14 +6512,14 @@
               </span>
               {event && (
                 <>
-                  <span style={{ color: 'var(--text-tertiary)', fontSize: 13, margin: '0 1px' }}>›</span>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 2px' }}>›</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
                     {event.name}
                   </span>
                   {currentRoute && currentRoute !== ROUTES.EVENTS && currentRoute !== ROUTES.DASHBOARD && (
                     <>
-                      <span style={{ color: 'var(--text-tertiary)', fontSize: 13, margin: '0 1px' }}>›</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--text-tertiary)', fontSize: 14, margin: '0 2px' }}>›</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                         {ROUTE_LABELS[currentRoute] || currentRoute}
                       </span>
                     </>
@@ -6717,9 +6758,9 @@
         rsvp_enabled: event?.rsvp_enabled ?? false,
         rsvp_deadline: event?.rsvp_deadline || '',
         message_template: event?.message_template || '',
-        auto_reminder_enabled: event?.auto_reminder_enabled ?? false,
-        auto_thank_you_enabled: event?.auto_thank_you_enabled ?? false,
-        reminder_days_before: event?.reminder_days_before ?? 3,
+        auto_reminder_enabled: event?.settings?.auto_reminder_enabled ?? false,
+        auto_thank_you_enabled: event?.settings?.auto_thank_you_enabled ?? false,
+        reminder_days_before: event?.settings?.reminder_days_before ?? 3,
       });
       const [saving, setSaving] = useState(false);
 
@@ -6744,17 +6785,24 @@
       const saveEvent = async () => {
         if (!client || !event?.id) return;
         setSaving(true);
-        const settings = { ...(event.settings || {}), invitation_url: invitationUrl, floorplan_url: floorplanUrl };
-        const { data, error } = await client.from('events').update({
-          ...eventForm,
-          event_date: eventForm.event_date || null,
-          event_time: eventForm.event_time || null,
-          rsvp_deadline: eventForm.rsvp_deadline || null,
-          venue_address: eventForm.venue_address || null,
-          message_template: eventForm.message_template || null,
+        const settings = {
+          ...(event.settings || {}),
+          invitation_url: invitationUrl,
+          floorplan_url: floorplanUrl,
           auto_reminder_enabled: eventForm.auto_reminder_enabled,
           auto_thank_you_enabled: eventForm.auto_thank_you_enabled,
           reminder_days_before: eventForm.reminder_days_before || 3,
+        };
+        const { data, error } = await client.from('events').update({
+          name: eventForm.name,
+          event_type: eventForm.event_type,
+          event_date: eventForm.event_date || null,
+          event_time: eventForm.event_time || null,
+          venue_name: eventForm.venue_name || null,
+          venue_address: eventForm.venue_address || null,
+          rsvp_enabled: eventForm.rsvp_enabled,
+          rsvp_deadline: eventForm.rsvp_deadline || null,
+          message_template: eventForm.message_template || null,
           settings,
         }).eq('id', event.id).select().single();
 
