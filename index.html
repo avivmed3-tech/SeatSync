@@ -5290,7 +5290,7 @@
     }
 
     // Floor plan SVG table node (draggable on canvas)
-    function FloorTable({ table, guests, onDragTable, onTouchTable, selected, onClick }) {
+    function FloorTable({ table, guests, onDragTable, onTouchTable, selected, onClick, locked }) {
       const tGuests = guests.filter(g => g.table_id === table.id);
       const occupied = tGuests.reduce((s,g) => s + (g.confirmed_guests || 1), 0);
       const isFull = occupied >= table.seats;
@@ -5302,7 +5302,7 @@
       return (
         <g
           transform={`translate(${table.position_x || 80}, ${table.position_y || 80})`}
-          style={{ cursor: 'grab', userSelect: 'none' }}
+          style={{ cursor: locked ? 'default' : 'grab', userSelect: 'none' }}
           onMouseDown={e => { e.stopPropagation(); onDragTable(table, e); }}
           onTouchStart={e => { e.stopPropagation(); onTouchTable && onTouchTable(table, e); }}
           onClick={() => onClick(table)}
@@ -5455,6 +5455,8 @@
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
       const [tablesLocked, setTablesLocked] = useState(false); // lock table positions on floor plan
+      const tablesLockedRef = useRef(false);
+      useEffect(() => { tablesLockedRef.current = tablesLocked; }, [tablesLocked]);
 
       // Floor plan state
       const [zoom, setZoom] = useState(1);
@@ -5670,7 +5672,7 @@
       // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLocked) return; // tables are locked — don't allow dragging
+        if (tablesLockedRef.current) return; // tables are locked — don't allow dragging
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
@@ -5702,7 +5704,7 @@
       // Floor plan: drag tables (touch — mobile)
       const handleTableTouchStart = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLocked) return; // tables are locked
+        if (tablesLockedRef.current) return; // tables are locked
         if (e.touches.length !== 1) return;
         e.stopPropagation();
         const touch = e.touches[0];
@@ -6224,6 +6226,7 @@
                           table={table}
                           guests={guests}
                           selected={selectedFloorTable?.id === table.id}
+                          locked={tablesLocked}
                           onDragTable={handleTableMouseDown}
                           onTouchTable={handleTableTouchStart}
                           onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
@@ -6740,68 +6743,122 @@
     function PWAInstallBanner() {
       const [deferredPrompt, setDeferredPrompt] = useState(null);
       const [show, setShow] = useState(false);
-      const [dismissed, setDismissed] = useState(() =>
-        sessionStorage.getItem('seatsync-pwa-dismissed') === '1'
-      );
+      const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+      // Detect platform
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
 
       useEffect(() => {
-        // Already installed — don't show
-        if (window.matchMedia('(display-mode: standalone)').matches) return;
-        if (dismissed) return;
+        // Already running as installed PWA — hide
+        if (isStandalone) return;
 
+        // On Android/Chrome — listen for the native prompt event
         const handler = (e) => {
           e.preventDefault();
           setDeferredPrompt(e);
-          // Show banner after 3 seconds so it's not intrusive
-          setTimeout(() => setShow(true), 3000);
+          setTimeout(() => setShow(true), 2000);
         };
         window.addEventListener('beforeinstallprompt', handler);
-        return () => window.removeEventListener('beforeinstallprompt', handler);
-      }, [dismissed]);
+
+        // If no beforeinstallprompt fires within 4 seconds AND not installed,
+        // show a manual install guide (iOS never fires this event, and Android
+        // may not re-fire after uninstall for a while)
+        const fallbackTimer = setTimeout(() => {
+          if (!isStandalone) {
+            setShow(true); // show even without deferredPrompt — will show manual instructions
+          }
+        }, 4000);
+
+        return () => {
+          window.removeEventListener('beforeinstallprompt', handler);
+          clearTimeout(fallbackTimer);
+        };
+      }, []);
 
       const handleInstall = async () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-          setShow(false);
-          setDeferredPrompt(null);
+        if (deferredPrompt) {
+          // Native install prompt available (Chrome Android)
+          deferredPrompt.prompt();
+          const { outcome } = await deferredPrompt.userChoice;
+          if (outcome === 'accepted') {
+            setShow(false);
+            setDeferredPrompt(null);
+          }
+        } else if (isIOS) {
+          // iOS — show guide
+          setShowIOSGuide(true);
+        } else {
+          // Android without prompt / Desktop — show guide
+          setShowIOSGuide(true);
         }
       };
 
       const handleDismiss = () => {
         setShow(false);
-        setDismissed(true);
+        // Use sessionStorage so it only dismisses for this session
+        // Next time user opens the site, banner will appear again
         sessionStorage.setItem('seatsync-pwa-dismissed', '1');
       };
 
-      if (!show || !deferredPrompt) return null;
+      // Check if dismissed this session
+      if (sessionStorage.getItem('seatsync-pwa-dismissed') === '1') return null;
+      if (!show || isStandalone) return null;
 
       return (
-        <div className="pwa-install-banner" role="dialog" aria-label="התקנת האפליקציה">
-          <div className="pwa-install-icon">
-            <svg width="24" height="24" viewBox="0 0 34 34" fill="none">
-              <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth="1.5"/>
-              <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
-              <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
-              <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
-              <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+        <>
+          <div className="pwa-install-banner" role="dialog" aria-label="התקנת האפליקציה">
+            <div className="pwa-install-icon">
+              <svg width="24" height="24" viewBox="0 0 34 34" fill="none">
+                <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.25)" stroke="white" strokeWidth="1.5"/>
+                <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
+                <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+                <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+                <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div className="pwa-install-text">
+              <div className="pwa-install-title">התקינו את SeatSync</div>
+              <div className="pwa-install-sub">גישה מהירה ישר מהמסך הראשי</div>
+            </div>
+            <div className="pwa-install-actions">
+              <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={handleDismiss}>
+                לא עכשיו
+              </button>
+              <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={handleInstall}>
+                <Icon name="Download" size={15} />
+                התקן
+              </button>
+            </div>
           </div>
-          <div className="pwa-install-text">
-            <div className="pwa-install-title">התקינו את SeatSync</div>
-            <div className="pwa-install-sub">גישה מהירה ישר מהמסך הראשי</div>
-          </div>
-          <div className="pwa-install-actions">
-            <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 12 }} onClick={handleDismiss}>
-              לא עכשיו
-            </button>
-            <button className="btn btn-primary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={handleInstall}>
-              <Icon name="Download" size={15} />
-              התקן
-            </button>
-          </div>
-        </div>
+
+          {/* Manual install guide modal */}
+          {showIOSGuide && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowIOSGuide(false)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 360, textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>📱</div>
+                <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>התקנה ידנית</div>
+                {isIOS ? (
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 20 }}>
+                    <div>1. לחצו על כפתור <strong>השיתוף</strong> (⬆️) בתחתית Safari</div>
+                    <div>2. גללו ולחצו <strong>"הוסף למסך הבית"</strong></div>
+                    <div>3. לחצו <strong>"הוסף"</strong></div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8, marginBottom: 20 }}>
+                    <div>1. לחצו על <strong>⋮ תפריט</strong> (3 נקודות) בפינה העליונה</div>
+                    <div>2. בחרו <strong>"התקן אפליקציה"</strong> או <strong>"הוסף למסך הבית"</strong></div>
+                    <div>3. אשרו את ההתקנה</div>
+                  </div>
+                )}
+                <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => { setShowIOSGuide(false); handleDismiss(); }}>
+                  הבנתי!
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       );
     }
 
