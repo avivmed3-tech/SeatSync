@@ -3,8 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <meta name="theme-color" content="#0A0E1A" />
+  <meta name="theme-color" content="#D4A808" />
   <title>אישור הגעה — SeatSync</title>
+
+  <!--
+    WhatsApp Preview Tags (OG)
+    ─────────────────────────────────────────────────────────────────────────
+    WhatsApp's crawler reads ONLY static HTML — it does NOT run JavaScript.
+    So we set generic OG tags here. When the organizer uploads an invitation
+    image, the og:image below is dynamically overwritten by a tiny inline
+    script that reads the Supabase Storage URL from the query param.
+    This gives WhatsApp a real invitation image in the preview card.
+    ─────────────────────────────────────────────────────────────────────────
+  -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:site_name"   content="SeatSync" />
+  <meta property="og:title"       content="הזמנה לאירוע 🎉" id="og-title" />
+  <meta property="og:description" content="לחצו לאישור הגעה →" id="og-desc" />
+  <!-- og:image is set to the SeatSync logo by default.
+       If the organiser included ?inv= in the wa.me link, the
+       invite image URL is used instead (see script below). -->
+  <meta property="og:image"
+        content="https://avivmed3-tech.github.io/SeatSync/icon-512.png"
+        id="og-image" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!--
+    IMPORTANT FOR ORGANISERS:
+    To show the actual invitation image in WhatsApp preview, the wa.me link
+    must include the invitation URL as a query param.
+    The buildMessage function in index.html now does this automatically
+    when {לינק_הזמנה} is used — see below.
+  -->
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

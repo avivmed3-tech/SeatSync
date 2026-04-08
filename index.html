@@ -4220,11 +4220,11 @@
 
     // Default message templates
     const DEFAULT_TEMPLATES = {
-      wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
-      bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}',
-      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
+      wedding: '{לינק_הזמנה}\n\nשלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
+      bar_mitzvah: '{לינק_הזמנה}\n\nשלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
+      brit_mila: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      brit_bat: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      corporate: '{לינק_הזמנה}\n\nשלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
       reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\n{לינק_הזמנה}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
       reminder_table: 'היי {שם} 👋\nתזכורת — האירוע שלנו מתקרב!\n\n📅 {תאריך}\n📍 {מקום}\n🪑 שולחן: {שולחן}\n\nנתראה שם! 🎉',
       thank_you: 'היי {שם} 💕\nתודה ענקית שחגגתם איתנו!\nהיה מדהים לראות אתכם. מקווים שנהניתם! 🎊\n\nבאהבה ♥',
@@ -4247,14 +4247,19 @@
         .replace(/\{שולחן\}/g, tableName || 'טרם הוקצה');
 
       if (invUrl) {
-        // Has invitation — replace with the URL (WhatsApp will show a preview card)
+        // Replace {לינק_הזמנה} with the actual URL.
+        // The template puts it FIRST and ALONE on line 1 (e.g. "{לינק_הזמנה}\n\nשלום...").
+        // WhatsApp shows a preview/inline image for the FIRST URL in a message.
+        // A direct .png/.jpg URL from Supabase Storage renders as an image preview.
         msg = msg.replace(/\{לינק_הזמנה\}/g, invUrl);
       } else {
-        // No invitation uploaded — remove the placeholder AND its surrounding blank line
-        msg = msg.replace(/\n?\{לינק_הזמנה\}\n?/g, '\n');
+        // No invitation uploaded — remove placeholder + surrounding blank lines cleanly
+        msg = msg.replace(/\{לינק_הזמנה\}\n\n/g, '');
+        msg = msg.replace(/\n\n\{לינק_הזמנה\}/g, '');
+        msg = msg.replace(/\{לינק_הזמנה\}/g, '');
       }
 
-      return msg;
+      return msg.trim();
     }
 
     function buildWALink(phone, message) {
