@@ -1496,6 +1496,18 @@
     .quick-action-label { font-size: 13px; font-weight: 700; color: var(--text-primary); }
     .quick-action-sub { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
 
+    /* Send mode selector */
+    .send-mode-grid { display: flex; gap: 8px; margin-bottom: 16px; }
+    .send-mode-btn {
+      flex: 1; padding: 10px 8px; border-radius: var(--radius-sm);
+      border: 2px solid var(--border-default); text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 12px; font-weight: 600; color: var(--text-secondary);
+      transition: all var(--duration-fast); cursor: pointer;
+    }
+    .send-mode-btn:hover { border-color: var(--accent); color: var(--text-primary); }
+    .send-mode-btn.active { border-color: #25D366; background: rgba(37,211,102,0.08); color: #128C7E; }
+
     /* ============================================
        Dashboard Phase 3 Styles
        ============================================ */
@@ -3825,7 +3837,6 @@
       // Import guests in bulk
       const handleImportBulk = async (rows) => {
         if (!rows.length) return;
-        // Generate RSVP tokens for each imported guest
         const rowsWithTokens = rows.map(row => ({
           ...row,
           rsvp_token: generateToken(),
@@ -4247,20 +4258,19 @@
     // Phase 2 — Messages Page
     // ============================================
 
-    // Default message templates
+    // Default message templates — invitation image is sent separately, NOT as a link in the message
     const DEFAULT_TEMPLATES = {
-      wedding: '{לינק_הזמנה}\n\nשלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
-      bar_mitzvah: '{לינק_הזמנה}\n\nשלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
-      brit_mila: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      brit_bat: '{לינק_הזמנה}\n\nשלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      corporate: '{לינק_הזמנה}\n\nשלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
-      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\n{לינק_הזמנה}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
+      wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
+      bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
+      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
+      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
       reminder_table: 'היי {שם} 👋\nתזכורת — האירוע שלנו מתקרב!\n\n📅 {תאריך}\n📍 {מקום}\n🪑 שולחן: {שולחן}\n\nנתראה שם! 🎉',
       thank_you: 'היי {שם} 💕\nתודה ענקית שחגגתם איתנו!\nהיה מדהים לראות אתכם. מקווים שנהניתם! 🎊\n\nבאהבה ♥',
     };
 
     function buildMessage(template, guest, event, tablesData) {
-      const invUrl = event.settings?.invitation_url || '';
       const tableName = (() => {
         if (!guest.table_id || !tablesData) return '';
         const t = tablesData.find(t => t.id === guest.table_id);
@@ -4275,20 +4285,23 @@
         .replace(/\{שם_אירוע\}/g, event.name || '')
         .replace(/\{שולחן\}/g, tableName || 'טרם הוקצה');
 
-      if (invUrl) {
-        // Replace {לינק_הזמנה} with the actual URL.
-        // The template puts it FIRST and ALONE on line 1 (e.g. "{לינק_הזמנה}\n\nשלום...").
-        // WhatsApp shows a preview/inline image for the FIRST URL in a message.
-        // A direct .png/.jpg URL from Supabase Storage renders as an image preview.
-        msg = msg.replace(/\{לינק_הזמנה\}/g, invUrl);
-      } else {
-        // No invitation uploaded — remove placeholder + surrounding blank lines cleanly
-        msg = msg.replace(/\{לינק_הזמנה\}\n\n/g, '');
-        msg = msg.replace(/\n\n\{לינק_הזמנה\}/g, '');
-        msg = msg.replace(/\{לינק_הזמנה\}/g, '');
-      }
+      // Clean up any leftover {לינק_הזמנה} from old templates
+      msg = msg.replace(/\{לינק_הזמנה\}\n\n/g, '');
+      msg = msg.replace(/\n\n\{לינק_הזמנה\}/g, '');
+      msg = msg.replace(/\{לינק_הזמנה\}/g, '');
 
       return msg.trim();
+    }
+
+    // Build WhatsApp image share link — opens WA with image pre-loaded
+    function buildWAImageLink(phone, imageUrl) {
+      const raw = String(phone || '').replace(/[^0-9+]/g, '');
+      let intl = raw;
+      if (raw.startsWith('0')) intl = '+972' + raw.slice(1);
+      else if (!raw.startsWith('+')) intl = '+972' + raw;
+      // WhatsApp doesn't support sending images via wa.me text param.
+      // Instead, we use the Web Share API or just send the URL as text.
+      return `https://wa.me/${intl.replace('+','')}?text=${encodeURIComponent(imageUrl)}`;
     }
 
     function buildWALink(phone, message) {
@@ -4503,41 +4516,45 @@
       const [guests, setGuests] = useState([]);
       const [rounds, setRounds] = useState([]);
       const [tables, setTables] = useState([]);
-      const [activeRound, setActiveRound] = useState(null); // null = "new"
+      const [activeRound, setActiveRound] = useState(null);
       const [loadingGuests, setLoadingGuests] = useState(true);
       const [view, setView] = useState('actions'); // actions | compose | send | history
       const [upsellFeature, setUpsellFeature] = useState(null);
 
       // Compose state
       const [template, setTemplate] = useState('');
-      const [channel, setChannel] = useState('whatsapp'); // whatsapp | rsvp
+      const [channel, setChannel] = useState('whatsapp');
       const [recipientFilter, setRecipientFilter] = useState('all');
       const [sentSet, setSentSet] = useState(new Set());
       const [saving, setSaving] = useState(false);
-      const [selectedAction, setSelectedAction] = useState(null); // 'invite' | 'reminder' | 'thank_you' | 'custom'
+      const [selectedAction, setSelectedAction] = useState(null);
+      // Send mode: 'text_only' | 'image_then_text'
+      const [sendMode, setSendMode] = useState('text_only');
+      // Image step tracking: which guests got image sent
+      const [imageSentSet, setImageSentSet] = useState(new Set());
+      const [sendStep, setSendStep] = useState('image'); // 'image' | 'text' — only used in image_then_text mode
 
       const templateRef = useRef(null);
+      const invitationUrl = event?.settings?.invitation_url || '';
 
       useEffect(() => {
         if (!client || !event?.id) return;
-        // Load guests
         client.from('guests').select('id,name,phone,status,confirmed_guests,group_name,rsvp_token,table_id')
           .eq('event_id', event.id)
           .then(({ data }) => { setGuests(data || []); setLoadingGuests(false); });
-        // Load rounds
         client.from('message_rounds').select('*')
           .eq('event_id', event.id)
           .order('round_number', { ascending: false })
-          .then(({ data }) => {
-            setRounds(data || []);
-          });
-        // Load tables for {שולחן} variable
+          .then(({ data }) => { setRounds(data || []); });
         client.from('tables').select('id,name')
           .eq('event_id', event.id)
           .then(({ data }) => { setTables(data || []); });
+        // Auto-set send mode based on invitation
+        if (event?.settings?.invitation_url) {
+          setSendMode('image_then_text');
+        }
       }, [client, event?.id]);
 
-      // Filtered recipients
       const recipients = useMemo(() => {
         if (recipientFilter === 'all') return guests.filter(g => g.phone || g.rsvp_token);
         return guests.filter(g => {
@@ -4572,11 +4589,13 @@
           target_filter: recipientFilter,
           total_sent: 0,
         }).select().single();
-
         if (!error && data) {
           setRounds(prev => [data, ...prev]);
           setActiveRound(data);
           setView('send');
+          setSendStep('image');
+          setImageSentSet(new Set());
+          setSentSet(new Set());
           addToast(`סבב ${roundNum} נשמר ✓`, 'success');
         } else {
           addToast('שגיאה בשמירת הסבב', 'error');
@@ -4586,13 +4605,11 @@
 
       const markSent = async (guestId) => {
         setSentSet(s => new Set([...s, guestId]));
-        // Update total_sent on round
         if (activeRound) {
           await client.from('message_rounds')
             .update({ total_sent: (activeRound.total_sent || 0) + 1 })
             .eq('id', activeRound.id);
         }
-        // Log message
         await client.from('messages').insert({
           event_id: event.id,
           guest_id: guestId,
@@ -4608,10 +4625,21 @@
         addToast(`סומנו ${recipients.length} הודעות כנשלחו ✓`, 'success');
       };
 
+      const markImageSent = (guestId) => {
+        setImageSentSet(s => new Set([...s, guestId]));
+      };
+
+      const markAllImagesSent = () => {
+        setImageSentSet(new Set(recipients.map(g => g.id)));
+        addToast('כל ההזמנות סומנו כנשלחו ✓', 'success');
+      };
+
       const sentCount = recipients.filter(g => sentSet.has(g.id)).length;
       const sendProgress = recipients.length > 0 ? Math.round((sentCount / recipients.length) * 100) : 0;
+      const imageSentCount = recipients.filter(g => imageSentSet.has(g.id)).length;
+      const imageProgress = recipients.length > 0 ? Math.round((imageSentCount / recipients.length) * 100) : 0;
 
-      const VARIABLES = ['{שם}', '{תאריך}', '{מקום}', '{לינק_rsvp}', '{שם_אירוע}', '{לינק_הזמנה}', '{שולחן}'];
+      const VARIABLES = ['{שם}', '{תאריך}', '{מקום}', '{לינק_rsvp}', '{שם_אירוע}', '{שולחן}'];
       const FILTER_OPTIONS = [
         { key: 'all',      label: 'כולם',       count: guests.filter(g => g.phone || g.rsvp_token).length },
         { key: 'pending',  label: 'ממתינים',    count: guests.filter(g => g.status === 'pending').length },
@@ -4620,53 +4648,51 @@
         { key: 'confirmed',label: 'מגיעים',     count: guests.filter(g => g.status === 'confirmed').length },
       ];
 
-      // Quick action handler
       const handleQuickAction = (action) => {
         setSelectedAction(action);
         setSentSet(new Set());
+        setImageSentSet(new Set());
+        setSendStep('image');
         switch (action) {
           case 'invite':
             setTemplate(DEFAULT_TEMPLATES[event.event_type] || DEFAULT_TEMPLATES.wedding);
             setRecipientFilter('all');
-            setChannel('whatsapp');
+            setSendMode(invitationUrl ? 'image_then_text' : 'text_only');
             break;
           case 'reminder':
             setTemplate(DEFAULT_TEMPLATES.reminder);
             setRecipientFilter('pending');
-            setChannel('whatsapp');
+            setSendMode('text_only');
             break;
           case 'reminder_table':
             setTemplate(DEFAULT_TEMPLATES.reminder_table);
             setRecipientFilter('confirmed');
-            setChannel('whatsapp');
+            setSendMode('text_only');
             break;
           case 'thank_you':
             setTemplate(DEFAULT_TEMPLATES.thank_you);
             setRecipientFilter('confirmed');
-            setChannel('whatsapp');
+            setSendMode('text_only');
             break;
           case 'custom':
             setTemplate('');
             setRecipientFilter('all');
-            setChannel('whatsapp');
-            break;
-          default:
+            setSendMode('text_only');
             break;
         }
+        setChannel('whatsapp');
         setView('compose');
       };
 
-      // Quick actions data
       const QUICK_ACTIONS = [
-        { key: 'invite', icon: '🎉', label: 'שלח הזמנות', sub: 'לכל המוזמנים', bg: 'rgba(37,211,102,0.1)', filterLabel: 'כולם' },
-        { key: 'reminder', icon: '🔔', label: 'תזכורת', sub: 'למי שלא אישר', bg: 'rgba(59,130,246,0.1)', filterLabel: 'ממתינים' },
-        { key: 'reminder_table', icon: '🪑', label: 'תזכורת+שולחן', sub: 'למגיעים עם פרטי שולחן', bg: 'rgba(245,158,11,0.1)', filterLabel: 'מגיעים' },
-        { key: 'thank_you', icon: '💕', label: 'תודה', sub: 'לכל מי שהגיע', bg: 'rgba(244,114,182,0.1)', filterLabel: 'מגיעים' },
+        { key: 'invite', icon: '🎉', label: 'שלח הזמנות', sub: invitationUrl ? 'תמונה + הודעה' : 'לכל המוזמנים', bg: 'rgba(37,211,102,0.1)' },
+        { key: 'reminder', icon: '🔔', label: 'תזכורת', sub: 'למי שלא אישר', bg: 'rgba(59,130,246,0.1)' },
+        { key: 'reminder_table', icon: '🪑', label: 'תזכורת+שולחן', sub: 'למגיעים עם שולחן', bg: 'rgba(245,158,11,0.1)' },
+        { key: 'thank_you', icon: '💕', label: 'תודה', sub: 'לכל מי שהגיע', bg: 'rgba(244,114,182,0.1)' },
       ];
 
       return (
         <div className="animate-slide-up">
-          {/* Header */}
           <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div>
               <div className="page-title">הודעות</div>
@@ -4680,8 +4706,7 @@
                 { v: 'history', icon: 'History', label: 'היסטוריה' },
               ].map(m => (
                 <button key={m.v} className={`view-mode-btn ${view === m.v ? 'active' : ''}`} onClick={() => setView(m.v)}>
-                  <Icon name={m.icon} size={14} />
-                  {m.label}
+                  <Icon name={m.icon} size={14} />{m.label}
                 </button>
               ))}
             </div>
@@ -4690,14 +4715,10 @@
           {/* ── QUICK ACTIONS VIEW ── */}
           {view === 'actions' && (
             <div>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14, color: 'var(--text-primary)' }}>מה תרצו לשלוח?</div>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 14 }}>מה תרצו לשלוח?</div>
               <div className="quick-actions-grid">
                 {QUICK_ACTIONS.map(a => (
-                  <div
-                    key={a.key}
-                    className={`quick-action-card ${selectedAction === a.key ? 'active' : ''}`}
-                    onClick={() => handleQuickAction(a.key)}
-                  >
+                  <div key={a.key} className="quick-action-card" onClick={() => handleQuickAction(a.key)}>
                     <div className="quick-action-icon" style={{ background: a.bg }}>{a.icon}</div>
                     <div className="quick-action-label">{a.label}</div>
                     <div className="quick-action-sub">{a.sub}</div>
@@ -4705,12 +4726,7 @@
                 ))}
               </div>
 
-              {/* Custom message option */}
-              <div
-                className="card"
-                style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}
-                onClick={() => handleQuickAction('custom')}
-              >
+              <div className="card" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }} onClick={() => handleQuickAction('custom')}>
                 <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-md)', background: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon name="PenLine" size={20} style={{ color: 'var(--accent)' }} />
                 </div>
@@ -4721,109 +4737,59 @@
                 <Icon name="ChevronLeft" size={18} style={{ color: 'var(--text-tertiary)' }} />
               </div>
 
-              {/* SMS Info Card */}
-              <div className="card" style={{ borderColor: 'rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon name="MessageSquare" size={18} style={{ color: 'var(--blue-500)' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>💡 טיפ: שליחה מהירה ב-WhatsApp</div>
-                    <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                      במצב שליחה, לחצו <strong>"שלח הכל אוטומטית"</strong> — המערכת תפתח WhatsApp עם ההודעה מוכנה לכל אורח ברצף אוטומטי.
-                      בדסקטופ אפשר גם לפתוח את כל הטאבים בבת אחת!
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 6 }}>
-                      🔜 <strong>SMS אוטומטי</strong> — בקרוב! שליחת SMS בבאלק בלי צורך באישור ידני (Twilio / MessageBird)
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Previous rounds */}
               {rounds.length > 0 && (
                 <div style={{ marginTop: 20 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, color: 'var(--text-primary)' }}>סבבים קודמים</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>סבבים קודמים</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {rounds.slice(0, 3).map(r => (
                       <div key={r.id} className="card" style={{ padding: 14 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: 'var(--accent)', flexShrink: 0 }}>
-                              {r.round_number}
-                            </div>
+                            <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, color: 'var(--accent)' }}>{r.round_number}</div>
                             <div>
                               <div style={{ fontWeight: 600, fontSize: 13 }}>סבב {r.round_number}</div>
-                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                                {new Date(r.sent_at).toLocaleDateString('he-IL')} · {r.total_sent || 0} נשלחו
-                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{new Date(r.sent_at).toLocaleDateString('he-IL')} · {r.total_sent || 0} נשלחו</div>
                             </div>
                           </div>
-                          <button
-                            className="btn btn-secondary"
-                            style={{ fontSize: 12, padding: '6px 12px' }}
-                            onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); setSentSet(new Set()); }}
-                          >
+                          <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => { setActiveRound(r); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setView('send'); setSentSet(new Set()); setImageSentSet(new Set()); setSendStep('image'); }}>
                             <Icon name="RotateCw" size={14} />שלח שוב
                           </button>
                         </div>
                       </div>
                     ))}
-                    {rounds.length > 3 && (
-                      <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setView('history')}>
-                        הצג את כל {rounds.length} הסבבים →
-                      </button>
-                    )}
+                    {rounds.length > 3 && <button className="btn btn-ghost" style={{ fontSize: 13 }} onClick={() => setView('history')}>הצג הכל →</button>}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Round tabs - shown in compose and send views */}
+          {/* Round tabs — compose/send views */}
           {(view === 'compose' || view === 'send') && (
             <div className="round-tabs">
-              <button
-                className={`round-tab ${activeRound === null ? 'active' : ''}`}
-                onClick={() => {
-                  if (!isPro && rounds.length >= limits.messageRounds) { setUpsellFeature('messageRounds'); return; }
-                  setActiveRound(null); setView('compose');
-                }}
-                title={!isPro && rounds.length >= limits.messageRounds ? 'דורש תוכנית Pro' : 'סבב הודעות חדש'}
-              >
-                <Icon name="Plus" size={14} />
-                סבב חדש
+              <button className={`round-tab ${activeRound === null ? 'active' : ''}`} onClick={() => { if (!isPro && rounds.length >= limits.messageRounds) { setUpsellFeature('messageRounds'); return; } setActiveRound(null); setView('compose'); }}>
+                <Icon name="Plus" size={14} />סבב חדש
                 {!isPro && rounds.length >= limits.messageRounds && <ProBadge style={{ marginRight: 4 }} />}
               </button>
               {rounds.map(r => (
-                <button
-                  key={r.id}
-                  className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`}
-                  onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setSentSet(new Set()); }}
-                >
-                  <Icon name="MessageSquare" size={13} />
-                  סבב {r.round_number}
-                  <span style={{ fontSize: 11, opacity: 0.8 }}>({r.total_sent || 0})</span>
+                <button key={r.id} className={`round-tab ${activeRound?.id === r.id ? 'active' : ''}`} onClick={() => { setActiveRound(r); setView('send'); setTemplate(r.message_template); setChannel(r.channel || 'whatsapp'); setRecipientFilter(r.target_filter || 'all'); setSentSet(new Set()); setImageSentSet(new Set()); setSendStep('image'); }}>
+                  <Icon name="MessageSquare" size={13} />סבב {r.round_number} <span style={{ fontSize: 11, opacity: 0.8 }}>({r.total_sent || 0})</span>
                 </button>
               ))}
             </div>
           )}
 
-          {/* Free plan round limit notice */}
           {(view === 'compose' || view === 'send') && !isPro && rounds.length >= limits.messageRounds && activeRound !== null && (
             <div className="plan-limit-bar">
               <Icon name="Info" size={16} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
               <span style={{ flex: 1 }}>תוכנית Free מאפשרת סבב הודעות אחד בלבד</span>
-              <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setUpsellFeature('messageRounds')}>
-                <Icon name="Zap" size={13} />שדרוג
-              </button>
+              <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setUpsellFeature('messageRounds')}><Icon name="Zap" size={13} />שדרוג</button>
             </div>
           )}
 
           {/* ── COMPOSE VIEW ── */}
           {view === 'compose' && (
             <div style={{ display: 'grid', gap: 16 }}>
-              {/* Back to actions + current action indicator */}
               {selectedAction && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => { setView('actions'); setSelectedAction(null); }}>
@@ -4839,31 +4805,34 @@
                 </div>
               )}
 
-              {/* Channel selection */}
+              {/* Send mode — image first? */}
+              {invitationUrl && (
+                <div className="card">
+                  <div className="card-title" style={{ marginBottom: 12 }}>מצב שליחה</div>
+                  <div className="send-mode-grid">
+                    <div className={`send-mode-btn ${sendMode === 'image_then_text' ? 'active' : ''}`} onClick={() => setSendMode('image_then_text')}>
+                      <span style={{ fontSize: 20 }}>🖼️ → 💬</span>
+                      <span style={{ fontWeight: 700 }}>קודם הזמנה, אח"כ הודעה</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>שלחו תמונת ההזמנה + אח"כ הודעה עם לינק RSVP</span>
+                    </div>
+                    <div className={`send-mode-btn ${sendMode === 'text_only' ? 'active' : ''}`} onClick={() => setSendMode('text_only')}>
+                      <span style={{ fontSize: 20 }}>💬</span>
+                      <span style={{ fontWeight: 700 }}>הודעה בלבד</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>ההזמנה תוצג בדף ה-RSVP</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Channel */}
               <div className="card">
                 <div className="card-title" style={{ marginBottom: 12 }}>ערוץ שליחה</div>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    className={`channel-btn ${channel === 'whatsapp' ? 'active-wa' : ''}`}
-                    onClick={() => setChannel('whatsapp')}
-                  >
-                    <span style={{ fontSize: 22 }}>💬</span>
-                    <span>WhatsApp</span>
-                    <span style={{ fontSize: 11, opacity: 0.7 }}>חינמי</span>
+                  <button className={`channel-btn ${channel === 'whatsapp' ? 'active-wa' : ''}`} onClick={() => setChannel('whatsapp')}>
+                    <span style={{ fontSize: 22 }}>💬</span><span>WhatsApp</span><span style={{ fontSize: 11, opacity: 0.7 }}>חינמי</span>
                   </button>
-                  <button
-                    className={`channel-btn ${channel === 'rsvp' ? 'active-rsvp' : ''}`}
-                    onClick={() => {
-                      if (!isPro) { setUpsellFeature('rsvpLink'); return; }
-                      setChannel('rsvp');
-                    }}
-                    style={!isPro ? { opacity: 0.7 } : {}}
-                  >
-                    <Icon name="Link" size={20} />
-                    <span>RSVP Link</span>
-                    {isPro
-                      ? <span style={{ fontSize: 11, opacity: 0.7 }}>ללא הודעה</span>
-                      : <ProBadge />}
+                  <button className={`channel-btn ${channel === 'rsvp' ? 'active-rsvp' : ''}`} onClick={() => { if (!isPro) { setUpsellFeature('rsvpLink'); return; } setChannel('rsvp'); }} style={!isPro ? { opacity: 0.7 } : {}}>
+                    <Icon name="Link" size={20} /><span>RSVP Link</span>{isPro ? <span style={{ fontSize: 11, opacity: 0.7 }}>ללא הודעה</span> : <ProBadge />}
                   </button>
                 </div>
               </div>
@@ -4873,26 +4842,17 @@
                 <div className="card-title" style={{ marginBottom: 12 }}>נמענים</div>
                 <div className="filter-chips">
                   {FILTER_OPTIONS.map(f => (
-                    <button
-                      key={f.key}
-                      className={`filter-chip ${recipientFilter === f.key ? 'active' : ''}`}
-                      onClick={() => setRecipientFilter(f.key)}
-                    >
-                      {f.label} ({f.count})
-                    </button>
+                    <button key={f.key} className={`filter-chip ${recipientFilter === f.key ? 'active' : ''}`} onClick={() => setRecipientFilter(f.key)}>{f.label} ({f.count})</button>
                   ))}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                  <Icon name="Users" size={14} style={{ display: 'inline', marginLeft: 4 }} />
-                  {recipients.length} נמענים נבחרו
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 8 }}>
+                  <Icon name="Users" size={14} style={{ display: 'inline', marginLeft: 4 }} />{recipients.length} נמענים נבחרו
                 </div>
               </div>
 
-              {/* Template editor */}
+              {/* Template */}
               <div className="card">
                 <div className="card-title" style={{ marginBottom: 12 }}>תבנית הודעה</div>
-
-                {/* Quick templates */}
                 <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
                   {[
                     { key: 'wedding', label: '💒 חתונה' },
@@ -4902,76 +4862,41 @@
                     { key: 'thank_you', label: '💕 תודה' },
                     { key: 'corporate', label: '🏢 עסקי' },
                   ].map(t => (
-                    <button key={t.key} className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => setTemplate(DEFAULT_TEMPLATES[t.key])}>
-                      {t.label}
-                    </button>
+                    <button key={t.key} className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => setTemplate(DEFAULT_TEMPLATES[t.key])}>{t.label}</button>
                   ))}
                 </div>
-
-                <textarea
-                  ref={templateRef}
-                  className="template-textarea"
-                  value={template}
-                  onChange={e => setTemplate(e.target.value)}
-                  placeholder="כתבו את תבנית ההודעה כאן..."
-                />
-
+                <textarea ref={templateRef} className="template-textarea" value={template} onChange={e => setTemplate(e.target.value)} placeholder="כתבו את תבנית ההודעה כאן..." />
                 <div className="variable-chips">
                   <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 4 }}>הוסף משתנה:</span>
                   {VARIABLES.map(v => (
                     <button key={v} className="variable-chip" onClick={() => insertVariable(v)}>{v}</button>
                   ))}
                 </div>
-
-                {/* Warning: {לינק_הזמנה} used but no invitation uploaded */}
-                {template.includes('{לינק_הזמנה}') && !event?.settings?.invitation_url && (
-                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 16, lineHeight: 1.2, flexShrink: 0 }}>⚠️</span>
-                    <div>
-                      <strong>לא הועלתה הזמנה</strong> — {'{לינק_הזמנה}'} יוסר מההודעה אוטומטית.
-                      {' '}<span
-                        style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
-                        onClick={() => window.dispatchEvent(new CustomEvent('seatsync:go-settings'))}
-                      >
-                        העלו הזמנה בהגדרות →
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Tip: invitation uploaded — explain WhatsApp preview */}
-                {template.includes('{לינק_הזמנה}') && event?.settings?.invitation_url && (
-                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(37,211,102,0.07)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 16, lineHeight: 1.2, flexShrink: 0 }}>✅</span>
-                    <div>
-                      <strong>הזמנה מועלית!</strong> — WhatsApp יציג <strong>תצוגה מקדימה ויזואלית</strong> של ההזמנה ישירות בגוף ההודעה.
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Preview */}
               {template && guests.length > 0 && (
                 <div className="card">
                   <div className="card-title" style={{ marginBottom: 12 }}>תצוגה מקדימה</div>
+                  {sendMode === 'image_then_text' && invitationUrl && (
+                    <div style={{ marginBottom: 12, padding: 12, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', textAlign: 'center' }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>שלב 1 — תמונת ההזמנה:</div>
+                      <img src={invitationUrl} alt="הזמנה" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)', objectFit: 'contain' }} />
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>↓ שלב 2 — ההודעה:</div>
+                    </div>
+                  )}
                   <div className="message-preview-box">
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>
-                      הודעה לדוגמה עבור: {guests[0]?.name}
-                    </div>
-                    <div className="message-bubble">
-                      {previewMessage(guests[0])}
-                    </div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>הודעה לדוגמה עבור: {guests[0]?.name}</div>
+                    <div className="message-bubble">{previewMessage(guests[0])}</div>
                     <div className="message-bubble-time">עכשיו ✓✓</div>
                   </div>
                 </div>
               )}
 
-              {/* Save & go to send */}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button className="btn btn-ghost" onClick={() => setTemplate('')}>נקה</button>
                 <button className="btn btn-primary" onClick={saveRound} disabled={saving || !template.trim()}>
-                  <Icon name="ArrowLeft" size={18} />
-                  {saving ? 'שומר...' : `המשך לשליחה (${recipients.length})`}
+                  <Icon name="ArrowLeft" size={18} />{saving ? 'שומר...' : `המשך לשליחה (${recipients.length})`}
                 </button>
               </div>
             </div>
@@ -4980,133 +4905,190 @@
           {/* ── SEND VIEW ── */}
           {view === 'send' && (
             <div>
-              {/* Progress summary */}
-              <div className="round-summary-card">
-                <div className="round-stat">
-                  <div className="round-stat-value" style={{ color: 'var(--accent)' }}>{recipients.length}</div>
-                  <div className="round-stat-label">נמענים</div>
-                </div>
-                <div className="round-stat">
-                  <div className="round-stat-value" style={{ color: '#25D366' }}>{sentCount}</div>
-                  <div className="round-stat-label">נשלחו</div>
-                </div>
-                <div className="round-stat">
-                  <div className="round-stat-value" style={{ color: 'var(--text-secondary)' }}>{recipients.length - sentCount}</div>
-                  <div className="round-stat-label">נותרו</div>
-                </div>
-                <div style={{ flex: 1, minWidth: 120 }}>
-                  <div className="send-progress">
-                    <div className="send-progress-bar" style={{ width: `${sendProgress}%` }} />
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{sendProgress}% הושלם</div>
-                </div>
-                <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllSent}>
-                  סמן הכל כנשלח
-                </button>
-              </div>
-
-              {/* Instructions */}
-              {channel === 'whatsapp' && (
-                <div style={{ padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: '#128C7E', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
-                  <div>לחצו "שלח הכל אוטומטית" לפתיחת WhatsApp אוטומטית לכל אורח ברצף, או שלחו ידנית אחד-אחד.</div>
-                </div>
-              )}
-
-              {/* Bulk auto-send button */}
-              {channel === 'whatsapp' && recipients.length > 0 && sentCount < recipients.length && (
-                <div style={{ marginBottom: 14 }}>
-                  <BulkWhatsAppSender
-                    recipients={recipients.filter(g => !sentSet.has(g.id) && g.phone)}
-                    buildLink={(guest) => buildWALink(guest.phone, previewMessage(guest))}
-                    onSent={(guestId) => markSent(guestId)}
-                    onAllDone={() => addToast('כל ההודעות נפתחו ב-WhatsApp! ✓', 'success')}
-                  />
-                </div>
-              )}
-
-              {/* Filter chips for send view */}
-              <div className="filter-chips" style={{ marginBottom: 12 }}>
-                {FILTER_OPTIONS.map(f => (
-                  <button key={f.key} className={`filter-chip ${recipientFilter === f.key ? 'active' : ''}`} onClick={() => setRecipientFilter(f.key)}>
-                    {f.label} ({f.count})
+              {/* Two-step mode indicator */}
+              {sendMode === 'image_then_text' && invitationUrl && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <button
+                    className={`send-mode-btn ${sendStep === 'image' ? 'active' : ''}`}
+                    onClick={() => setSendStep('image')}
+                    style={{ flex: 1, borderColor: sendStep === 'image' ? '#25D366' : undefined }}
+                  >
+                    <span style={{ fontSize: 16 }}>🖼️</span>
+                    <span>שלב 1: שלח הזמנה</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>{imageSentCount}/{recipients.length}</span>
                   </button>
-                ))}
-              </div>
-
-              {/* Recipient list */}
-              {loadingGuests ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 56 }} />)}
+                  <button
+                    className={`send-mode-btn ${sendStep === 'text' ? 'active' : ''}`}
+                    onClick={() => setSendStep('text')}
+                    style={{ flex: 1, borderColor: sendStep === 'text' ? '#25D366' : undefined }}
+                  >
+                    <span style={{ fontSize: 16 }}>💬</span>
+                    <span>שלב 2: שלח הודעה</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 400 }}>{sentCount}/{recipients.length}</span>
+                  </button>
                 </div>
-              ) : recipients.length === 0 ? (
-                <div className="empty-state" style={{ padding: 40 }}>
-                  <div className="empty-state-icon"><Icon name="UserX" size={32} /></div>
-                  <div className="empty-state-title">אין נמענים</div>
-                  <div className="empty-state-text">שנו את הפילטר או הוסיפו מוזמנים עם מספר טלפון</div>
-                </div>
-              ) : (
-                <div className="recipient-list">
-                  {recipients.map((guest, idx) => {
-                    const isSent = sentSet.has(guest.id);
-                    const msg = previewMessage(guest);
-                    const waLink = buildWALink(guest.phone, msg);
-                    return (
-                      <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
-                        {/* Number */}
-                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
+              )}
 
-                        {/* Guest info */}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
-                        </div>
-
-                        {/* Status */}
-                        <StatusBadge status={guest.status} small />
-
-                        {/* Actions */}
-                        {isSent ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--emerald-500)', fontSize: 13, fontWeight: 600 }}>
-                            <Icon name="CheckCircle2" size={16} />
-                            נשלח
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            {channel === 'whatsapp' && guest.phone && (
-                              <a
-                                href={waLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="wa-link-btn"
-                                onClick={() => setTimeout(() => markSent(guest.id), 1500)}
-                              >
-                                💬 שלח
-                              </a>
-                            )}
-                            {channel === 'rsvp' && guest.rsvp_token && (
-                              <button
-                                className="btn btn-secondary"
-                                style={{ padding: '5px 12px', fontSize: 12 }}
-                                onClick={() => { navigator.clipboard?.writeText(`https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}`); markSent(guest.id); addToast('לינק הועתק ✓', 'success'); }}
-                              >
-                                <Icon name="Copy" size={14} />
-                                העתק לינק
-                              </button>
-                            )}
-                            <button
-                              className="icon-btn"
-                              style={{ width: 32, height: 32, color: 'var(--emerald-500)' }}
-                              title="סמן כנשלח"
-                              onClick={() => markSent(guest.id)}
-                            >
-                              <Icon name="Check" size={16} />
-                            </button>
-                          </div>
-                        )}
+              {/* IMAGE STEP — send invitation image */}
+              {sendMode === 'image_then_text' && invitationUrl && sendStep === 'image' && (
+                <div>
+                  <div className="round-summary-card" style={{ background: 'rgba(37,211,102,0.04)', borderColor: 'rgba(37,211,102,0.2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <img src={invitationUrl} alt="הזמנה" style={{ width: 48, height: 48, borderRadius: 'var(--radius-sm)', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>שלחו את תמונת ההזמנה</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>לחצו על כל אורח כדי לפתוח WhatsApp עם התמונה</div>
                       </div>
-                    );
-                  })}
+                    </div>
+                    <div className="round-stat">
+                      <div className="round-stat-value" style={{ color: '#25D366' }}>{imageSentCount}</div>
+                      <div className="round-stat-label">נשלחו</div>
+                    </div>
+                    <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllImagesSent}>סמן הכל</button>
+                  </div>
+
+                  <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
+                    <div>לחצו על כפתור "שלח הזמנה" — WhatsApp ייפתח עם תמונת ההזמנה. שלחו ולחצו חזרה. אחרי שתסיימו את כולם, עברו ל<strong>שלב 2</strong> לשליחת הודעה עם לינק אישור הגעה.</div>
+                  </div>
+
+                  {/* Bulk image sender */}
+                  {recipients.filter(g => !imageSentSet.has(g.id) && g.phone).length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <BulkWhatsAppSender
+                        recipients={recipients.filter(g => !imageSentSet.has(g.id) && g.phone)}
+                        buildLink={(guest) => buildWAImageLink(guest.phone, invitationUrl)}
+                        onSent={(guestId) => markImageSent(guestId)}
+                        onAllDone={() => addToast('כל ההזמנות נפתחו ב-WhatsApp! ✓', 'success')}
+                      />
+                    </div>
+                  )}
+
+                  <div className="recipient-list">
+                    {recipients.map((guest, idx) => {
+                      const isSent = imageSentSet.has(guest.id);
+                      const waLink = buildWAImageLink(guest.phone, invitationUrl);
+                      return (
+                        <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
+                          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
+                          </div>
+                          {isSent ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--emerald-500)', fontSize: 13, fontWeight: 600 }}><Icon name="CheckCircle2" size={16} />נשלח</div>
+                          ) : guest.phone ? (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <a href={waLink} target="_blank" rel="noopener noreferrer" className="wa-link-btn" onClick={() => setTimeout(() => markImageSent(guest.id), 1500)}>🖼️ שלח הזמנה</a>
+                              <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--emerald-500)' }} title="סמן כנשלח" onClick={() => markImageSent(guest.id)}><Icon name="Check" size={16} /></button>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>אין טלפון</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {imageSentCount > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: 16 }}>
+                      <button className="btn btn-primary" style={{ padding: '12px 32px' }} onClick={() => setSendStep('text')}>
+                        <Icon name="ArrowLeft" size={18} />המשך לשלב 2 — שליחת הודעה
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TEXT STEP — send message with RSVP link (or only step if text_only mode) */}
+              {(sendMode === 'text_only' || sendStep === 'text') && (
+                <div>
+                  <div className="round-summary-card">
+                    <div className="round-stat">
+                      <div className="round-stat-value" style={{ color: 'var(--accent)' }}>{recipients.length}</div>
+                      <div className="round-stat-label">נמענים</div>
+                    </div>
+                    <div className="round-stat">
+                      <div className="round-stat-value" style={{ color: '#25D366' }}>{sentCount}</div>
+                      <div className="round-stat-label">נשלחו</div>
+                    </div>
+                    <div className="round-stat">
+                      <div className="round-stat-value" style={{ color: 'var(--text-secondary)' }}>{recipients.length - sentCount}</div>
+                      <div className="round-stat-label">נותרו</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 120 }}>
+                      <div className="send-progress"><div className="send-progress-bar" style={{ width: `${sendProgress}%` }} /></div>
+                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{sendProgress}% הושלם</div>
+                    </div>
+                    <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllSent}>סמן הכל כנשלח</button>
+                  </div>
+
+                  {channel === 'whatsapp' && (
+                    <div style={{ padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: '#128C7E', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
+                      <div>לחצו "שלח הכל אוטומטית" לפתיחת WhatsApp אוטומטית לכל אורח ברצף, או שלחו ידנית אחד-אחד.</div>
+                    </div>
+                  )}
+
+                  {channel === 'whatsapp' && recipients.length > 0 && sentCount < recipients.length && (
+                    <div style={{ marginBottom: 14 }}>
+                      <BulkWhatsAppSender
+                        recipients={recipients.filter(g => !sentSet.has(g.id) && g.phone)}
+                        buildLink={(guest) => buildWALink(guest.phone, previewMessage(guest))}
+                        onSent={(guestId) => markSent(guestId)}
+                        onAllDone={() => addToast('כל ההודעות נפתחו ב-WhatsApp! ✓', 'success')}
+                      />
+                    </div>
+                  )}
+
+                  <div className="filter-chips" style={{ marginBottom: 12 }}>
+                    {FILTER_OPTIONS.map(f => (
+                      <button key={f.key} className={`filter-chip ${recipientFilter === f.key ? 'active' : ''}`} onClick={() => setRecipientFilter(f.key)}>{f.label} ({f.count})</button>
+                    ))}
+                  </div>
+
+                  {loadingGuests ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 56 }} />)}</div>
+                  ) : recipients.length === 0 ? (
+                    <div className="empty-state" style={{ padding: 40 }}>
+                      <div className="empty-state-icon"><Icon name="UserX" size={32} /></div>
+                      <div className="empty-state-title">אין נמענים</div>
+                      <div className="empty-state-text">שנו את הפילטר או הוסיפו מוזמנים עם מספר טלפון</div>
+                    </div>
+                  ) : (
+                    <div className="recipient-list">
+                      {recipients.map((guest, idx) => {
+                        const isSent = sentSet.has(guest.id);
+                        const msg = previewMessage(guest);
+                        const waLink = buildWALink(guest.phone, msg);
+                        return (
+                          <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
+                              <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
+                            </div>
+                            <StatusBadge status={guest.status} small />
+                            {isSent ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--emerald-500)', fontSize: 13, fontWeight: 600 }}><Icon name="CheckCircle2" size={16} />נשלח</div>
+                            ) : (
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                {channel === 'whatsapp' && guest.phone && (
+                                  <a href={waLink} target="_blank" rel="noopener noreferrer" className="wa-link-btn" onClick={() => setTimeout(() => markSent(guest.id), 1500)}>💬 שלח</a>
+                                )}
+                                {channel === 'rsvp' && guest.rsvp_token && (
+                                  <button className="btn btn-secondary" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => { navigator.clipboard?.writeText(`https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}`); markSent(guest.id); addToast('לינק הועתק ✓', 'success'); }}>
+                                    <Icon name="Copy" size={14} />העתק לינק
+                                  </button>
+                                )}
+                                <button className="icon-btn" style={{ width: 32, height: 32, color: 'var(--emerald-500)' }} title="סמן כנשלח" onClick={() => markSent(guest.id)}><Icon name="Check" size={16} /></button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
