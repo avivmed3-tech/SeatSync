@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SeatSync — ניהול אישורי הגעה וסידורי הושבה חכם לאירועים. חתונות, בר מצוות, אירועים עסקיים." />
+  <meta property="og:title" content="SeatSync — ניהול אירועים חכם" />
+  <meta property="og:description" content="שלחו הזמנות, עקבו אחרי אישורים בזמן אמת, וסדרו הושבה בגרירה. הכל במקום אחד." />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#D4A808" />
+  <title>SeatSync — ניהול אירועים חכם</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --gold: #D4A808;
+      --gold-dark: #B38D06;
+      --gold-light: #FFF9E6;
+      --bg: #FAFAF8;
+      --card: #FFFFFF;
+      --text: #1A1A1A;
+      --text2: #5C5C5C;
+      --text3: #8C8C8C;
+      --border: #E5E2DC;
+      --emerald: #10B981;
+      --radius: 16px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Heebo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; border: none; font-family: inherit; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px; font-weight: 700;
+    }
+    .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 22px; border-radius: 10px;
+      font-size: 14px; font-weight: 600; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary {
+      background: linear-gradient(135deg, #F5C518, #B38D06);
+      color: #1A1A1A;
+      box-shadow: 0 2px 10px rgba(212,168,8,0.3);
+    }
+    .btn-primary:hover { box-shadow: 0 4px 20px rgba(212,168,8,0.4); transform: translateY(-1px); }
+    .btn-ghost { color: var(--text2); background: transparent; }
+    .btn-ghost:hover { background: rgba(0,0,0,0.05); color: var(--text); }
+    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 12px; }
+    .btn-outline {
+      background: transparent; color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--gold); background: var(--gold-light); }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 60px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--gold-light); border: 1px solid rgba(212,168,8,0.3);
+      border-radius: 100px; padding: 5px 14px;
+      font-size: 13px; font-weight: 600; color: var(--gold-dark);
+      margin-bottom: 28px;
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800; line-height: 1.15;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, #D4A808, #8A6D05);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--text2); max-width: 560px;
+      margin: 0 auto 36px; line-height: 1.7;
+    }
+
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+    .hero-social-proof {
+      margin-top: 40px;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      font-size: 13px; color: var(--text3);
+    }
+
+    .avatar-stack {
+      display: flex;
+    }
+    .avatar-stack span {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: 2px solid white; margin-left: -8px;
+      font-size: 14px; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    }
+
+    /* ── FEATURES ── */
+    section { padding: 80px 24px; }
+    .section-label {
+      text-align: center; margin-bottom: 12px;
+      font-size: 13px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--gold-dark);
+    }
+    .section-title {
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 42px);
+      font-weight: 800; letter-spacing: -0.5px;
+      margin-bottom: 14px;
+    }
+    .section-sub {
+      text-align: center; color: var(--text2);
+      font-size: 16px; max-width: 500px;
+      margin: 0 auto 56px; line-height: 1.7;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; max-width: 1100px; margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: all 0.25s;
+    }
+    .feature-card:hover {
+      border-color: rgba(212,168,8,0.4);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.07);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--gold-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px; margin-bottom: 16px;
+    }
+    .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .feature-text { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    /* ── HOW IT WORKS ── */
+    .how-section { background: linear-gradient(180deg, #FAFAF8 0%, #FFF9E6 100%); }
+
+    .steps { display: flex; flex-direction: column; gap: 0; max-width: 680px; margin: 0 auto; }
+
+    .step {
+      display: flex; gap: 20px; align-items: flex-start;
+      padding: 24px 0; border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .step:last-child { border-bottom: none; }
+
+    .step-num {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, #F5C518, #B38D06);
+      color: #1A1A1A; font-weight: 800; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(212,168,8,0.3);
+    }
+
+    .step-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+    .step-text { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    /* ── PRICING ── */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px; max-width: 900px; margin: 0 auto;
+    }
+
+    .price-card {
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 32px 28px;
+      position: relative; transition: all 0.25s;
+    }
+    .price-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+    .price-card.featured {
+      border-color: var(--gold);
+      background: linear-gradient(160deg, #FFFDF0 0%, #FFFFFF 100%);
+    }
+
+    .price-badge {
+      position: absolute; top: -12px; right: 24px;
+      background: linear-gradient(135deg, #F5C518, #B38D06);
+      color: #1A1A1A; font-size: 11px; font-weight: 800;
+      padding: 3px 12px; border-radius: 100px; letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .price-plan { font-size: 14px; font-weight: 600; color: var(--text3); margin-bottom: 8px; }
+    .price-amount {
+      font-size: 40px; font-weight: 800; letter-spacing: -1px;
+      margin-bottom: 4px; line-height: 1;
+    }
+    .price-period { font-size: 13px; color: var(--text3); margin-bottom: 24px; }
+    .price-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 20px; }
+    .price-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .price-feature {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 14px; color: var(--text2);
+    }
+    .price-feature .check { color: var(--emerald); font-size: 16px; }
+    .price-feature .cross { color: #D1D5DB; font-size: 16px; }
+
+    /* ── FAQ ── */
+    .faq-list { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+    .faq-item {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+    }
+
+    .faq-q {
+      padding: 18px 20px; font-weight: 700; font-size: 15px;
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none;
+    }
+    .faq-q:hover { background: rgba(0,0,0,0.02); }
+    .faq-a {
+      padding: 0 20px 18px;
+      font-size: 14px; color: var(--text2); line-height: 1.7;
+      display: none;
+    }
+    .faq-item.open .faq-a { display: block; }
+    .faq-item.open .faq-arrow { transform: rotate(180deg); }
+    .faq-arrow { transition: transform 0.2s; font-size: 12px; color: var(--text3); }
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center; padding: 80px 24px;
+      background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
+      color: white;
+    }
+    .cta-section h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px;
+    }
+    .cta-section p { color: rgba(255,255,255,0.7); font-size: 16px; margin-bottom: 36px; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--card); border-top: 1px solid var(--border);
+      padding: 32px 24px; text-align: center;
+      font-size: 13px; color: var(--text3);
+    }
+    footer a { color: var(--text2); margin: 0 8px; }
+    footer a:hover { color: var(--text); }
+
+    @media (max-width: 640px) {
+      nav .btn-outline { display: none; }
+      .hero { padding: 50px 20px 40px; }
+      section { padding: 56px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg width="32" height="32" viewBox="0 0 34 34" fill="none">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#F5C518"/>
+          <stop offset="100%" stop-color="#B38D06"/>
+        </linearGradient>
+      </defs>
+      <rect width="34" height="34" rx="9" fill="url(#lg)"/>
+      <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.22)" stroke="white" stroke-width="1.5"/>
+      <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
+      <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+      <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
+      <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span class="nav-logo-text">SeatSync</span>
+  </div>
+  <div class="nav-actions">
+    <a href="#pricing" class="btn btn-ghost btn-outline" style="padding:8px 18px;font-size:14px;">מחירים</a>
+    <a href="index.html" class="btn btn-primary" style="padding:9px 20px;font-size:14px;">כניסה למערכת</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">✦ ניהול אירועים חכם</div>
+  <h1>
+    ניהול <span>מוזמנים והושבה</span><br/>
+    שלא ראיתם כמוהו
+  </h1>
+  <p>
+    שלחו הזמנות, עקבו אחרי אישורי הגעה בזמן אמת,
+    וסדרו הושבה ויזואלית עם גרירה ושחרור. הכל בעברית, הכל ממקום אחד.
+  </p>
+  <div class="hero-actions">
+    <a href="index.html" class="btn btn-primary btn-lg">התחילו בחינם — ללא כרטיס אשראי</a>
+    <a href="#features" class="btn btn-outline btn-lg">גלו את הפיצ'רים</a>
+  </div>
+  <div class="hero-social-proof">
+    <div class="avatar-stack">
+      <span>👰</span><span>🤵</span><span>👨‍💼</span><span>👩‍👧</span>
+    </div>
+    <span>+200 אירועים נוהלו בהצלחה</span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features" style="background:white;">
+  <div class="section-label">פיצ'רים</div>
+  <h2 class="section-title">כל מה שצריך לניהול אירוע מושלם</h2>
+  <p class="section-sub">מרשימת מוזמנים ועד מפת הושבה — הכל מסונכרן בזמן אמת.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">ניהול מוזמנים</div>
+      <div class="feature-text">הוסיפו מוזמנים ידנית או ייבאו מאקסל. חפשו, סננו ומיינו בלחיצה. ייצוא מלא לאקסל בכל שלב.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💬</div>
+      <div class="feature-title">שליחת הזמנות WhatsApp</div>
+      <div class="feature-text">צרו תבנית הודעה עם משתנים ושלחו לכל האורחים בלחיצה. עקבו אחרי מי שלא הגיב וסדרו סבבים.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <div class="feature-title">קישור RSVP אישי</div>
+      <div class="feature-text">כל אורח מקבל קישור אישי. לחיצה → אישור הגעה + מספר אורחים + הערות תזונה. ללא אפליקציה.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🪑</div>
+      <div class="feature-title">סידורי הושבה ויזואליים</div>
+      <div class="feature-text">גררו אורחים לשולחנות. צרו מפת אולם אינטראקטיבית. ייצאו PDF לצוות האירוע.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">דשבורד בזמן אמת</div>
+      <div class="feature-text">ראו כמה אישרו, כמה ממתינים, ופילוח לפי קבוצה — הכל מתעדכן בזמן אמת.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">הודעות אוטומטיות</div>
+      <div class="feature-text">תזכורת אוטומטית ימים לפני האירוע + הודעת תודה ליום אחרי. ללא עבודה ידנית.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section">
+  <div class="section-label">איך זה עובד</div>
+  <h2 class="section-title">מוכנים בפחות מ-10 דקות</h2>
+  <p class="section-sub">ללא התקנה, ללא הגדרות מורכבות. רק נרשמים ומתחילים.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">צרו אירוע</div>
+        <div class="step-text">הזינו שם, תאריך ומיקום. האירוע נוצר תוך שניות.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">הוסיפו מוזמנים</div>
+        <div class="step-text">הוסיפו ידנית, ייבאו מאקסל, או שתפו לינק RSVP כללי. המערכת מזהה כפילויות אוטומטית.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">שלחו הזמנות</div>
+        <div class="step-text">כתבו תבנית הודעה עם {שם}, {תאריך} ו-{לינק_rsvp}. שלחו ל-WhatsApp בלחיצה אחת.</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">עקבו ועדכנו בזמן אמת</div>
+        <div class="step-text">כל תשובה מתעדכנת אוטומטית. ראו פילוחים, שלחו תזכורות, וסדרו הושבה.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" style="background:white;">
+  <div class="section-label">מחירים</div>
+  <h2 class="section-title">תוכנית לכל סוג אירוע</h2>
+  <p class="section-sub">התחילו בחינם. שדרגו רק כשאתם צריכים.</p>
+
+  <div class="pricing-grid">
+    <!-- Free -->
+    <div class="price-card">
+      <div class="price-plan">Free</div>
+      <div class="price-amount">חינם</div>
+      <div class="price-period">ללא כרטיס אשראי</div>
+      <hr class="price-divider"/>
+      <div class="price-features">
+        <div class="price-feature"><span class="check">✓</span> עד 50 מוזמנים</div>
+        <div class="price-feature"><span class="check">✓</span> עד 5 שולחנות</div>
+        <div class="price-feature"><span class="check">✓</span> סבב הודעות אחד</div>
+        <div class="price-feature"><span class="check">✓</span> דשבורד בזמן אמת</div>
+        <div class="price-feature"><span class="cross">✗</span> קישורי RSVP אישיים</div>
+        <div class="price-feature"><span class="cross">✗</span> הודעות אוטומטיות</div>
+        <div class="price-feature"><span class="cross">✗</span> ייצוא PDF</div>
+      </div>
+      <a href="index.html" class="btn btn-outline" style="width:100%;justify-content:center;">התחילו בחינם</a>
+    </div>
+
+    <!-- Pro -->
+    <div class="price-card featured">
+      <div class="price-badge">הכי פופולרי</div>
+      <div class="price-plan">Pro</div>
+      <div class="price-amount">99<span style="font-size:22px;letter-spacing:0">₪</span></div>
+      <div class="price-period">לאירוע</div>
+      <hr class="price-divider"/>
+      <div class="price-features">
+        <div class="price-feature"><span class="check">✓</span> עד 500 מוזמנים</div>
+        <div class="price-feature"><span class="check">✓</span> עד 50 שולחנות</div>
+        <div class="price-feature"><span class="check">✓</span> סבבי הודעות ללא הגבלה</div>
+        <div class="price-feature"><span class="check">✓</span> קישורי RSVP אישיים</div>
+        <div class="price-feature"><span class="check">✓</span> הודעות אוטומטיות</div>
+        <div class="price-feature"><span class="check">✓</span> ייצוא PDF + אקסל</div>
+        <div class="price-feature"><span class="check">✓</span> מפת הושבה ויזואלית</div>
+      </div>
+      <a href="/cdn-cgi/l/email-protection#73000603031c01073300161207000a1d105d1203034c000611191610074ea4daa4e0a4dba4e6a4e153a4ef5e23011c" class="btn btn-primary" style="width:100%;justify-content:center;">שדרגו ל-Pro</a>
+    </div>
+
+    <!-- Enterprise -->
+    <div class="price-card">
+      <div class="price-plan">Enterprise</div>
+      <div class="price-amount">249<span style="font-size:22px;letter-spacing:0">₪</span></div>
+      <div class="price-period">לחודש — אירועים ללא הגבלה</div>
+      <hr class="price-divider"/>
+      <div class="price-features">
+        <div class="price-feature"><span class="check">✓</span> מוזמנים ושולחנות ללא הגבלה</div>
+        <div class="price-feature"><span class="check">✓</span> כל פיצ'רי Pro</div>
+        <div class="price-feature"><span class="check">✓</span> אירועים ללא הגבלה בחשבון</div>
+        <div class="price-feature"><span class="check">✓</span> WhatsApp Business API</div>
+        <div class="price-feature"><span class="check">✓</span> שליחת SMS</div>
+        <div class="price-feature"><span class="check">✓</span> תמיכה עדיפותית</div>
+      </div>
+      <a href="/cdn-cgi/l/email-protection#7b080e0b0b14090f3b081e1a0f08021518551a0b0b44080e19111e180f463e150f1e090b0912081e" class="btn btn-outline" style="width:100%;justify-content:center;">צרו קשר</a>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section>
+  <div class="section-label">שאלות נפוצות</div>
+  <h2 class="section-title">יש לכם שאלות?</h2>
+  <p class="section-sub">הנה התשובות לשאלות הנפוצות ביותר.</p>
+
+  <div class="faq-list">
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">האם SeatSync עובד עם WhatsApp רגיל (לא Business)? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">כן! בתוכנית Free ו-Pro, SeatSync יוצר קישורי wa.me שפותחים את WhatsApp הרגיל עם הודעה מוכנה. אין צורך ב-WhatsApp Business.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">מה קורה לנתונים שלי? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">הנתונים שמורים ב-Supabase — שירות ענן מאובטח. ניתן לייצא את כל הנתונים לאקסל בכל עת. הנתונים שייכים לכם.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">האם הדף RSVP עובד גם בלי אפליקציה? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">כן! האורח מקבל קישור אישי — לוחץ, מאשר הגעה, מציין כמה אנשים, ומוסיף הערות תזונה. ללא הורדת אפליקציה, ללא הרשמה.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">כמה עולה Pro לחתונה ממוצעת? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">99₪ לאירוע — פחות מהעלות של הדפסת מקומונים. תוכנית Pro כוללת 500 מוזמנים, קישורי RSVP, הודעות אוטומטיות וייצוא PDF.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">האם אפשר לנהל כמה אירועים במקביל? <span class="faq-arrow">▾</span></div>
+      <div class="faq-a">בתוכנית Free ו-Pro כל חשבון מנהל אירוע אחד בו-זמנית. בתוכנית Enterprise — אירועים ללא הגבלה תחת חשבון אחד.</div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2>מוכנים לאירוע שיזכרו?</h2>
+  <p>הצטרפו והתחילו לנהל את האירוע שלכם עוד היום — בחינם.</p>
+  <a href="index.html" class="btn btn-primary btn-lg">התחילו עכשיו — בחינם</a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div style="margin-bottom:12px;">
+    <a href="index.html">כניסה למערכת</a>
+    <a href="/cdn-cgi/l/email-protection#cdbeb8bdbda2bfb98dbea8acb9beb4a3aee3acbdbd">צרו קשר</a>
+    <a href="privacy.html">מדינ

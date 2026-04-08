@@ -1782,6 +1782,23 @@
       background: rgba(59,130,246,0.05);
     }
 
+    /* Plan limits */
+    .plan-limit-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: var(--radius-sm);
+      background: var(--accent-light); border: 1px solid var(--accent);
+      font-size: 13px; margin-bottom: 12px;
+    }
+    .plan-limit-bar.danger { background: rgba(239,68,68,0.08); border-color: var(--red-400); }
+    .feature-locked {
+      opacity: 0.5; pointer-events: none; position: relative; filter: grayscale(0.3);
+    }
+    .feature-locked-overlay {
+      position: absolute; inset: 0; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: inherit; z-index: 1;
+    }
+
     /* PWA Install Banner */
     .pwa-install-banner {
       position: fixed;
@@ -1858,16 +1875,21 @@
       }
     } catch(e) { localStorage.removeItem('seatsync-supabase'); }
 
+    // Safe HTML escape for error messages
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
     // Global error handler to show JS errors on screen
     window.onerror = function(msg, src, line, col, err) {
       var el = document.getElementById('root');
       if (el) {
         el.innerHTML = '<div style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;overflow:auto;">'
           + '<h2 style="color:#f59e0b;margin-bottom:10px;">SeatSync Error</h2>'
-          + '<p><b>Message:</b> ' + msg + '</p>'
-          + '<p><b>Source:</b> ' + (src || 'unknown') + '</p>'
-          + '<p><b>Line:</b> ' + line + ', <b>Col:</b> ' + col + '</p>'
-          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;max-height:50vh;overflow:auto;">' + (err && err.stack ? err.stack : 'No stack trace') + '</pre>'
+          + '<p><b>Message:</b> ' + escHtml(msg) + '</p>'
+          + '<p><b>Source:</b> ' + escHtml(src || 'unknown') + '</p>'
+          + '<p><b>Line:</b> ' + escHtml(line) + ', <b>Col:</b> ' + escHtml(col) + '</p>'
+          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;max-height:50vh;overflow:auto;">' + escHtml(err && err.stack ? err.stack : 'No stack trace') + '</pre>'
           + '</div>';
       }
       return true;
@@ -1877,8 +1899,8 @@
       if (el && !el.querySelector('.error-shown')) {
         el.innerHTML = '<div class="error-shown" style="color:#ef4444;padding:20px;font-family:monospace;direction:ltr;text-align:left;font-size:13px;background:#1a1a2e;min-height:100vh;">'
           + '<h2 style="color:#f59e0b;">SeatSync Promise Error</h2>'
-          + '<p>' + (event.reason ? (event.reason.message || event.reason) : 'Unknown promise rejection') + '</p>'
-          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;">' + (event.reason && event.reason.stack ? event.reason.stack : '') + '</pre>'
+          + '<p>' + escHtml(event.reason ? (event.reason.message || event.reason) : 'Unknown promise rejection') + '</p>'
+          + '<pre style="white-space:pre-wrap;margin-top:10px;padding:10px;background:#0d0d1a;border-radius:8px;font-size:11px;">' + escHtml(event.reason && event.reason.stack ? event.reason.stack : '') + '</pre>'
           + '</div>';
       }
     });
@@ -2006,17 +2028,33 @@
             setLoading(false);
           }, 8000);
 
-          sb.auth.getSession().then(({ data: { session }, error }) => {
+          // Handle magic link / password reset tokens in the URL.
+          // Supabase v2 puts tokens in the URL hash (#access_token=...) or
+          // as query params (?token_hash=...&type=...). getSession() picks
+          // these up automatically when the client is created, so just call it.
+          sb.auth.getSession().then(({ data: { session } }) => {
             clearTimeout(timeout);
             setUser(session?.user ?? null);
             setLoading(false);
+
+            // Clean the token from the URL so it isn't bookmarked / shared
+            if (window.location.hash.includes('access_token') ||
+                window.location.search.includes('token_hash')) {
+              window.history.replaceState(
+                null, '', window.location.pathname
+              );
+            }
           }).catch(() => {
             clearTimeout(timeout);
             setLoading(false);
           });
 
-          const { data: { subscription } } = sb.auth.onAuthStateChange((_event, session) => {
+          const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
             setUser(session?.user ?? null);
+            // After password recovery link is clicked, redirect to settings
+            if (event === 'PASSWORD_RECOVERY') {
+              setUser(session?.user ?? null);
+            }
           });
 
           return () => { subscription.unsubscribe(); clearTimeout(timeout); };
@@ -2108,6 +2146,111 @@
       SETTINGS: 'settings',
       EVENTS: 'events',
     };
+
+    // ============================================
+    // Plan System
+    // ============================================
+    const PLAN_LIMITS = {
+      free:       { guests: 50,  tables: 5,  messageRounds: 1,  rsvpLink: false, label: 'Free' },
+      pro:        { guests: 500, tables: 50, messageRounds: 999, rsvpLink: true,  label: 'Pro' },
+      enterprise: { guests: 9999,tables: 999,messageRounds: 999, rsvpLink: true,  label: 'Enterprise' },
+    };
+
+    const PlanContext = createContext();
+
+    function PlanProvider({ children }) {
+      const { client, user } = useContext(SupabaseContext);
+      const [plan, setPlan] = useState('free');
+      const [loadingPlan, setLoadingPlan] = useState(true);
+
+      useEffect(() => {
+        if (!client || !user) { setLoadingPlan(false); return; }
+        client.from('profiles').select('plan').eq('id', user.id).single()
+          .then(({ data }) => {
+            setPlan(data?.plan || 'free');
+            setLoadingPlan(false);
+          })
+          .catch(() => setLoadingPlan(false));
+      }, [client, user]);
+
+      const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+      const isPro = plan === 'pro' || plan === 'enterprise';
+
+      const canAdd = useCallback((resource, currentCount) => {
+        return currentCount < limits[resource];
+      }, [limits]);
+
+      return (
+        <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan }}>
+          {children}
+        </PlanContext.Provider>
+      );
+    }
+
+    // Pro Badge inline component
+    function ProBadge({ style = {} }) {
+      return (
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 3,
+          background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+          color: '#1A1A1A', fontSize: 10, fontWeight: 800,
+          padding: '2px 7px', borderRadius: 20, letterSpacing: 0.3,
+          textTransform: 'uppercase', lineHeight: 1.4, flexShrink: 0,
+          ...style
+        }}>
+          ✦ Pro
+        </span>
+      );
+    }
+
+    // Upsell Modal — shown when hitting a limit
+    function UpsellModal({ feature, onClose }) {
+      const featureText = {
+        guests:       { title: 'הגעתם ל-50 מוזמנים', sub: 'תוכנית Free מוגבלת ל-50 מוזמנים', detail: 'שדרגו ל-Pro ל-500 מוזמנים ויכולות מלאות' },
+        tables:       { title: 'הגעתם ל-5 שולחנות',  sub: 'תוכנית Free מוגבלת ל-5 שולחנות',  detail: 'שדרגו ל-Pro ל-50 שולחנות ומפת הושבה מלאה' },
+        messageRounds:{ title: 'סבב הודעות נוסף',    sub: 'תוכנית Free מאפשרת סבב אחד בלבד', detail: 'שדרגו ל-Pro לסבבי הודעות בלתי מוגבלים' },
+        rsvpLink:     { title: 'קישור RSVP אישי',    sub: 'פיצ\'ר Pro בלבד',                 detail: 'שדרגו ל-Pro לשליחת קישורי RSVP אישיים לכל אורח' },
+      }[feature] || { title: 'פיצ\'ר Pro', sub: 'זמין בתוכנית Pro', detail: 'שדרגו לגישה מלאה' };
+
+      return (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 380, textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🚀</div>
+            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{featureText.title}</div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{featureText.sub}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 24, lineHeight: 1.6 }}>{featureText.detail}</div>
+
+            {/* Plan comparison */}
+            <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 20, textAlign: 'right' }}>
+              {[
+                { label: 'מוזמנים', free: '50', pro: '500' },
+                { label: 'שולחנות', free: '5',  pro: '50' },
+                { label: 'סבבי הודעות', free: '1', pro: 'ללא הגבלה' },
+                { label: 'קישורי RSVP', free: '❌', pro: '✅' },
+              ].map(row => (
+                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 13, borderBottom: '1px solid var(--border-light)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
+                  <span><span style={{ color: 'var(--text-tertiary)', marginLeft: 16 }}>{row.free}</span>
+                  <span style={{ color: 'var(--gold-600)', fontWeight: 700, marginRight: 16 }}>{row.pro}</span></span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                <span>תוכנית</span>
+                <span><span style={{ marginLeft: 16 }}>Free</span><span style={{ color: 'var(--gold-600)', fontWeight: 700, marginRight: 16 }}>Pro ✦</span></span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>אחר כך</button>
+              <button className="btn btn-primary" style={{ flex: 2 }}
+                onClick={() => { window.open('mailto:support@seatsync.app?subject=שדרוג ל-Pro', '_blank'); onClose(); }}>
+                <Icon name="Zap" size={16} />שדרגו ל-Pro — 99₪
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     // ============================================
     // Supabase Config Modal
@@ -2302,13 +2445,18 @@
             }
           } else if (mode === 'forgot') {
             const { error } = await client.auth.resetPasswordForEmail(email, {
-              redirectTo: window.location.origin + '/index.html'
+              redirectTo: window.location.href.split('?')[0].split('#')[0]
             });
             if (error) throw error;
             setSentReset(true);
             addToast('נשלח מייל לאיפוס סיסמה 📧', 'success');
           } else if (mode === 'magic') {
-            const { error } = await client.auth.signInWithOtp({ email });
+            const { error } = await client.auth.signInWithOtp({
+              email,
+              options: {
+                emailRedirectTo: window.location.href.split('?')[0].split('#')[0]
+              }
+            });
             if (error) throw error;
             setSentMagic(true);
             addToast('נשלח לינק התחברות למייל 📧', 'success');
@@ -2954,6 +3102,7 @@
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   style={errors.name ? { borderColor: 'var(--red-500)' } : {}}
+                  maxLength={100}
                   autoFocus
                 />
                 {errors.name && <div style={{ color: 'var(--red-500)', fontSize: 12, marginTop: 4 }}>{errors.name}</div>}
@@ -2970,6 +3119,7 @@
                     onChange={e => handlePhoneChange(e.target.value)}
                     dir="ltr"
                     style={{ textAlign: 'right', ...(errors.phone ? { borderColor: 'var(--red-500)' } : {}) }}
+                    maxLength={20}
                   />
                   {errors.phone && <div style={{ color: 'var(--red-500)', fontSize: 12, marginTop: 4 }}>{errors.phone}</div>}
                   {phoneDupWarn && <div style={{ color: 'var(--amber-500)', fontSize: 12, marginTop: 4 }}>⚠️ מספר כפול</div>}
@@ -2984,6 +3134,7 @@
                     onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                     dir="ltr"
                     style={{ textAlign: 'right' }}
+                    maxLength={200}
                   />
                 </div>
               </div>
@@ -3050,6 +3201,7 @@
                   placeholder="צמחוני, ללא גלוטן, אלרגיה לאגוזים..."
                   value={form.dietary_notes}
                   onChange={e => setForm(f => ({ ...f, dietary_notes: e.target.value }))}
+                  maxLength={200}
                 />
               </div>
 
@@ -3062,6 +3214,7 @@
                   onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                   rows={2}
                   style={{ resize: 'none' }}
+                  maxLength={500}
                 />
               </div>
             </div>
@@ -3410,6 +3563,7 @@
     function GuestsPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
+      const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
 
       // State
@@ -3423,6 +3577,7 @@
       const [selected, setSelected] = useState(new Set());
       const [page, setPage] = useState(1);
       const PAGE_SIZE = 20;
+      const [upsellFeature, setUpsellFeature] = useState(null); // plan upsell modal
 
       // Modals
       const [showAdd, setShowAdd] = useState(false);
@@ -3696,12 +3851,40 @@
                 <Icon name="Upload" size={18} />
                 <span className="hide-mobile">ייבוא</span>
               </button>
-              <button className="btn btn-primary" onClick={() => setShowAdd(true)}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  if (guests.length >= limits.guests) { setUpsellFeature('guests'); return; }
+                  setShowAdd(true);
+                }}
+                title={guests.length >= limits.guests ? `מגבלת ${limits.guests} מוזמנים (Free)` : 'הוספת אורח'}
+              >
                 <Icon name="UserPlus" size={18} />
                 <span className="hide-mobile">הוספת אורח</span>
+                {!isPro && guests.length >= limits.guests * 0.9 && <ProBadge style={{ marginRight: 4 }} />}
               </button>
             </div>
           </div>
+
+          {/* Plan limit bar */}
+          {!isPro && (
+            (() => {
+              const pct = Math.round((guests.length / limits.guests) * 100);
+              if (pct < 70) return null;
+              const danger = pct >= 100;
+              return (
+                <div className={`plan-limit-bar ${danger ? 'danger' : ''}`}>
+                  <Icon name={danger ? 'AlertCircle' : 'Info'} size={16} style={{ color: danger ? 'var(--red-500)' : 'var(--gold-600)', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>
+                    {danger ? `הגעתם למגבלה — ${guests.length}/${limits.guests} מוזמנים (Free)` : `${guests.length}/${limits.guests} מוזמנים — מתקרבים למגבלת Free`}
+                  </span>
+                  <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setUpsellFeature('guests')}>
+                    <Icon name="Zap" size={13} />שדרוג
+                  </button>
+                </div>
+              );
+            })()
+          )}
 
           {/* Stats row */}
           {stats.total > 0 && (
@@ -4022,6 +4205,8 @@
               onClose={() => setStatusPopover(null)}
             />
           )}
+
+          {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
         </div>
       );
     }
@@ -4035,12 +4220,12 @@
 
     // Default message templates
     const DEFAULT_TEMPLATES = {
-      wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nנשמח לדעת אם תגיעו:\n{לינק_rsvp}\n\nבברכה ♥',
-      bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}',
-      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
-      corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
-      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
+      wedding: 'שלום {שם}! 🎉\nאנחנו שמחים להזמין אותך לחתונה שלנו!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה ♥',
+      bar_mitzvah: 'שלום {שם}! ✡️\nנשמח לחגוג איתך את שמחתנו!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}',
+      brit_mila: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בברית!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      brit_bat: 'שלום {שם}! 👶\nבשעה טובה! נשמח לראותכם בבריתה!\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nמזל טוב! 🎉',
+      corporate: 'שלום {שם},\nהנך מוזמן/ת לאירוע:\n\n📅 {תאריך}\n📍 {מקום}\n\n{לינק_הזמנה}\n\nלאישור הגעה:\n{לינק_rsvp}\n\nבברכה',
+      reminder: 'היי {שם} 👋\nרק רצינו לוודא — קיבלת את ההזמנה שלנו?\n\n📅 {תאריך} | 📍 {מקום}\n\n{לינק_הזמנה}\n\nנשמח שתעדכן:\n{לינק_rsvp}\n\nתודה! ♥',
       reminder_table: 'היי {שם} 👋\nתזכורת — האירוע שלנו מתקרב!\n\n📅 {תאריך}\n📍 {מקום}\n🪑 שולחן: {שולחן}\n\nנתראה שם! 🎉',
       thank_you: 'היי {שם} 💕\nתודה ענקית שחגגתם איתנו!\nהיה מדהים לראות אתכם. מקווים שנהניתם! 🎊\n\nבאהבה ♥',
     };
@@ -4052,14 +4237,24 @@
         const t = tablesData.find(t => t.id === guest.table_id);
         return t ? t.name : '';
       })();
-      return template
+
+      let msg = template
         .replace(/\{שם\}/g, guest.name || '')
         .replace(/\{תאריך\}/g, event.event_date ? new Date(event.event_date).toLocaleDateString('he-IL') : '')
         .replace(/\{מקום\}/g, event.venue_name || '')
         .replace(/\{לינק_rsvp\}/g, guest.rsvp_token ? `https://avivmed3-tech.github.io/SeatSync/rsvp.html?token=${guest.rsvp_token}` : 'לינק יישלח בנפרד')
         .replace(/\{שם_אירוע\}/g, event.name || '')
-        .replace(/\{לינק_הזמנה\}/g, invUrl || '')
         .replace(/\{שולחן\}/g, tableName || 'טרם הוקצה');
+
+      if (invUrl) {
+        // Has invitation — replace with the URL (WhatsApp will show a preview card)
+        msg = msg.replace(/\{לינק_הזמנה\}/g, invUrl);
+      } else {
+        // No invitation uploaded — remove the placeholder AND its surrounding blank line
+        msg = msg.replace(/\n?\{לינק_הזמנה\}\n?/g, '\n');
+      }
+
+      return msg;
     }
 
     function buildWALink(phone, message) {
@@ -4078,10 +4273,43 @@
       const [currentIdx, setCurrentIdx] = useState(0);
       const [paused, setPaused] = useState(false);
       const [delay, setDelay] = useState(3); // seconds between sends
+      const [openedAll, setOpenedAll] = useState(false);
       const timerRef = useRef(null);
       const pausedRef = useRef(false);
+      const isMobile = useIsMobile();
 
       useEffect(() => { pausedRef.current = paused; }, [paused]);
+
+      // ── Open ALL tabs at once (Desktop only) ──────────────────────────────
+      const openAllTabs = () => {
+        if (recipients.length === 0) return;
+
+        // Modern browsers block multiple window.open unless triggered by user
+        // We open them in rapid succession — most browsers allow ~5-10 before blocking
+        // For larger lists we batch with a tiny delay
+        const BATCH = 8; // open 8 at a time to avoid popup blockers
+        let opened = 0;
+
+        const openBatch = (startIdx) => {
+          const end = Math.min(startIdx + BATCH, recipients.length);
+          for (let i = startIdx; i < end; i++) {
+            const link = buildLink(recipients[i]);
+            window.open(link, `_whatsapp_${recipients[i].id}`);
+            onSent(recipients[i].id);
+            opened++;
+          }
+          if (end < recipients.length) {
+            // Small pause between batches so browser doesn't block
+            setTimeout(() => openBatch(end), 800);
+          } else {
+            setOpenedAll(true);
+            onAllDone();
+          }
+        };
+
+        openBatch(0);
+      };
+      // ──────────────────────────────────────────────────────────────────────
 
       const startBulkSend = async () => {
         setSending(true);
@@ -4089,7 +4317,6 @@
         setPaused(false);
 
         for (let i = 0; i < recipients.length; i++) {
-          // Check if stopped
           if (pausedRef.current) {
             setCurrentIdx(i);
             return;
@@ -4098,12 +4325,9 @@
           setCurrentIdx(i);
           const guest = recipients[i];
           const link = buildLink(guest);
-
-          // Open WhatsApp link
           window.open(link, '_blank');
           onSent(guest.id);
 
-          // Wait between sends (except last one)
           if (i < recipients.length - 1) {
             await new Promise(resolve => {
               timerRef.current = setTimeout(resolve, delay * 1000);
@@ -4152,6 +4376,39 @@
 
       return (
         <div style={{ background: 'linear-gradient(135deg, rgba(37,211,102,0.08), rgba(37,211,102,0.02))', border: '1.5px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-md)', padding: 16 }}>
+
+          {/* Desktop: Open all tabs button */}
+          {!isMobile && !sending && recipients.length > 0 && (
+            <div style={{ marginBottom: 12, padding: '10px 14px', background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 'var(--radius-sm)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--blue-500)', marginBottom: 2 }}>
+                    🖥️ מצב Desktop — פתח הכל בטאבים
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                    פותח {recipients.length} טאבים במקביל עם WhatsApp Web. לחצו שלח בכל טאב ← סגרו ← הבא.
+                    {recipients.length > 8 && ` (נפתח ב-${Math.ceil(recipients.length / 8)} סבבים של 8 בגלל הגנות הדפדפן)`}
+                  </div>
+                </div>
+                <button
+                  className="btn"
+                  style={{ background: 'var(--blue-500)', color: 'white', padding: '9px 18px', fontSize: 13, boxShadow: '0 2px 8px rgba(59,130,246,0.3)', flexShrink: 0 }}
+                  onClick={openAllTabs}
+                  title={`פתח את כל ${recipients.length} הטאבים`}
+                >
+                  <Icon name="ExternalLink" size={16} />
+                  פתח {recipients.length} טאבים
+                </button>
+              </div>
+              {openedAll && (
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--emerald-500)', fontWeight: 600 }}>
+                  ✓ כל הטאבים נפתחו — שלחו את ההודעה בכל אחד
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sequential auto-send (works on mobile too) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             {!sending ? (
               <>
@@ -4161,7 +4418,9 @@
                   onClick={paused ? resumeSending : startBulkSend}
                 >
                   <Icon name={paused ? 'Play' : 'Zap'} size={18} />
-                  {paused ? `המשך שליחה (${recipients.length - currentIdx} נותרו)` : `שלח הכל אוטומטית (${recipients.length})`}
+                  {paused
+                    ? `המשך (${recipients.length - currentIdx} נותרו)`
+                    : `שלח ${isMobile ? 'אחד-אחד' : 'ברצף'} (${recipients.length})`}
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-secondary)' }}>
                   <span>השהייה:</span>
@@ -4183,7 +4442,7 @@
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
                   <Icon name="Loader" size={20} style={{ color: '#25D366', animation: 'spin 1s linear infinite' }} />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#128C7E' }}>שולח הודעה {currentIdx + 1} מתוך {recipients.length}...</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: '#128C7E' }}>שולח {currentIdx + 1} מתוך {recipients.length}...</div>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{recipients[currentIdx]?.name}</div>
                   </div>
                 </div>
@@ -4194,7 +4453,9 @@
             )}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
-            ⚠️ יש לאשר שליחה בכל חלון WhatsApp שנפתח. על המחשב — מומלץ לעבוד עם WhatsApp Web.
+            {isMobile
+              ? '📱 כל לחיצה פותחת WhatsApp עם ההודעה מוכנה — לחצו שלח וחזרו לאפליקציה'
+              : '🖥️ Desktop: השתמשו ב"פתח הכל בטאבים" לשליחה מהירה בו-זמנית דרך WhatsApp Web'}
           </div>
         </div>
       );
@@ -4203,6 +4464,7 @@
     function MessagesPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
+      const { limits, isPro } = useContext(PlanContext);
 
       const [guests, setGuests] = useState([]);
       const [rounds, setRounds] = useState([]);
@@ -4210,6 +4472,7 @@
       const [activeRound, setActiveRound] = useState(null); // null = "new"
       const [loadingGuests, setLoadingGuests] = useState(true);
       const [view, setView] = useState('compose'); // compose | send | history
+      const [upsellFeature, setUpsellFeature] = useState(null);
 
       // Compose state
       const [template, setTemplate] = useState('');
@@ -4351,10 +4614,15 @@
           <div className="round-tabs">
             <button
               className={`round-tab ${activeRound === null ? 'active' : ''}`}
-              onClick={() => { setActiveRound(null); setView('compose'); }}
+              onClick={() => {
+                if (!isPro && rounds.length >= limits.messageRounds) { setUpsellFeature('messageRounds'); return; }
+                setActiveRound(null); setView('compose');
+              }}
+              title={!isPro && rounds.length >= limits.messageRounds ? 'דורש תוכנית Pro' : 'סבב הודעות חדש'}
             >
               <Icon name="Plus" size={14} />
               סבב חדש
+              {!isPro && rounds.length >= limits.messageRounds && <ProBadge style={{ marginRight: 4 }} />}
             </button>
             {rounds.map(r => (
               <button
@@ -4368,6 +4636,17 @@
               </button>
             ))}
           </div>
+
+          {/* Free plan round limit notice */}
+          {!isPro && rounds.length >= limits.messageRounds && activeRound !== null && (
+            <div className="plan-limit-bar">
+              <Icon name="Info" size={16} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>תוכנית Free מאפשרת סבב הודעות אחד בלבד</span>
+              <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setUpsellFeature('messageRounds')}>
+                <Icon name="Zap" size={13} />שדרוג
+              </button>
+            </div>
+          )}
 
           {/* ── COMPOSE VIEW ── */}
           {view === 'compose' && (
@@ -4386,11 +4665,17 @@
                   </button>
                   <button
                     className={`channel-btn ${channel === 'rsvp' ? 'active-rsvp' : ''}`}
-                    onClick={() => setChannel('rsvp')}
+                    onClick={() => {
+                      if (!isPro) { setUpsellFeature('rsvpLink'); return; }
+                      setChannel('rsvp');
+                    }}
+                    style={!isPro ? { opacity: 0.7 } : {}}
                   >
                     <Icon name="Link" size={20} />
                     <span>RSVP Link</span>
-                    <span style={{ fontSize: 11, opacity: 0.7 }}>ללא הודעה</span>
+                    {isPro
+                      ? <span style={{ fontSize: 11, opacity: 0.7 }}>ללא הודעה</span>
+                      : <ProBadge />}
                   </button>
                 </div>
               </div>
@@ -4449,6 +4734,32 @@
                     <button key={v} className="variable-chip" onClick={() => insertVariable(v)}>{v}</button>
                   ))}
                 </div>
+
+                {/* Warning: {לינק_הזמנה} used but no invitation uploaded */}
+                {template.includes('{לינק_הזמנה}') && !event?.settings?.invitation_url && (
+                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, lineHeight: 1.2, flexShrink: 0 }}>⚠️</span>
+                    <div>
+                      <strong>לא הועלתה הזמנה</strong> — {'{לינק_הזמנה}'} יוסר מההודעה אוטומטית.
+                      {' '}<span
+                        style={{ color: 'var(--accent)', cursor: 'pointer', textDecoration: 'underline' }}
+                        onClick={() => window.dispatchEvent(new CustomEvent('seatsync:go-settings'))}
+                      >
+                        העלו הזמנה בהגדרות →
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tip: invitation uploaded — explain WhatsApp preview */}
+                {template.includes('{לינק_הזמנה}') && event?.settings?.invitation_url && (
+                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'rgba(37,211,102,0.07)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, lineHeight: 1.2, flexShrink: 0 }}>✅</span>
+                    <div>
+                      <strong>הזמנה מועלית!</strong> — WhatsApp יציג <strong>תצוגה מקדימה ויזואלית</strong> של ההזמנה ישירות בגוף ההודעה.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Preview */}
@@ -4666,6 +4977,8 @@
               )}
             </div>
           )}
+
+          {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
         </div>
       );
     }
@@ -4852,6 +5165,7 @@
     function SeatingPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
+      const { limits, isPro } = useContext(PlanContext);
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -4859,9 +5173,10 @@
       const [viewMode, setViewMode] = useState('list'); // list | dnd | floor
       const [showAddTable, setShowAddTable] = useState(false);
       const [editTable, setEditTable] = useState(null);
-      const [deleteTableTarget, setDeleteTableTarget] = useState(null); // Bug fix 2.2: confirmation before delete
+      const [deleteTableTarget, setDeleteTableTarget] = useState(null);
       const [selectedFloorTable, setSelectedFloorTable] = useState(null);
       const [draggingGuest, setDraggingGuest] = useState(null);
+      const [upsellFeature, setUpsellFeature] = useState(null);
 
       // Floor plan state
       const [zoom, setZoom] = useState(1);
@@ -5315,12 +5630,31 @@
                   <span className="hide-mobile">מפה</span>
                 </button>
               )}
-              <button className="btn btn-primary" onClick={() => setShowAddTable(true)}>
+              <button className="btn btn-primary" onClick={() => {
+                if (tables.length >= limits.tables) { setUpsellFeature('tables'); return; }
+                setShowAddTable(true);
+              }}>
                 <Icon name="Plus" size={18} />
                 <span className="hide-mobile">שולחן חדש</span>
+                {!isPro && tables.length >= limits.tables && <ProBadge style={{ marginRight: 4 }} />}
               </button>
             </div>
           </div>
+
+          {/* Tables plan limit bar */}
+          {!isPro && tables.length >= Math.floor(limits.tables * 0.8) && (
+            <div className={`plan-limit-bar ${tables.length >= limits.tables ? 'danger' : ''}`}>
+              <Icon name={tables.length >= limits.tables ? 'AlertCircle' : 'Info'} size={16} style={{ color: tables.length >= limits.tables ? 'var(--red-500)' : 'var(--gold-600)', flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>
+                {tables.length >= limits.tables
+                  ? `הגעתם למגבלה — ${tables.length}/${limits.tables} שולחנות (Free)`
+                  : `${tables.length}/${limits.tables} שולחנות — מתקרבים למגבלת Free`}
+              </span>
+              <button className="btn btn-primary" style={{ padding: '4px 12px', fontSize: 12 }} onClick={() => setUpsellFeature('tables')}>
+                <Icon name="Zap" size={13} />שדרוג
+              </button>
+            </div>
+          )}
 
           {/* Stats strip */}
           {tables.length > 0 && (
@@ -5344,7 +5678,10 @@
               <div className="empty-state-icon"><Icon name="Armchair" size={36} /></div>
               <div className="empty-state-title">אין שולחנות עדיין</div>
               <div className="empty-state-text">הוסיפו שולחן בודד או צרו כמה שולחנות בבת אחת</div>
-              <button className="btn btn-primary" onClick={() => setShowAddTable(true)}>
+              <button className="btn btn-primary" onClick={() => {
+                if (tables.length >= limits.tables) { setUpsellFeature('tables'); return; }
+                setShowAddTable(true);
+              }}>
                 <Icon name="Plus" size={18} />הוספת שולחן
               </button>
             </div>
@@ -5668,6 +6005,8 @@
               </div>
             </div>
           )}
+
+          {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
         </div>
       );
     }
@@ -6219,6 +6558,7 @@
       const { signOut } = useContext(SupabaseContext);
       const { theme, toggleTheme } = useContext(ThemeContext);
       const { saveConfig } = useContext(SupabaseContext);
+      const { plan, limits, isPro } = useContext(PlanContext);
 
       const [eventForm, setEventForm] = useState({
         name: event?.name || '',
@@ -6230,6 +6570,9 @@
         rsvp_enabled: event?.rsvp_enabled ?? false,
         rsvp_deadline: event?.rsvp_deadline || '',
         message_template: event?.message_template || '',
+        auto_reminder_enabled: event?.auto_reminder_enabled ?? false,
+        auto_thank_you_enabled: event?.auto_thank_you_enabled ?? false,
+        reminder_days_before: event?.reminder_days_before ?? 3,
       });
       const [saving, setSaving] = useState(false);
 
@@ -6262,6 +6605,9 @@
           rsvp_deadline: eventForm.rsvp_deadline || null,
           venue_address: eventForm.venue_address || null,
           message_template: eventForm.message_template || null,
+          auto_reminder_enabled: eventForm.auto_reminder_enabled,
+          auto_thank_you_enabled: eventForm.auto_thank_you_enabled,
+          reminder_days_before: eventForm.reminder_days_before || 3,
           settings,
         }).eq('id', event.id).select().single();
 
@@ -6450,6 +6796,83 @@
             )}
           </div>
 
+          {/* Auto-messaging CRON settings */}
+          <div className="settings-section">
+            <div className="settings-section-title">הודעות אוטומטיות</div>
+            <div style={{ padding: '0 0 8px' }}>
+              {!isPro && (
+                <div style={{ margin: '12px 20px', padding: '10px 14px', background: 'var(--accent-light)', border: '1px solid var(--accent)', borderRadius: 'var(--radius-sm)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon name="Zap" size={14} style={{ color: 'var(--gold-600)', flexShrink: 0 }} />
+                  <span>פיצ'ר Pro — שדרגו לשליחת הודעות אוטומטיות</span>
+                  <ProBadge />
+                </div>
+              )}
+
+              {/* Auto reminder */}
+              <div className="settings-row">
+                <div className="settings-row-icon"><Icon name="Bell" size={18} /></div>
+                <div style={{ flex: 1 }}>
+                  <div className="settings-row-label">תזכורת אוטומטית לפני האירוע</div>
+                  <div className="settings-row-sub">שולחת WhatsApp לכל מי שלא אישר/ה</div>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.auto_reminder_enabled ?? false}
+                    onChange={e => setEventForm(f => ({ ...f, auto_reminder_enabled: e.target.checked }))}
+                    disabled={!isPro}
+                  />
+                  <span className="toggle-track" />
+                </label>
+              </div>
+
+              {eventForm.auto_reminder_enabled && isPro && (
+                <div style={{ padding: '8px 20px 12px' }}>
+                  <label className="input-label">שלח תזכורת כמה ימים לפני האירוע?</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <input
+                      className="input-field"
+                      type="number"
+                      min="1" max="30"
+                      value={eventForm.reminder_days_before ?? 3}
+                      onChange={e => setEventForm(f => ({ ...f, reminder_days_before: parseInt(e.target.value) || 3 }))}
+                      style={{ width: 80 }}
+                      dir="ltr"
+                    />
+                    <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>ימים לפני האירוע</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Auto thank-you */}
+              <div className="settings-row">
+                <div className="settings-row-icon"><Icon name="Heart" size={18} /></div>
+                <div style={{ flex: 1 }}>
+                  <div className="settings-row-label">הודעת תודה אחרי האירוע</div>
+                  <div className="settings-row-sub">שולחת תודה ליום אחרי לכל המגיעים</div>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={eventForm.auto_thank_you_enabled ?? false}
+                    onChange={e => setEventForm(f => ({ ...f, auto_thank_you_enabled: e.target.checked }))}
+                    disabled={!isPro}
+                  />
+                  <span className="toggle-track" />
+                </label>
+              </div>
+
+              {(eventForm.auto_reminder_enabled || eventForm.auto_thank_you_enabled) && isPro && (
+                <div style={{ padding: '4px 20px 12px' }}>
+                  <button className="btn btn-primary" onClick={saveEvent} disabled={saving} style={{ width: '100%' }}>
+                    <Icon name={saving ? 'Loader' : 'Save'} size={18} />
+                    {saving ? 'שומר...' : 'שמור הגדרות הודעות'}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* App settings */}
           <div className="settings-section">
             <div className="settings-section-title">הזמנה מעוצבת</div>
@@ -6576,9 +6999,110 @@
             </div>
           </div>
 
+          {/* Plan Status */}
+          <div className="settings-section" style={{ marginBottom: 16 }}>
+            <div className="settings-section-title">תוכנית</div>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,var(--gold-400),var(--gold-600))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name="Zap" size={20} style={{ color: 'white' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>תוכנית {PLAN_LIMITS[plan]?.label || 'Free'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isPro ? 'גישה מלאה לכל הפיצ\'רים' : 'גרסת ניסיון חינמית'}</div>
+                  </div>
+                </div>
+                {!isPro && (
+                  <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}
+                    onClick={() => window.open('mailto:support@seatsync.app?subject=שדרוג ל-Pro', '_blank')}>
+                    <Icon name="Zap" size={15} />שדרוג ל-Pro
+                  </button>
+                )}
+              </div>
+              {/* Usage bars */}
+              {[
+                { label: 'מוזמנים', used: event ? null : null, max: limits.guests, icon: 'Users' },
+                { label: 'שולחנות', max: limits.tables, icon: 'Armchair' },
+                { label: 'סבבי הודעות', max: limits.messageRounds === 999 ? '∞' : limits.messageRounds, icon: 'Send' },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, fontSize: 13 }}>
+                  <Icon name={item.icon} size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0 }} />
+                  <span style={{ color: 'var(--text-secondary)', width: 110 }}>{item.label}</span>
+                  <span style={{ fontWeight: 600, color: isPro ? 'var(--emerald-500)' : 'var(--text-primary)' }}>
+                    {typeof item.max === 'number' ? `עד ${item.max}` : item.max}
+                  </span>
+                  {!isPro && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Pro: ללא הגבלה)</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Version */}
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
-            SeatSync v2.0.0 — Production Ready 🚀
+            SeatSync v2.1.0 🚀
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // Password Update Page (after reset-password link)
+    // ============================================
+    function PasswordUpdatePage({ onDone }) {
+      const { client } = useContext(SupabaseContext);
+      const { addToast } = useContext(ToastContext);
+      const [password, setPassword] = useState('');
+      const [confirm, setConfirm] = useState('');
+      const [loading, setLoading] = useState(false);
+      const [done, setDone] = useState(false);
+
+      const handleUpdate = async () => {
+        if (password.length < 6) { addToast('סיסמה חייבת להכיל לפחות 6 תווים', 'error'); return; }
+        if (password !== confirm) { addToast('הסיסמאות אינן תואמות', 'error'); return; }
+        setLoading(true);
+        const { error } = await client.auth.updateUser({ password });
+        if (error) {
+          addToast('שגיאה בעדכון סיסמה: ' + error.message, 'error');
+        } else {
+          setDone(true);
+          addToast('הסיסמה עודכנה בהצלחה ✓', 'success');
+          setTimeout(onDone, 1500);
+        }
+        setLoading(false);
+      };
+
+      if (done) return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 48 }}>✅</div>
+          <div style={{ fontSize: 20, fontWeight: 800 }}>הסיסמה עודכנה!</div>
+          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>מועבר לאפליקציה...</div>
+        </div>
+      );
+
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 380 }}>
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div className="hero-logo" style={{ width: 64, height: 64, borderRadius: 16, margin: '0 auto 16px', animation: 'none' }}>
+                <Icon name="KeyRound" size={30} />
+              </div>
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>עדכון סיסמה</div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>הזינו סיסמה חדשה לחשבון שלכם</div>
+            </div>
+            <div className="card">
+              <div className="input-group">
+                <label className="input-label">סיסמה חדשה</label>
+                <input className="input-field" type="password" placeholder="לפחות 6 תווים" value={password} onChange={e => setPassword(e.target.value)} dir="ltr" style={{ textAlign: 'left' }} autoFocus />
+              </div>
+              <div className="input-group">
+                <label className="input-label">אימות סיסמה</label>
+                <input className="input-field" type="password" placeholder="הזינו שוב" value={confirm} onChange={e => setConfirm(e.target.value)} dir="ltr" style={{ textAlign: 'left' }} onKeyDown={e => e.key === 'Enter' && handleUpdate()} />
+              </div>
+              <button className="btn btn-primary" style={{ width: '100%', marginTop: 4 }} onClick={handleUpdate} disabled={loading}>
+                {loading ? <><Icon name="Loader" size={18} style={{ animation: 'spin 1s linear infinite' }} />מעדכן...</> : <><Icon name="Check" size={18} />עדכן סיסמה</>}
+              </button>
+            </div>
           </div>
         </div>
       );
@@ -6592,6 +7116,17 @@
       const [currentRoute, setCurrentRoute] = useState(ROUTES.EVENTS);
       const [selectedEvent, setSelectedEvent] = useState(null);
       const [showOnboarding, setShowOnboarding] = useState(false);
+      const [passwordRecovery, setPasswordRecovery] = useState(false);
+
+      // Detect PASSWORD_RECOVERY event to show password update screen
+      useEffect(() => {
+        if (!client) return;
+        const { data: { subscription } } = client.auth.onAuthStateChange((event) => {
+          if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
+          if (event === 'USER_UPDATED')      setPasswordRecovery(false);
+        });
+        return () => subscription.unsubscribe();
+      }, [client]);
 
       // Restore selected event from localStorage
       useEffect(() => {
@@ -6637,16 +7172,14 @@
       // Keyboard shortcuts (desktop)
       useEffect(() => {
         const handler = (e) => {
-          // Ignore if typing in an input/textarea
           const tag = document.activeElement?.tagName;
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
           if (!user) return;
 
           switch(e.key) {
-            case 'Escape': break; // handled by modals
+            case 'Escape': break;
             case 'n': case 'N':
               if (currentRoute === ROUTES.GUESTS) {
-                // Trigger add guest — dispatch a custom event
                 window.dispatchEvent(new CustomEvent('seatsync:add-guest'));
               }
               break;
@@ -6665,7 +7198,15 @@
           }
         };
         window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
+
+        // Navigate to settings from anywhere (e.g. invitation upload warning)
+        const goSettings = () => setCurrentRoute(ROUTES.SETTINGS);
+        window.addEventListener('seatsync:go-settings', goSettings);
+
+        return () => {
+          window.removeEventListener('keydown', handler);
+          window.removeEventListener('seatsync:go-settings', goSettings);
+        };
       }, [user, currentRoute, selectedEvent]);
 
       if (!isConfigured) return <ConfigModal onSave={saveConfig} />;
@@ -6680,6 +7221,9 @@
       );
 
       if (!user) return <AuthPage />;
+
+      // Password reset link clicked → show update password screen
+      if (passwordRecovery) return <PasswordUpdatePage onDone={() => setPasswordRecovery(false)} />;
 
       const NAV_ITEMS = [
         { id: ROUTES.EVENTS,    icon: 'CalendarDays',    label: 'אירועים' },
@@ -6732,9 +7276,11 @@
       return (
         <ThemeProvider>
           <SupabaseProvider>
-            <ToastProvider>
-              <App />
-            </ToastProvider>
+            <PlanProvider>
+              <ToastProvider>
+                <App />
+              </ToastProvider>
+            </PlanProvider>
           </SupabaseProvider>
         </ThemeProvider>
       );
