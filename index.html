@@ -2198,26 +2198,77 @@
     // Plan System
     // ============================================
     const PLAN_LIMITS = {
-      free:       { guests: 50,  tables: 5,  messageRounds: 1,  rsvpLink: false, label: 'Free' },
-      pro:        { guests: 500, tables: 50, messageRounds: 999, rsvpLink: true,  label: 'Pro' },
-      enterprise: { guests: 9999,tables: 999,messageRounds: 999, rsvpLink: true,  label: 'Enterprise' },
+      free:       { guests: 50,  tables: 5,  messageRounds: 1,  rsvpLink: false, events: 1,  label: 'Free' },
+      pro:        { guests: 200, tables: 25, messageRounds: 999, rsvpLink: true,  events: 1,  label: 'Pro' },
+      enterprise: { guests: 600, tables: 60, messageRounds: 999, rsvpLink: true,  events: 5,  label: 'Enterprise' },
     };
 
     const PlanContext = createContext();
+
+    // ── Lemon Squeezy Checkout URLs ──
+    // Replace these with your actual Lemon Squeezy checkout links after creating products.
+    // Create products at https://app.lemonsqueezy.com → Store → Products
+    // Each product should be a one-time payment (not subscription).
+    // After creating, copy the checkout URL and paste here.
+    const CHECKOUT_URLS = {
+      pro:        'https://seatsync.lemonsqueezy.com/buy/YOUR_PRO_PRODUCT_ID',
+      enterprise: 'https://seatsync.lemonsqueezy.com/buy/YOUR_ENTERPRISE_PRODUCT_ID',
+    };
 
     function PlanProvider({ children }) {
       const { client, user } = useContext(SupabaseContext);
       const [plan, setPlan] = useState('free');
       const [loadingPlan, setLoadingPlan] = useState(true);
+      const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+      // Fetch plan from DB
+      const refreshPlan = useCallback(async () => {
+        if (!client || !user) return;
+        try {
+          const { data } = await client.from('profiles').select('plan, plan_expires_at').eq('id', user.id).single();
+          setPlan(data?.plan || 'free');
+        } catch {}
+      }, [client, user]);
 
       useEffect(() => {
         if (!client || !user) { setLoadingPlan(false); return; }
-        client.from('profiles').select('plan').eq('id', user.id).single()
+        client.from('profiles').select('plan, plan_expires_at').eq('id', user.id).single()
           .then(({ data }) => {
             setPlan(data?.plan || 'free');
             setLoadingPlan(false);
           })
           .catch(() => setLoadingPlan(false));
+      }, [client, user]);
+
+      // Listen for plan changes via URL callback (after Lemon Squeezy checkout)
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('payment') === 'success') {
+          // Remove query param
+          window.history.replaceState({}, '', window.location.pathname);
+          // Poll for plan update (webhook may take a few seconds)
+          let attempts = 0;
+          const poll = setInterval(async () => {
+            attempts++;
+            await refreshPlan();
+            if (attempts >= 10) clearInterval(poll);
+          }, 2000);
+          return () => clearInterval(poll);
+        }
+      }, [refreshPlan]);
+
+      // Listen for real-time plan changes
+      useEffect(() => {
+        if (!client || !user) return;
+        const channel = client.channel('plan-changes')
+          .on('postgres_changes', {
+            event: 'UPDATE', schema: 'public', table: 'profiles',
+            filter: `id=eq.${user.id}`
+          }, (payload) => {
+            if (payload.new?.plan) setPlan(payload.new.plan);
+          })
+          .subscribe();
+        return () => { client.removeChannel(channel); };
       }, [client, user]);
 
       const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
@@ -2227,8 +2278,24 @@
         return currentCount < limits[resource];
       }, [limits]);
 
+      // Open Lemon Squeezy checkout with user info pre-filled
+      const openCheckout = useCallback((targetPlan = 'pro') => {
+        const baseUrl = CHECKOUT_URLS[targetPlan];
+        if (!baseUrl || baseUrl.includes('YOUR_')) {
+          // Fallback: show instructions if checkout URLs not configured yet
+          setShowUpgradeModal(true);
+          return;
+        }
+        const params = new URLSearchParams();
+        if (user?.email) params.set('checkout[email]', user.email);
+        if (user?.id) params.set('checkout[custom][user_id]', user.id);
+        // Redirect back after payment
+        params.set('checkout[custom][redirect_url]', window.location.origin + window.location.pathname + '?payment=success');
+        window.open(`${baseUrl}?${params.toString()}`, '_blank');
+      }, [user]);
+
       return (
-        <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan }}>
+        <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan, openCheckout, showUpgradeModal, setShowUpgradeModal, refreshPlan }}>
           {children}
         </PlanContext.Provider>
       );
@@ -2299,47 +2366,65 @@
 
     // Upsell Modal — shown when hitting a limit
     function UpsellModal({ feature, onClose }) {
+      const { openCheckout } = useContext(PlanContext);
       const featureText = {
-        guests:       { title: 'הגעתם ל-50 מוזמנים', sub: 'תוכנית Free מוגבלת ל-50 מוזמנים', detail: 'שדרגו ל-Pro ל-500 מוזמנים ויכולות מלאות' },
-        tables:       { title: 'הגעתם ל-5 שולחנות',  sub: 'תוכנית Free מוגבלת ל-5 שולחנות',  detail: 'שדרגו ל-Pro ל-50 שולחנות ומפת הושבה מלאה' },
-        messageRounds:{ title: 'סבב הודעות נוסף',    sub: 'תוכנית Free מאפשרת סבב אחד בלבד', detail: 'שדרגו ל-Pro לסבבי הודעות בלתי מוגבלים' },
-        rsvpLink:     { title: 'קישור RSVP אישי',    sub: 'פיצ\'ר Pro בלבד',                 detail: 'שדרגו ל-Pro לשליחת קישורי RSVP אישיים לכל אורח' },
-      }[feature] || { title: 'פיצ\'ר Pro', sub: 'זמין בתוכנית Pro', detail: 'שדרגו לגישה מלאה' };
+        guests:       { title: 'הגעתם ל-50 מוזמנים', sub: 'תוכנית Free מוגבלת ל-50 מוזמנים', detail: 'שדרגו ל-Pro ל-200 מוזמנים ויכולות מלאות', icon: '👥' },
+        tables:       { title: 'הגעתם ל-5 שולחנות',  sub: 'תוכנית Free מוגבלת ל-5 שולחנות',  detail: 'שדרגו ל-Pro ל-25 שולחנות ומפת הושבה מלאה', icon: '🪑' },
+        messageRounds:{ title: 'סבב הודעות נוסף',    sub: 'תוכנית Free מאפשרת סבב אחד בלבד', detail: 'שדרגו ל-Pro לסבבי הודעות בלתי מוגבלים', icon: '💬' },
+        rsvpLink:     { title: 'קישור RSVP אישי',    sub: 'פיצ\'ר Pro בלבד',                 detail: 'שדרגו ל-Pro לשליחת קישורי RSVP אישיים לכל אורח', icon: '🔗' },
+      }[feature] || { title: 'פיצ\'ר Pro', sub: 'זמין בתוכנית Pro', detail: 'שדרגו לגישה מלאה', icon: '🚀' };
 
       return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-          <div className="modal-content animate-scale-in" style={{ maxWidth: 380, textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🚀</div>
-            <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>{featureText.title}</div>
-            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 4 }}>{featureText.sub}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 24, lineHeight: 1.6 }}>{featureText.detail}</div>
-
-            {/* Plan comparison */}
-            <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 20, textAlign: 'right' }}>
-              {[
-                { label: 'מוזמנים', free: '50', pro: '500' },
-                { label: 'שולחנות', free: '5',  pro: '50' },
-                { label: 'סבבי הודעות', free: '1', pro: 'ללא הגבלה' },
-                { label: 'קישורי RSVP', free: '❌', pro: '✅' },
-              ].map(row => (
-                <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', fontSize: 13, borderBottom: '1px solid var(--border-light)' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{row.label}</span>
-                  <span><span style={{ color: 'var(--text-tertiary)', marginLeft: 16 }}>{row.free}</span>
-                  <span style={{ color: 'var(--gold-600)', fontWeight: 700, marginRight: 16 }}>{row.pro}</span></span>
-                </div>
-              ))}
-              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 8, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                <span>תוכנית</span>
-                <span><span style={{ marginLeft: 16 }}>Free</span><span style={{ color: 'var(--gold-600)', fontWeight: 700, marginRight: 16 }}>Pro ✦</span></span>
-              </div>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 400, textAlign: 'center', padding: 0, overflow: 'hidden' }}>
+            {/* Hero gradient header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #D4A808 0%, #8A6D05 100%)',
+              padding: '32px 24px 24px', color: 'white'
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 8 }}>{featureText.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>{featureText.title}</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>{featureText.sub}</div>
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>אחר כך</button>
-              <button className="btn btn-primary" style={{ flex: 2 }}
-                onClick={() => { window.open('mailto:support@seatsync.app?subject=שדרוג ל-Pro', '_blank'); onClose(); }}>
-                <Icon name="Zap" size={16} />שדרגו ל-Pro — 99₪
-              </button>
+            <div style={{ padding: '20px 24px 24px' }}>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.7 }}>{featureText.detail}</div>
+
+              {/* What you get */}
+              <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 20, textAlign: 'right' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>מה כלול ב-Pro</div>
+                {[
+                  { icon: '✅', text: 'עד 200 מוזמנים' },
+                  { icon: '✅', text: 'עד 25 שולחנות' },
+                  { icon: '✅', text: 'סבבי הודעות ללא הגבלה' },
+                  { icon: '✅', text: 'קישורי RSVP אישיים' },
+                  { icon: '✅', text: 'הודעות אוטומטיות' },
+                  { icon: '✅', text: 'ייצוא PDF + אקסל' },
+                ].map((item, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', fontSize: 13 }}>
+                    <span>{item.icon}</span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price callout */}
+              <div style={{ marginBottom: 16, padding: '12px 0', borderTop: '1px solid var(--border-light)' }}>
+                <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)' }}>99₪</span>
+                <span style={{ fontSize: 14, color: 'var(--text-tertiary)', marginRight: 6 }}>לאירוע (חד פעמי)</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onClose}>אחר כך</button>
+                <button className="btn btn-primary" style={{ flex: 2, fontSize: 15, padding: '12px 20px' }}
+                  onClick={() => { openCheckout('pro'); onClose(); }}>
+                  <Icon name="Zap" size={16} />שדרגו עכשיו
+                </button>
+              </div>
+
+              <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                💳 תשלום מאובטח · ללא מנוי · ללא חיוב חוזר
+              </div>
             </div>
           </div>
         </div>
@@ -7045,7 +7130,7 @@
       const { signOut } = useContext(SupabaseContext);
       const { theme, toggleTheme } = useContext(ThemeContext);
       const { saveConfig } = useContext(SupabaseContext);
-      const { plan, limits, isPro } = useContext(PlanContext);
+      const { plan, limits, isPro, openCheckout } = useContext(PlanContext);
 
       const [eventForm, setEventForm] = useState({
         name: event?.name || '',
@@ -7132,14 +7217,22 @@
           <div className="settings-section" style={{ marginBottom: 16 }}>
             <div className="settings-section-title">תוכנית</div>
             <div style={{ padding: '16px 20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,var(--gold-400),var(--gold-600))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon name="Zap" size={20} style={{ color: 'white' }} />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,var(--gold-400),var(--gold-600))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name="Zap" size={20} style={{ color: 'white' }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>תוכנית {PLAN_LIMITS[plan]?.label || 'Free'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isPro ? 'גישה מלאה לכל הפיצ\'רים' : 'גרסת ניסיון חינמית'}</div>
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>תוכנית {PLAN_LIMITS[plan]?.label || 'Free'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isPro ? 'גישה מלאה לכל הפיצ\'רים' : 'גרסת ניסיון חינמית'}</div>
-                </div>
+                {!isPro && (
+                  <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}
+                    onClick={() => openCheckout('pro')}>
+                    <Icon name="Zap" size={15} />שדרג
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -7568,14 +7661,15 @@
                 </div>
                 {!isPro && (
                   <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}
-                    onClick={() => window.open('mailto:support@seatsync.app?subject=שדרוג ל-Pro', '_blank')}>
+                    onClick={() => openCheckout('pro')}>
                     <Icon name="Zap" size={15} />שדרוג ל-Pro
                   </button>
                 )}
               </div>
               {/* Usage bars */}
               {[
-                { label: 'מוזמנים', used: event ? null : null, max: limits.guests, icon: 'Users' },
+                { label: 'אירועים', max: limits.events, icon: 'CalendarDays' },
+                { label: 'מוזמנים', max: limits.guests, icon: 'Users' },
                 { label: 'שולחנות', max: limits.tables, icon: 'Armchair' },
                 { label: 'סבבי הודעות', max: limits.messageRounds === 999 ? '∞' : limits.messageRounds, icon: 'Send' },
               ].map(item => (
@@ -7585,7 +7679,6 @@
                   <span style={{ fontWeight: 600, color: isPro ? 'var(--emerald-500)' : 'var(--text-primary)' }}>
                     {typeof item.max === 'number' ? `עד ${item.max}` : item.max}
                   </span>
-                  {!isPro && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>(Pro: ללא הגבלה)</span>}
                 </div>
               ))}
             </div>
@@ -7593,7 +7686,7 @@
 
           {/* Version */}
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
-            SeatSync v2.1.0 🚀
+            SeatSync v2.2.0 🚀
           </div>
         </div>
       );
@@ -7655,6 +7748,135 @@
               <button className="btn btn-primary" style={{ width: '100%', marginTop: 4 }} onClick={handleUpdate} disabled={loading}>
                 {loading ? <><Icon name="Loader" size={18} style={{ animation: 'spin 1s linear infinite' }} />מעדכן...</> : <><Icon name="Check" size={18} />עדכן סיסמה</>}
               </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================================
+    // Payment Success Banner — shown after returning from checkout
+    // ============================================
+    function PaymentSuccessBanner() {
+      const [show, setShow] = useState(false);
+      const [planName, setPlanName] = useState('Pro');
+      const { plan, isPro } = useContext(PlanContext);
+      const { addToast } = useContext(ToastContext);
+
+      useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('payment') === 'success') {
+          setShow(true);
+        }
+      }, []);
+
+      useEffect(() => {
+        if (show && isPro) {
+          setPlanName(PLAN_LIMITS[plan]?.label || 'Pro');
+          addToast('התוכנית שודרגה בהצלחה! 🎉', 'success');
+        }
+      }, [show, isPro, plan]);
+
+      if (!show) return null;
+
+      return (
+        <div style={{
+          background: 'linear-gradient(135deg, #D4A808 0%, #8A6D05 100%)',
+          color: 'white', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12,
+          position: 'relative', zIndex: 50
+        }}>
+          <div style={{ fontSize: 28 }}>{isPro ? '🎉' : '⏳'}</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>
+              {isPro ? `ברוכים הבאים ל-${planName}!` : 'התשלום התקבל — מפעיל...'}
+            </div>
+            <div style={{ fontSize: 12, opacity: 0.9 }}>
+              {isPro ? 'כל הפיצ\'רים פתוחים. ניהול מושלם מתחיל עכשיו!' : 'ההפעלה תתבצע תוך מספר שניות'}
+            </div>
+          </div>
+          <button onClick={() => setShow(false)} style={{
+            background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
+            width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'white', cursor: 'pointer', flexShrink: 0
+          }}>
+            <Icon name="X" size={16} />
+          </button>
+        </div>
+      );
+    }
+
+    // ============================================
+    // Full-page Upgrade Modal — accessible from anywhere
+    // ============================================
+    function UpgradeModal({ onClose }) {
+      const { openCheckout } = useContext(PlanContext);
+
+      return (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 440, padding: 0, overflow: 'hidden' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #D4A808 0%, #8A6D05 100%)',
+              padding: '28px 24px', color: 'white', textAlign: 'center'
+            }}>
+              <div style={{ fontSize: 36, marginBottom: 4 }}>✦</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 800, marginBottom: 6 }}>שדרגו ל-Pro</div>
+              <div style={{ fontSize: 14, opacity: 0.9 }}>תשלום חד פעמי לאירוע. ללא מנוי. ללא חיוב חוזר.</div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              <div style={{
+                border: '2px solid var(--gold-400)', borderRadius: 'var(--radius-lg)',
+                padding: '20px', marginBottom: 16, position: 'relative', background: 'var(--bg-secondary)'
+              }}>
+                <div style={{
+                  position: 'absolute', top: -10, right: 16,
+                  background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                  color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
+                  borderRadius: 20, letterSpacing: 0.5
+                }}>הכי פופולרי</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+                  <span style={{ fontSize: 36, fontWeight: 900 }}>99₪</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                </div>
+                {[
+                  'אירוע אחד', 'עד 200 מוזמנים', 'עד 25 שולחנות', 'סבבי הודעות ללא הגבלה',
+                  'קישורי RSVP אישיים', 'הודעות אוטומטיות', 'ייצוא PDF + אקסל',
+                ].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 13 }}>
+                    <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
+                  </div>
+                ))}
+                <button className="btn btn-primary" style={{ width: '100%', marginTop: 16, padding: '12px 0', fontSize: 15 }}
+                  onClick={() => { openCheckout('pro'); onClose(); }}>
+                  <Icon name="Zap" size={16} />שדרגו ל-Pro
+                </button>
+              </div>
+
+              <div style={{
+                border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)',
+                padding: '20px', background: 'var(--bg-secondary)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+                  <span style={{ fontSize: 28, fontWeight: 900 }}>249₪</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                </div>
+                {[
+                  'עד 5 אירועים', 'עד 600 מוזמנים לאירוע', 'עד 60 שולחנות', 'כל פיצ\'רי Pro', 'תמיכה עדיפותית',
+                ].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 13 }}>
+                    <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
+                  </div>
+                ))}
+                <button className="btn btn-outline" style={{ width: '100%', marginTop: 16, padding: '10px 0' }}
+                  onClick={() => { openCheckout('enterprise'); onClose(); }}>
+                  שדרגו ל-Enterprise
+                </button>
+              </div>
+
+              <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={onClose}>אחר כך</button>
+              <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
+                💳 תשלום מאובטח דרך Lemon Squeezy · ללא חיוב חוזר
+              </div>
             </div>
           </div>
         </div>
@@ -7809,11 +8031,15 @@
         }
       };
 
+      const { showUpgradeModal, setShowUpgradeModal } = useContext(PlanContext);
+
       return (
         <ErrorBoundary>
           <OfflineBanner />
+          <PaymentSuccessBanner />
           <PWAInstallBanner />
           {showOnboarding && user && <OnboardingModal onDone={doneOnboarding} />}
+          {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
           <TopBar event={selectedEvent} onSettings={() => setCurrentRoute(ROUTES.SETTINGS)} currentRoute={currentRoute} onNavigate={setCurrentRoute} />
           <main className="main-content">
             <ErrorBoundary key={currentRoute}>
