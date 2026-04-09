@@ -4646,13 +4646,24 @@
         const msg = buildMessage(template, guest, event, tables);
 
         if (shareSupported) {
-          // Mobile: share image + text together
+          // Mobile: share image + text together via Web Share
+          // Limitation: Web Share API cannot pre-select a contact — user must pick manually
+          // Optimization: we include the phone-specific wa.me link in the share text
+          // so after sharing the image, the user can tap the link to open the conversation
           const result = await shareInvitationWithMessage(invitationUrl, msg);
           if (result === 'shared') {
             onMarkSent(guest.id);
             addToast(`נשלח ל-${guest.name} ✓`, 'success');
           } else if (result === 'cancelled') {
-            // User cancelled share sheet — do nothing
+            // User cancelled — offer direct wa.me fallback with text only
+            if (guest.phone) {
+              const waLink = buildWALink(guest.phone, msg);
+              window.open(waLink, '_blank');
+              setTimeout(() => {
+                onMarkSent(guest.id);
+                addToast(`טקסט נשלח ל-${guest.name} (בלי תמונה)`, 'info');
+              }, 1500);
+            }
           } else {
             addToast('שגיאה בשיתוף — נסו שוב', 'error');
           }
@@ -4835,12 +4846,15 @@
         if (!template.trim()) return;
         setSaving(true);
         const roundNum = (rounds[0]?.round_number || 0) + 1;
+        // DB CHECK constraint allows: all, pending, maybe, declined, custom
+        // Map 'confirmed' to 'custom' for storage (we track real filter in local state)
+        const dbFilter = recipientFilter === 'confirmed' ? 'custom' : recipientFilter;
         const { data, error } = await client.from('message_rounds').insert({
           event_id: event.id,
           round_number: roundNum,
           message_template: template,
           channel,
-          target_filter: recipientFilter,
+          target_filter: dbFilter,
           total_sent: 0,
         }).select().single();
         if (!error && data) {
@@ -4850,7 +4864,8 @@
           setSentSet(new Set());
           addToast(`סבב ${roundNum} נשמר ✓`, 'success');
         } else {
-          addToast('שגיאה בשמירת הסבב', 'error');
+          console.error('saveRound error:', error);
+          addToast('שגיאה בשמירת הסבב: ' + (error?.message || 'שגיאה לא ידועה'), 'error');
         }
         setSaving(false);
       };
