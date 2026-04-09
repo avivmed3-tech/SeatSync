@@ -274,11 +274,13 @@
       border-bottom: 1px solid var(--border-default);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      padding: 0 20px;
+      padding: 0 16px;
       height: 60px;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 8px;
+      overflow: visible;
       transition: all var(--duration-normal) var(--ease-out);
     }
 
@@ -286,6 +288,8 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;
+      overflow: hidden;
     }
 
     .top-bar-logo-icon {
@@ -310,7 +314,8 @@
     .top-bar-actions {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
+      flex-shrink: 0;
     }
 
     .icon-btn {
@@ -6302,33 +6307,45 @@
                       ))}
                     </g>
                   </svg>
+                </div>
+              )}
 
-                  {/* Selected table panel */}
-                  {selectedFloorTable && (
-                    <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', padding: 14, minWidth: 200, boxShadow: 'var(--shadow-lg)', animation: 'scaleIn 0.2s ease both', zIndex: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <div style={{ fontWeight: 700 }}>{selectedFloorTable.name}</div>
-                        <button className="icon-btn" style={{ width: 24, height: 24 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={14}/></button>
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        {guests.filter(g=>g.table_id===selectedFloorTable.id).reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
-                      </div>
+              {/* Selected table panel — outside floorplan-wrap, shown as bottom sheet */}
+              {viewMode === 'floor' && selectedFloorTable && (
+                <div style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: 16,
+                  marginTop: 12,
+                  boxShadow: 'var(--shadow-lg)',
+                  animation: 'slideUp 0.2s ease both',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedFloorTable.name}</div>
+                    <button className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={16}/></button>
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
+                    {guests.filter(g=>g.table_id===selectedFloorTable.id).reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
+                  </div>
+                  {guests.filter(g=>g.table_id===selectedFloorTable.id).length > 0 && (
+                    <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {guests.filter(g=>g.table_id===selectedFloorTable.id).map(g => (
-                        <div key={g.id} style={{ display:'flex', alignItems:'center', gap:6, fontSize:12, padding:'3px 0' }}>
+                        <span key={g.id} style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, padding:'4px 10px', background:'var(--bg-tertiary)', borderRadius:'var(--radius-full)' }}>
                           <span style={{ width:7, height:7, borderRadius:'50%', background:getGroupColor(g.group_name), flexShrink:0 }}/>
                           {g.name}
-                        </div>
+                        </span>
                       ))}
-                      <div style={{ display:'flex', gap:6, marginTop:10 }}>
-                        <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
-                          <Icon name="Pencil" size={13}/>ערוך
-                        </button>
-                        <button className="btn btn-danger" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
-                          <Icon name="Trash2" size={13}/>מחק
-                        </button>
-                      </div>
                     </div>
                   )}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
+                      <Icon name="Pencil" size={14}/>ערוך
+                    </button>
+                    <button className="btn btn-danger" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
+                      <Icon name="Trash2" size={14}/>מחק
+                    </button>
+                  </div>
                 </div>
               )}
             </>
@@ -6669,23 +6686,7 @@
         <div className="top-bar">
           <div className="top-bar-logo">
             <div className="top-bar-logo-icon">
-              <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <linearGradient id="logoGrad" x1="0" y1="0" x2="34" y2="34" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#F5C518"/>
-                    <stop offset="100%" stopColor="#B38D06"/>
-                  </linearGradient>
-                  <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="rgba(212,168,8,0.35)"/>
-                  </filter>
-                </defs>
-                <rect width="34" height="34" rx="9" fill="url(#logoGrad)" filter="url(#logoShadow)"/>
-                <ellipse cx="17" cy="14" rx="9" ry="5.5" fill="rgba(255,255,255,0.22)" stroke="white" strokeWidth="1.5"/>
-                <rect x="15.5" y="18.5" width="3" height="5" rx="1.5" fill="white" opacity="0.9"/>
-                <circle cx="10" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
-                <circle cx="24" cy="21.5" r="2.5" fill="white" opacity="0.9"/>
-                <path d="M13.5 14 L16 16.5 L21 11.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.9"/>
-              </svg>
+              <img src="Icon-192.png" alt="SeatSync" width="34" height="34" style={{ borderRadius: 9 }} />
             </div>
             {/* Desktop breadcrumbs */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
