@@ -6307,45 +6307,62 @@
                       ))}
                     </g>
                   </svg>
-                </div>
-              )}
 
-              {/* Selected table panel — outside floorplan-wrap, shown as bottom sheet */}
-              {viewMode === 'floor' && selectedFloorTable && (
-                <div style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: 16,
-                  marginTop: 12,
-                  boxShadow: 'var(--shadow-lg)',
-                  animation: 'slideUp 0.2s ease both',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{selectedFloorTable.name}</div>
-                    <button className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={16}/></button>
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10 }}>
-                    {guests.filter(g=>g.table_id===selectedFloorTable.id).reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
-                  </div>
-                  {guests.filter(g=>g.table_id===selectedFloorTable.id).length > 0 && (
-                    <div style={{ marginBottom: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {guests.filter(g=>g.table_id===selectedFloorTable.id).map(g => (
-                        <span key={g.id} style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:12, padding:'4px 10px', background:'var(--bg-tertiary)', borderRadius:'var(--radius-full)' }}>
-                          <span style={{ width:7, height:7, borderRadius:'50%', background:getGroupColor(g.group_name), flexShrink:0 }}/>
-                          {g.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display:'flex', gap:8 }}>
-                    <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
-                      <Icon name="Pencil" size={14}/>ערוך
-                    </button>
-                    <button className="btn btn-danger" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
-                      <Icon name="Trash2" size={14}/>מחק
-                    </button>
-                  </div>
+                  {/* Selected table panel — positioned near the table */}
+                  {selectedFloorTable && (() => {
+                    const tx = (selectedFloorTable.position_x || 80) * zoom + pan.x;
+                    const ty = (selectedFloorTable.position_y || 80) * zoom + pan.y;
+                    const panelW = 210;
+                    const panelH = 160;
+                    // Position to the left of the table, or right if too close to right edge
+                    let left = tx - panelW - 10;
+                    let top = ty - panelH / 2 + 20;
+                    if (left < 8) left = tx + 60;
+                    if (top < 8) top = 8;
+                    if (top + panelH > 510) top = 510 - panelH;
+
+                    const tGuests = guests.filter(g => g.table_id === selectedFloorTable.id);
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left, top,
+                        width: panelW,
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: 12,
+                        boxShadow: 'var(--shadow-lg)',
+                        animation: 'scaleIn 0.15s ease both',
+                        zIndex: 10,
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{selectedFloorTable.name}</div>
+                          <button className="icon-btn" style={{ width: 24, height: 24 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={14}/></button>
+                        </div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                          {tGuests.reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
+                        </div>
+                        {tGuests.length > 0 && (
+                          <div style={{ marginBottom: 8, maxHeight: 60, overflowY: 'auto' }}>
+                            {tGuests.map(g => (
+                              <div key={g.id} style={{ display:'flex', alignItems:'center', gap:5, fontSize:11, padding:'2px 0' }}>
+                                <span style={{ width:6, height:6, borderRadius:'50%', background:getGroupColor(g.group_name), flexShrink:0 }}/>
+                                {g.name}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div style={{ display:'flex', gap:6 }}>
+                          <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
+                            <Icon name="Pencil" size={13}/>ערוך
+                          </button>
+                          <button className="btn btn-danger" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
+                            <Icon name="Trash2" size={13}/>מחק
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </>
