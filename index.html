@@ -3905,6 +3905,12 @@
       };
 
       const handleAdd = async (form) => {
+        // Plan limit check
+        if (guests.length >= limits.guests) {
+          addToast(`תוכנית ${limits.label} מאפשרת עד ${limits.guests} מוזמנים. שדרגו לתוכנית גבוהה יותר.`, 'error');
+          setUpsellFeature('guests');
+          return;
+        }
         const { data, error } = await client.from('guests').insert({
           ...form,
           event_id: event.id,
@@ -4886,21 +4892,67 @@
       const [tables, setTables] = useState([]);
       const [activeRound, setActiveRound] = useState(null);
       const [loadingGuests, setLoadingGuests] = useState(true);
-      const [view, setView] = useState('actions'); // actions | compose | send | history
       const [upsellFeature, setUpsellFeature] = useState(null);
 
       // Compose state
       const [template, setTemplate] = useState('');
       const [channel, setChannel] = useState('whatsapp');
       const [recipientFilter, setRecipientFilter] = useState('all');
-      const [sentSet, setSentSet] = useState(new Set());
+      const [sentSet, setSentSet] = useState(() => {
+        // Restore sentSet from sessionStorage (survives app backgrounding on mobile)
+        try {
+          const saved = sessionStorage.getItem(`seatsync-sent-${event?.id}`);
+          if (saved) return new Set(JSON.parse(saved));
+        } catch {}
+        return new Set();
+      });
       const [saving, setSaving] = useState(false);
       const [selectedAction, setSelectedAction] = useState(null);
       // Send mode: 'text_only' | 'image_then_text'
       const [sendMode, setSendMode] = useState('text_only');
 
+      // Persist sentSet to sessionStorage whenever it changes
+      useEffect(() => {
+        if (event?.id && sentSet.size > 0) {
+          try { sessionStorage.setItem(`seatsync-sent-${event.id}`, JSON.stringify([...sentSet])); } catch {}
+        }
+      }, [sentSet, event?.id]);
+
+      // Restore view state from sessionStorage (so returning from WhatsApp keeps the send screen)
+      const [view, setView] = useState(() => {
+        try {
+          const savedView = sessionStorage.getItem(`seatsync-msg-view-${event?.id}`);
+          if (savedView === 'send' || savedView === 'compose') return savedView;
+        } catch {}
+        return 'actions';
+      });
+
+      // Persist view to sessionStorage
+      useEffect(() => {
+        if (event?.id) {
+          try { sessionStorage.setItem(`seatsync-msg-view-${event.id}`, view); } catch {}
+        }
+      }, [view, event?.id]);
+
       const templateRef = useRef(null);
       const invitationUrl = event?.settings?.invitation_url || '';
+
+      // Restore template from session if available
+      useEffect(() => {
+        if (event?.id && !template) {
+          try {
+            const saved = sessionStorage.getItem(`seatsync-msg-tpl-${event.id}`);
+            if (saved) setTemplate(saved);
+          } catch {}
+        }
+      }, [event?.id]);
+
+      // Persist template
+      useEffect(() => {
+        if (event?.id && template) {
+          try { sessionStorage.setItem(`seatsync-msg-tpl-${event.id}`, template); } catch {}
+        }
+      }, [template, event?.id]);
 
       useEffect(() => {
         if (!client || !event?.id) return;
@@ -5278,30 +5330,52 @@
               {/* Text-only mode — regular wa.me flow */}
               {(sendMode === 'text_only' || !invitationUrl) && (
                 <div>
-                  <div className="round-summary-card">
-                    <div className="round-stat">
-                      <div className="round-stat-value" style={{ color: 'var(--accent)' }}>{recipients.length}</div>
-                      <div className="round-stat-label">נמענים</div>
+                  {/* Sticky progress header */}
+                  <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', paddingBottom: 8 }}>
+                    <div className="round-summary-card" style={{ marginBottom: 8 }}>
+                      <div className="round-stat">
+                        <div className="round-stat-value" style={{ color: 'var(--accent)' }}>{recipients.length}</div>
+                        <div className="round-stat-label">נמענים</div>
+                      </div>
+                      <div className="round-stat">
+                        <div className="round-stat-value" style={{ color: '#25D366' }}>{sentCount}</div>
+                        <div className="round-stat-label">נשלחו</div>
+                      </div>
+                      <div className="round-stat">
+                        <div className="round-stat-value" style={{ color: 'var(--text-secondary)' }}>{recipients.length - sentCount}</div>
+                        <div className="round-stat-label">נותרו</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: 120 }}>
+                        <div className="send-progress"><div className="send-progress-bar" style={{ width: `${sendProgress}%` }} /></div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{sendProgress}% הושלם</div>
+                      </div>
                     </div>
-                    <div className="round-stat">
-                      <div className="round-stat-value" style={{ color: '#25D366' }}>{sentCount}</div>
-                      <div className="round-stat-label">נשלחו</div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllSent}>סמן הכל כנשלח</button>
+                      {sentCount > 0 && (
+                        <button className="btn btn-ghost" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => { setSentSet(new Set()); if (event?.id) try { sessionStorage.removeItem(`seatsync-sent-${event.id}`); } catch {} addToast('התקדמות אופסה', 'success'); }}>
+                          <Icon name="RotateCcw" size={14} /> אפס התקדמות
+                        </button>
+                      )}
                     </div>
-                    <div className="round-stat">
-                      <div className="round-stat-value" style={{ color: 'var(--text-secondary)' }}>{recipients.length - sentCount}</div>
-                      <div className="round-stat-label">נותרו</div>
-                    </div>
-                    <div style={{ flex: 1, minWidth: 120 }}>
-                      <div className="send-progress"><div className="send-progress-bar" style={{ width: `${sendProgress}%` }} /></div>
-                      <div style={{ fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>{sendProgress}% הושלם</div>
-                    </div>
-                    <button className="btn btn-secondary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={markAllSent}>סמן הכל כנשלח</button>
+                    {sendProgress === 100 && (
+                      <div style={{ marginTop: 8, padding: '10px 14px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Icon name="PartyPopper" size={20} style={{ color: 'var(--emerald-500)' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--emerald-500)' }}>כל ההודעות נשלחו! 🎉</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>נשלחו {sentCount} הודעות בסבב הזה</div>
+                        </div>
+                        <button className="btn btn-primary" style={{ fontSize: 12, padding: '6px 14px' }} onClick={() => { setView('actions'); if (event?.id) try { sessionStorage.removeItem(`seatsync-sent-${event.id}`); sessionStorage.removeItem(`seatsync-msg-view-${event.id}`); } catch {} }}>
+                          סיים
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {channel === 'whatsapp' && (
                     <div style={{ padding: '10px 14px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 'var(--radius-sm)', fontSize: 13, color: '#128C7E', marginBottom: 14, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                       <span style={{ fontSize: 18, lineHeight: 1 }}>💡</span>
-                      <div>לחצו "שלח הכל אוטומטית" לפתיחת WhatsApp אוטומטית לכל אורח ברצף, או שלחו ידנית אחד-אחד.</div>
+                      <div>לחצו על <strong>"שלח"</strong> ליד כל אורח — WhatsApp ייפתח עם ההודעה מוכנה. אחרי השליחה חזרו לכאן — ההתקדמות נשמרת.</div>
                     </div>
                   )}
 
@@ -5332,13 +5406,18 @@
                     </div>
                   ) : (
                     <div className="recipient-list">
-                      {recipients.map((guest, idx) => {
+                      {/* Sort: unsent first, then sent */}
+                      {[...recipients].sort((a, b) => {
+                        const aSent = sentSet.has(a.id) ? 1 : 0;
+                        const bSent = sentSet.has(b.id) ? 1 : 0;
+                        return aSent - bSent;
+                      }).map((guest, idx) => {
                         const isSent = sentSet.has(guest.id);
                         const msg = previewMessage(guest);
                         const waLink = buildWALink(guest.phone, msg);
                         return (
                           <div key={guest.id} className={`recipient-row ${isSent ? 'sent-row' : ''}`}>
-                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{idx + 1}</div>
+                            <div style={{ fontSize: 12, color: isSent ? 'var(--emerald-500)' : 'var(--text-tertiary)', minWidth: 24, textAlign: 'center', fontWeight: 700 }}>{isSent ? '✓' : idx + 1}</div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 600, fontSize: 14 }}>{guest.name}</div>
                               <div style={{ fontSize: 12, color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'right' }}>{guest.phone || '—'}</div>
@@ -5366,6 +5445,7 @@
                   )}
                 </div>
               )}
+
             </div>
           )}
 
@@ -5673,6 +5753,13 @@
 
       // Add table(s)
       const handleAddTable = async (formOrArray, isBulk) => {
+        // Plan limit check
+        const newCount = isBulk ? formOrArray.length : 1;
+        if (tables.length + newCount > limits.tables) {
+          addToast(`תוכנית ${limits.label} מאפשרת עד ${limits.tables} שולחנות. שדרגו לתוכנית גבוהה יותר.`, 'error');
+          setUpsellFeature('tables');
+          return;
+        }
         if (isBulk) {
           const { data, error } = await client.from('tables').insert(formOrArray).select();
           if (!error) { setTables(prev => [...prev, ...(data || [])]); addToast(`${data?.length} שולחנות נוצרו ✓`, 'success'); }
@@ -6505,6 +6592,7 @@
     function EventsPage({ onSelectEvent, selectedEventId, onClearSelectedEvent }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
+      const { plan, limits, canAdd, openCheckout, setShowUpgradeModal } = useContext(PlanContext);
       const [events, setEvents] = useState([]);
       const [eventStats, setEventStats] = useState({});
       const [loading, setLoading] = useState(true);
@@ -6565,6 +6653,12 @@
 
       const createEvent = async () => {
         if (!newEvent.name.trim()) return;
+        // Plan limit check
+        if (!canAdd('events', events.length)) {
+          addToast(`תוכנית ${limits.label} מאפשרת עד ${limits.events} אירועים. שדרגו לתוכנית גבוהה יותר.`, 'error');
+          setShowUpgradeModal(true);
+          return;
+        }
         const { data: { user } } = await client.auth.getUser();
         if (!user) { addToast('שגיאה: לא מחובר', 'error'); return; }
 
@@ -6619,11 +6713,32 @@
               <div className="page-title">האירועים שלי</div>
               <div className="page-subtitle">{events.length} אירועים</div>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
+            <button className="btn btn-primary" onClick={() => {
+              if (!canAdd('events', events.length)) {
+                addToast(`תוכנית ${limits.label} מאפשרת עד ${limits.events} אירועים. שדרגו כדי להוסיף עוד.`, 'error');
+                setShowUpgradeModal(true);
+                return;
+              }
+              setShowCreate(true);
+            }}>
               <Icon name="Plus" size={18} />
               אירוע חדש
             </button>
           </div>
+
+          {/* Plan limits indicator */}
+          {events.length > 0 && (
+            <div style={{ marginBottom: 12, padding: '8px 14px', borderRadius: 'var(--radius-sm)', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: events.length >= limits.events ? 'rgba(239,68,68,0.08)' : 'var(--bg-secondary)', border: events.length >= limits.events ? '1px solid rgba(239,68,68,0.2)' : '1px solid var(--border-default)' }}>
+              <span style={{ color: events.length >= limits.events ? 'var(--red-500)' : 'var(--text-secondary)' }}>
+                {events.length}/{limits.events} אירועים · תוכנית {limits.label}
+              </span>
+              {events.length >= limits.events && (
+                <button className="btn" style={{ padding: '4px 12px', fontSize: 11, background: 'var(--gold-400)', color: 'white', borderRadius: 'var(--radius-sm)' }} onClick={() => setShowUpgradeModal(true)}>
+                  <Icon name="Zap" size={12} /> שדרג
+                </button>
+              )}
+            </div>
+          )}
 
           {showCreate && (
             <div className="card animate-scale-in" style={{ marginBottom: 20 }}>
@@ -7329,7 +7444,8 @@
           const url = await uploadFile(file, 'floorplans', 'floorplan');
           setFloorplanUrl(url);
           const settings = { ...(event.settings || {}), invitation_url: invitationUrl, floorplan_url: url };
-          await client.from('events').update({ settings }).eq('id', event.id);
+          const { data, error } = await client.from('events').update({ settings }).eq('id', event.id).select().single();
+          if (data) onEventUpdate(data);
           addToast('סקיצת האולם הועלתה ✓', 'success');
         } catch (err) {
           addToast('שגיאה בהעלאה: ' + (err.message || 'נסה שוב'), 'error');
@@ -7596,7 +7712,13 @@
                   <button
                     className="icon-btn"
                     style={{ position: 'absolute', top: 6, left: 6, width: 28, height: 28, background: 'rgba(0,0,0,0.6)', borderRadius: 'var(--radius-full)', color: 'white' }}
-                    onClick={() => { setFloorplanUrl(''); }}
+                    onClick={async () => { 
+                      setFloorplanUrl(''); 
+                      const settings = { ...(event.settings || {}), invitation_url: invitationUrl, floorplan_url: '' };
+                      const { data } = await client.from('events').update({ settings }).eq('id', event.id).select().single();
+                      if (data) onEventUpdate(data);
+                      addToast('הסקיצה הוסרה', 'success');
+                    }}
                     title="הסר סקיצה"
                   >
                     <Icon name="X" size={14} />
