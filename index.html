@@ -2408,10 +2408,20 @@
                 ))}
               </div>
 
-              {/* Price callout */}
-              <div style={{ marginBottom: 16, padding: '12px 0', borderTop: '1px solid var(--border-light)' }}>
-                <span style={{ fontSize: 32, fontWeight: 900, color: 'var(--text-primary)' }}>99₪</span>
-                <span style={{ fontSize: 14, color: 'var(--text-tertiary)', marginRight: 6 }}>לאירוע (חד פעמי)</span>
+              {/* Price options */}
+              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                <div style={{ flex: 1, border: '2px solid var(--gold-400)', borderRadius: 'var(--radius-md)', padding: '12px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-secondary)' }}
+                  onClick={() => { openCheckout('pro'); onClose(); }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--gold-600)', marginBottom: 4 }}>PRO</div>
+                  <div style={{ fontSize: 24, fontWeight: 900 }}>99₪</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>אירוע 1 · 200 מוזמנים</div>
+                </div>
+                <div style={{ flex: 1, border: '1px solid var(--border-default)', borderRadius: 'var(--radius-md)', padding: '12px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-secondary)' }}
+                  onClick={() => { openCheckout('enterprise'); onClose(); }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-secondary)', marginBottom: 4 }}>ENTERPRISE</div>
+                  <div style={{ fontSize: 24, fontWeight: 900 }}>249₪</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>5 אירועים · 600 מוזמנים</div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
@@ -7130,7 +7140,7 @@
       const { signOut } = useContext(SupabaseContext);
       const { theme, toggleTheme } = useContext(ThemeContext);
       const { saveConfig } = useContext(SupabaseContext);
-      const { plan, limits, isPro, openCheckout } = useContext(PlanContext);
+      const { plan, limits, isPro, openCheckout, setShowUpgradeModal } = useContext(PlanContext);
 
       const [eventForm, setEventForm] = useState({
         name: event?.name || '',
@@ -7224,13 +7234,13 @@
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 16 }}>תוכנית {PLAN_LIMITS[plan]?.label || 'Free'}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isPro ? 'גישה מלאה לכל הפיצ\'רים' : 'גרסת ניסיון חינמית'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{plan === 'enterprise' ? 'גישה מלאה לכל הפיצ\'רים' : plan === 'pro' ? 'אירוע אחד · עד 200 מוזמנים' : 'גרסת ניסיון חינמית'}</div>
                   </div>
                 </div>
-                {!isPro && (
+                {plan !== 'enterprise' && (
                   <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}
-                    onClick={() => openCheckout('pro')}>
-                    <Icon name="Zap" size={15} />שדרג
+                    onClick={() => plan === 'free' ? setShowUpgradeModal(true) : openCheckout('enterprise')}>
+                    <Icon name="Zap" size={15} />{plan === 'free' ? 'שדרג' : 'Enterprise'}
                   </button>
                 )}
               </div>
@@ -7656,13 +7666,13 @@
                   </div>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 16 }}>תוכנית {PLAN_LIMITS[plan]?.label || 'Free'}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{isPro ? 'גישה מלאה לכל הפיצ\'רים' : 'גרסת ניסיון חינמית'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{plan === 'enterprise' ? 'גישה מלאה לכל הפיצ\'רים' : plan === 'pro' ? 'אירוע אחד · עד 200 מוזמנים' : 'גרסת ניסיון חינמית'}</div>
                   </div>
                 </div>
-                {!isPro && (
+                {plan !== 'enterprise' && (
                   <button className="btn btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}
-                    onClick={() => openCheckout('pro')}>
-                    <Icon name="Zap" size={15} />שדרוג ל-Pro
+                    onClick={() => plan === 'free' ? setShowUpgradeModal(true) : openCheckout('enterprise')}>
+                    <Icon name="Zap" size={15} />{plan === 'free' ? 'שדרוג' : 'שדרוג ל-Enterprise'}
                   </button>
                 )}
               </div>
