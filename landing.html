@@ -330,10 +330,7 @@
     <a href="#features" class="btn btn-outline btn-lg">גלו את הפיצ'רים</a>
   </div>
   <div class="hero-social-proof">
-    <div class="avatar-stack">
-      <span>👰</span><span>🤵</span><span>👨‍💼</span><span>👩‍👧</span>
-    </div>
-    <span>+200 אירועים נוהלו בהצלחה</span>
+    <span>✦ ממשק עברי מלא · RTL מושלם · ללא צורך באפליקציה</span>
   </div>
 </div>
 
@@ -516,9 +513,53 @@
   <a href="index.html" class="btn btn-primary btn-lg">התחילו עכשיו — בחינם</a>
 </div>
 
+<!-- TERMS MODAL -->
+<div id="terms-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:white;border-radius:16px;max-width:640px;width:90%;max-height:80vh;overflow-y:auto;padding:32px;margin:auto;position:relative;top:50%;transform:translateY(-50%);">
+    <button onclick="document.getElementById('terms-modal').style.display='none'" style="position:absolute;top:16px;left:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
+    <h2 style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:20px;">תנאי שימוש</h2>
+    <div style="font-size:14px;line-height:1.8;color:#444;">
+      <p><strong>1. כללי</strong><br/>
+      ברוכים הבאים ל-SeatSync (להלן: "השירות"). השימוש בשירות מהווה הסכמה לתנאים אלו. השירות מופעל על ידי אביב ("המפעיל"). ליצירת קשר: <a href="mailto:avivmed3@gmail.com" style="color:var(--gold-dark);">avivmed3@gmail.com</a>.</p>
+
+      <p><strong>2. השירות</strong><br/>
+      SeatSync מספק כלי ניהול אישורי הגעה וסידורי הושבה לאירועים. השירות כולל ניהול מוזמנים, שליחת הודעות, מעקב אישורים וסידורי הושבה ויזואליים.</p>
+
+      <p><strong>3. הרשמה וחשבון</strong><br/>
+      השימוש בשירות מותנה ביצירת חשבון עם כתובת אימייל תקינה. המשתמש אחראי לשמירת פרטי הגישה שלו ולכל פעולה שמתבצעת תחת חשבונו.</p>
+
+      <p><strong>4. פרטיות ומידע אישי</strong><br/>
+      המידע שנאסף כולל: שם, אימייל, מספרי טלפון של מוזמנים, ונתוני אירוע. המידע מאוחסן בשרתי Supabase מאובטחים. איננו מוכרים או משתפים מידע אישי עם צדדים שלישיים. המשתמש רשאי לייצא את כל הנתונים שלו בכל עת ולמחוק את חשבונו.</p>
+
+      <p><strong>5. שימוש הוגן</strong><br/>
+      אין להשתמש בשירות למטרות בלתי חוקיות, שליחת ספאם, או באופן שפוגע בשירות או במשתמשים אחרים. המפעיל רשאי להשעות חשבונות המפרים תנאים אלו.</p>
+
+      <p><strong>6. תוכניות ומחירים</strong><br/>
+      השירות מציע תוכניות Free, Pro ו-Enterprise. המחירים עשויים להשתנות בהתראה מוקדמת. תוכנית Free ניתנת ללא הגבלת זמן.</p>
+
+      <p><strong>7. הגבלת אחריות</strong><br/>
+      השירות ניתן "כפי שהוא" (AS IS). המפעיל אינו אחראי לנזקים ישירים או עקיפים הנובעים מהשימוש בשירות, לרבות אובדן נתונים.</p>
+
+      <p><strong>8. שינויים בתנאים</strong><br/>
+      המפעיל רשאי לעדכן תנאים אלו מעת לעת. המשך השימוש לאחר עדכון מהווה הסכמה לתנאים המעודכנים.</p>
+
+      <p style="color:#888;margin-top:16px;">עדכון אחרון: אפריל 2026</p>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer>
   <div style="margin-bottom:12px;">
     <a href="index.html">כניסה למערכת</a>
-    <a href="mailto:support@seatsync.app">צרו קשר</a>
-    <a href="privacy.html">מדינ
+    <a href="#" onclick="document.getElementById('terms-modal').style.display='flex';return false;">תנאי שימוש</a>
+    <a href="mailto:avivmed3@gmail.com">צרו קשר</a>
+  </div>
+  <div style="margin-bottom:8px;font-size:12px;">
+    ✉️ <a href="mailto:avivmed3@gmail.com" style="color:var(--text2);">avivmed3@gmail.com</a>
+  </div>
+  <div>© 2026 SeatSync — כל הזכויות שמורות</div>
+</footer>
+
+</body>
+</html>

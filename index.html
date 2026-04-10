@@ -5805,9 +5805,14 @@
       const [selectedFloorTable, setSelectedFloorTable] = useState(null);
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
-      const [tablesLocked, setTablesLocked] = useState(false); // lock table positions on floor plan
-      const tablesLockedRef = useRef(false);
-      useEffect(() => { tablesLockedRef.current = tablesLocked; }, [tablesLocked]);
+      const [tablesLocked, setTablesLocked] = useState(() => {
+        try { return localStorage.getItem('seatsync_tables_locked_' + event?.id) === 'true'; } catch { return false; }
+      });
+      const tablesLockedRef = useRef(tablesLocked);
+      useEffect(() => {
+        tablesLockedRef.current = tablesLocked;
+        try { localStorage.setItem('seatsync_tables_locked_' + event?.id, tablesLocked); } catch {}
+      }, [tablesLocked]);
 
       // Floor plan state
       const [zoom, setZoom] = useState(1);
@@ -5815,6 +5820,20 @@
       const [isPanning, setIsPanning] = useState(false);
       const panStart = useRef(null);
       const svgRef = useRef(null);
+
+      // Auto-fit zoom on mobile when entering floor view
+      useEffect(() => {
+        if (viewMode === 'floor' && isMobile && svgRef.current) {
+          const wrapEl = svgRef.current.parentElement;
+          if (wrapEl) {
+            const wrapW = wrapEl.clientWidth;
+            const wrapH = wrapEl.clientHeight;
+            const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
+            setZoom(Math.max(0.3, fitZoom * 0.95));
+            setPan({ x: 0, y: 0 });
+          }
+        }
+      }, [viewMode, isMobile]);
 
       // Table drag on floor plan
       const tableDragRef = useRef(null);
@@ -6030,18 +6049,22 @@
       // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return; // tables are locked — don't allow dragging
+        if (tablesLockedRef.current) return;
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
         const startPosX = table.position_x || 100;
         const startPosY = table.position_y || 100;
+        // Use object to track final position (avoids stale closure)
+        const finalPos = { x: startPosX, y: startPosY };
 
         const onMove = (me) => {
           const dx = (me.clientX - startX) / zoom;
           const dy = (me.clientY - startY) / zoom;
           const newX = Math.max(40, Math.min(1160, startPosX + dx));
           const newY = Math.max(40, Math.min(760, startPosY + dy));
+          finalPos.x = newX;
+          finalPos.y = newY;
           setTables(prev => prev.map(t => t.id === table.id
             ? { ...t, position_x: newX, position_y: newY }
             : t
@@ -6051,10 +6074,7 @@
         const onUp = async () => {
           document.removeEventListener('mousemove', onMove);
           document.removeEventListener('mouseup', onUp);
-          const updated = tables.find(t => t.id === table.id);
-          if (updated) {
-            await client.from('tables').update({ position_x: updated.position_x, position_y: updated.position_y }).eq('id', table.id);
-          }
+          await client.from('tables').update({ position_x: finalPos.x, position_y: finalPos.y }).eq('id', table.id);
         };
 
         document.addEventListener('mousemove', onMove);
@@ -6064,7 +6084,7 @@
       // Floor plan: drag tables (touch — mobile)
       const handleTableTouchStart = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return; // tables are locked
+        if (tablesLockedRef.current) return;
         if (e.touches.length !== 1) return;
         e.stopPropagation();
         const touch = e.touches[0];
@@ -6072,6 +6092,7 @@
         const startY = touch.clientY;
         const startPosX = table.position_x || 100;
         const startPosY = table.position_y || 100;
+        const finalPos = { x: startPosX, y: startPosY };
 
         const onMove = (me) => {
           if (me.touches.length !== 1) return;
@@ -6081,6 +6102,8 @@
           const dy = (t.clientY - startY) / zoom;
           const newX = Math.max(40, Math.min(1160, startPosX + dx));
           const newY = Math.max(40, Math.min(760, startPosY + dy));
+          finalPos.x = newX;
+          finalPos.y = newY;
           setTables(prev => prev.map(tb => tb.id === table.id
             ? { ...tb, position_x: newX, position_y: newY }
             : tb
@@ -6090,10 +6113,7 @@
         const onEnd = async () => {
           svgRef.current?.removeEventListener('touchmove', onMove);
           svgRef.current?.removeEventListener('touchend', onEnd);
-          const updated = tables.find(t => t.id === table.id);
-          if (updated) {
-            await client.from('tables').update({ position_x: updated.position_x, position_y: updated.position_y }).eq('id', table.id);
-          }
+          await client.from('tables').update({ position_x: finalPos.x, position_y: finalPos.y }).eq('id', table.id);
         };
 
         svgRef.current?.addEventListener('touchmove', onMove, { passive: false });
@@ -6345,7 +6365,7 @@
                     </button>
                   ))}
                 </div>
-                {viewMode === 'floor' && (
+                {viewMode === 'floor' && !isMobile && (
                   <div style={{ display: 'flex', gap: 4, marginRight: 'auto' }}>
                     <button
                       className="btn btn-secondary"
@@ -6361,7 +6381,14 @@
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => setZoom(z => Math.max(0.4, z - 0.2))}>
                       <Icon name="ZoomOut" size={16} />
                     </button>
-                    <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}>
+                    <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => {
+                      const wrapEl = svgRef.current?.parentElement;
+                      if (wrapEl) {
+                        const fitZoom = Math.min(wrapEl.clientWidth / 1200, wrapEl.clientHeight / 800, 1);
+                        setZoom(Math.max(0.25, fitZoom * 0.92));
+                        setPan({ x: 0, y: 0 });
+                      }
+                    }}>
                       <Icon name="Maximize2" size={16} />
                     </button>
                   </div>
@@ -6528,12 +6555,35 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
-                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 240px)' : 520, minHeight: 350 }}>
+                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 520, minHeight: 300 }}>
                   <div className="floorplan-controls">
-                    <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.2))}><Icon name="Plus" size={14}/></div>
-                    <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.4, z - 0.2))}><Icon name="Minus" size={14}/></div>
+                    <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.15))}><Icon name="Plus" size={14}/></div>
+                    <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><Icon name="Minus" size={14}/></div>
+                    <div className="floorplan-btn" onClick={() => {
+                      // Fit all tables in view
+                      const wrapEl = svgRef.current?.parentElement;
+                      if (wrapEl) {
+                        const wrapW = wrapEl.clientWidth;
+                        const wrapH = wrapEl.clientHeight;
+                        const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
+                        setZoom(Math.max(0.25, fitZoom * 0.92));
+                        setPan({ x: 0, y: 0 });
+                      }
+                    }} title="התאם למסך"><Icon name="Maximize2" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => { setZoom(1); setPan({x:0,y:0}); }} title="איפוס"><Icon name="Crosshair" size={14}/></div>
                   </div>
+                  {isMobile && (
+                    <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 5, display: 'flex', gap: 4 }}>
+                      <button
+                        className="floorplan-btn"
+                        style={{ width: 'auto', padding: '4px 10px', fontSize: 11, fontWeight: 600, fontFamily: 'Heebo', gap: 4, display: 'flex', alignItems: 'center' }}
+                        onClick={() => setTablesLocked(l => !l)}
+                      >
+                        <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={13}/>
+                        {tablesLocked ? 'נעול' : 'נעל'}
+                      </button>
+                    </div>
+                  )}
                   <svg
                     ref={svgRef}
                     width="100%"
@@ -6553,7 +6603,12 @@
                     onMouseUp={() => setIsPanning(false)}
                     onMouseLeave={() => setIsPanning(false)}
                     onTouchStart={e => {
-                      if (e.touches.length === 1) {
+                      if (e.touches.length === 2) {
+                        // Pinch-to-zoom start
+                        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                        panStart.current = { pinchDist: d, startZoom: zoom };
+                        setIsPanning(false);
+                      } else if (e.touches.length === 1) {
                         const t = e.touches[0];
                         if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
                           setIsPanning(true);
@@ -6562,13 +6617,18 @@
                       }
                     }}
                     onTouchMove={e => {
-                      if (isPanning && panStart.current && e.touches.length === 1) {
+                      if (e.touches.length === 2 && panStart.current?.pinchDist) {
+                        e.preventDefault();
+                        const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                        const scale = d / panStart.current.pinchDist;
+                        setZoom(Math.max(0.2, Math.min(2.5, panStart.current.startZoom * scale)));
+                      } else if (isPanning && panStart.current && e.touches.length === 1) {
                         e.preventDefault();
                         const t = e.touches[0];
                         setPan({ x: t.clientX - panStart.current.x, y: t.clientY - panStart.current.y });
                       }
                     }}
-                    onTouchEnd={() => setIsPanning(false)}
+                    onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                       {/* Visible boundary so users see the floor plan edges */}
@@ -6599,20 +6659,74 @@
                     </g>
                   </svg>
 
-                  {/* Selected table panel — positioned near the table */}
+                  {/* Selected table panel */}
                   {selectedFloorTable && (() => {
+                    const tGuests = guests.filter(g => g.table_id === selectedFloorTable.id);
+
+                    // On mobile: bottom sheet. On desktop: near the table
+                    if (isMobile) {
+                      return (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0, left: 0, right: 0,
+                          background: 'var(--bg-elevated)',
+                          borderTop: '1px solid var(--border-default)',
+                          borderRadius: '16px 16px 0 0',
+                          padding: '14px 16px',
+                          boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
+                          zIndex: 10,
+                          animation: 'slideUp 0.2s ease both',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <div>
+                              <span style={{ fontWeight: 700, fontSize: 15 }}>{selectedFloorTable.name}</span>
+                              <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginRight: 8 }}>
+                                {tGuests.reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
+                              </span>
+                            </div>
+                            <button className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={16}/></button>
+                          </div>
+                          {tGuests.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, maxHeight: 50, overflowY: 'auto' }}>
+                              {tGuests.map(g => (
+                                <span key={g.id} style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 8px', background:'var(--bg-tertiary)', borderRadius:20 }}>
+                                  <span style={{ width:5, height:5, borderRadius:'50%', background:getGroupColor(g.group_name) }}/>
+                                  {g.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ display:'flex', gap:8 }}>
+                            <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
+                              const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
+                              await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
+                              setTables(prev => prev.map(t => t.id === selectedFloorTable.id ? { ...t, rotation: newRot } : t));
+                              setSelectedFloorTable(prev => ({ ...prev, rotation: newRot }));
+                            }}>
+                              <Icon name="RotateCw" size={14}/>סובב
+                            </button>
+                            <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
+                              <Icon name="Pencil" size={14}/>ערוך
+                            </button>
+                            <button className="btn btn-danger" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
+                              <Icon name="Trash2" size={14}/>מחק
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Desktop: floating panel near table
                     const tx = (selectedFloorTable.position_x || 80) * zoom + pan.x;
                     const ty = (selectedFloorTable.position_y || 80) * zoom + pan.y;
                     const panelW = 210;
                     const panelH = 160;
-                    // Position to the left of the table, or right if too close to right edge
                     let left = tx - panelW - 10;
                     let top = ty - panelH / 2 + 20;
                     if (left < 8) left = tx + 60;
                     if (top < 8) top = 8;
                     if (top + panelH > 510) top = 510 - panelH;
 
-                    const tGuests = guests.filter(g => g.table_id === selectedFloorTable.id);
                     return (
                       <div style={{
                         position: 'absolute',
