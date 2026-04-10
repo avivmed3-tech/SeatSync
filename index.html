@@ -7941,7 +7941,21 @@
     // Full-page Upgrade Modal — accessible from anywhere
     // ============================================
     function UpgradeModal({ onClose }) {
-      const { openCheckout } = useContext(PlanContext);
+      const { plan, openCheckout } = useContext(PlanContext);
+
+      // If already enterprise, nothing to upgrade
+      if (plan === 'enterprise') {
+        return (
+          <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+            <div className="modal-content animate-scale-in" style={{ maxWidth: 380, padding: 24, textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>🏆</div>
+              <div style={{ fontWeight: 800, fontSize: 20, marginBottom: 8 }}>תוכנית Enterprise פעילה</div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>יש לכם גישה מלאה לכל הפיצ'רים!</div>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={onClose}>מעולה!</button>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -7951,45 +7965,61 @@
               padding: '28px 24px', color: 'white', textAlign: 'center'
             }}>
               <div style={{ fontSize: 36, marginBottom: 4 }}>✦</div>
-              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 800, marginBottom: 6 }}>שדרגו ל-Pro</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
+                {plan === 'pro' ? 'שדרגו ל-Enterprise' : 'שדרגו ל-Pro'}
+              </div>
               <div style={{ fontSize: 14, opacity: 0.9 }}>תשלום חד פעמי לאירוע. ללא מנוי. ללא חיוב חוזר.</div>
             </div>
 
             <div style={{ padding: '24px' }}>
-              <div style={{
-                border: '2px solid var(--gold-400)', borderRadius: 'var(--radius-lg)',
-                padding: '20px', marginBottom: 16, position: 'relative', background: 'var(--bg-secondary)'
-              }}>
+              {/* Show Pro option only for Free users */}
+              {plan === 'free' && (
                 <div style={{
-                  position: 'absolute', top: -10, right: 16,
-                  background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
-                  color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
-                  borderRadius: 20, letterSpacing: 0.5
-                }}>הכי פופולרי</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                  <span style={{ fontSize: 36, fontWeight: 900 }}>99₪</span>
-                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
-                </div>
-                {[
-                  'אירוע אחד', 'עד 200 מוזמנים', 'עד 25 שולחנות', 'סבבי הודעות ללא הגבלה',
-                  'קישורי RSVP אישיים', 'הודעות אוטומטיות', 'ייצוא PDF + אקסל',
-                ].map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 13 }}>
-                    <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
+                  border: '2px solid var(--gold-400)', borderRadius: 'var(--radius-lg)',
+                  padding: '20px', marginBottom: 16, position: 'relative', background: 'var(--bg-secondary)'
+                }}>
+                  <div style={{
+                    position: 'absolute', top: -10, right: 16,
+                    background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                    color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
+                    borderRadius: 20, letterSpacing: 0.5
+                  }}>הכי פופולרי</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+                    <span style={{ fontSize: 36, fontWeight: 900 }}>99₪</span>
+                    <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
                   </div>
-                ))}
-                <button className="btn btn-primary" style={{ width: '100%', marginTop: 16, padding: '12px 0', fontSize: 15 }}
-                  onClick={() => { openCheckout('pro'); onClose(); }}>
-                  <Icon name="Zap" size={16} />שדרגו ל-Pro
-                </button>
-              </div>
+                  {[
+                    'אירוע אחד', 'עד 200 מוזמנים', 'עד 25 שולחנות', 'סבבי הודעות ללא הגבלה',
+                    'קישורי RSVP אישיים', 'הודעות אוטומטיות', 'ייצוא PDF + אקסל',
+                  ].map((f, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', fontSize: 13 }}>
+                      <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
+                    </div>
+                  ))}
+                  <button className="btn btn-primary" style={{ width: '100%', marginTop: 16, padding: '12px 0', fontSize: 15 }}
+                    onClick={() => { openCheckout('pro'); onClose(); }}>
+                    <Icon name="Zap" size={16} />שדרגו ל-Pro
+                  </button>
+                </div>
+              )}
 
+              {/* Enterprise option - highlighted for Pro users */}
               <div style={{
-                border: '1px solid var(--border-default)', borderRadius: 'var(--radius-lg)',
-                padding: '20px', background: 'var(--bg-secondary)'
+                border: plan === 'pro' ? '2px solid var(--gold-400)' : '1px solid var(--border-default)', 
+                borderRadius: 'var(--radius-lg)',
+                padding: '20px', background: 'var(--bg-secondary)',
+                position: 'relative'
               }}>
+                {plan === 'pro' && (
+                  <div style={{
+                    position: 'absolute', top: -10, right: 16,
+                    background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                    color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
+                    borderRadius: 20, letterSpacing: 0.5
+                  }}>שדרוג מומלץ</div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                  <span style={{ fontSize: 28, fontWeight: 900 }}>249₪</span>
+                  <span style={{ fontSize: plan === 'pro' ? 36 : 28, fontWeight: 900 }}>249₪</span>
                   <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
                 </div>
                 {[
@@ -7999,11 +8029,20 @@
                     <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
                   </div>
                 ))}
-                <button className="btn btn-outline" style={{ width: '100%', marginTop: 16, padding: '10px 0' }}
+                <button className={plan === 'pro' ? 'btn btn-primary' : 'btn btn-outline'} 
+                  style={{ width: '100%', marginTop: 16, padding: plan === 'pro' ? '12px 0' : '10px 0', fontSize: plan === 'pro' ? 15 : 14 }}
                   onClick={() => { openCheckout('enterprise'); onClose(); }}>
+                  {plan === 'pro' && <Icon name="Zap" size={16} />}
                   שדרגו ל-Enterprise
                 </button>
               </div>
+
+              {/* Current plan indicator */}
+              {plan !== 'free' && (
+                <div style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: 'var(--text-secondary)', padding: '6px 0', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                  ✓ התוכנית הנוכחית שלכם: <strong>{plan === 'pro' ? 'Pro' : 'Enterprise'}</strong>
+                </div>
+              )}
 
               <button className="btn btn-ghost" style={{ width: '100%', marginTop: 12 }} onClick={onClose}>אחר כך</button>
               <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: 'var(--text-tertiary)' }}>
@@ -8025,6 +8064,11 @@
       const [showOnboarding, setShowOnboarding] = useState(false);
       const [passwordRecovery, setPasswordRecovery] = useState(false);
 
+      // Persist current route so returning from WhatsApp keeps the same screen
+      useEffect(() => {
+        try { sessionStorage.setItem('seatsync-current-route', currentRoute); } catch {}
+      }, [currentRoute]);
+
       // Detect PASSWORD_RECOVERY event to show password update screen
       useEffect(() => {
         if (!client) return;
@@ -8043,7 +8087,9 @@
             .then(({ data }) => {
               if (data) {
                 setSelectedEvent(data);
-                setCurrentRoute(ROUTES.DASHBOARD);
+                // Restore last route (e.g. messages send screen) instead of always going to dashboard
+                const savedRoute = sessionStorage.getItem('seatsync-current-route');
+                setCurrentRoute(savedRoute && Object.values(ROUTES).includes(savedRoute) ? savedRoute : ROUTES.DASHBOARD);
               } else {
                 // Event doesn't belong to this user or was deleted — clean up
                 localStorage.removeItem('seatsync-selected-event');
