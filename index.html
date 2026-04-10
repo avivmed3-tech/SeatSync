@@ -2820,6 +2820,28 @@
                   <button className="btn btn-secondary" style={{ width: '100%', fontSize: 13 }} onClick={() => setMode('magic')}>
                     <Icon name="Sparkles" size={15} />התחברות עם לינק (בלי סיסמה)
                   </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ width: '100%', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        const { error } = await client.auth.signInWithOAuth({
+                          provider: 'google',
+                          options: {
+                            redirectTo: window.location.href.split('?')[0].split('#')[0]
+                          }
+                        });
+                        if (error) throw error;
+                      } catch (err) {
+                        addToast(err.message || 'שגיאה בהתחברות עם Google', 'error');
+                        setLoading(false);
+                      }
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    התחברות עם Google
+                  </button>
                 </div>
               )}
             </div>
@@ -3904,6 +3926,72 @@
         return btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
       };
 
+      // Import from phone contacts (Contact Picker API)
+      const importFromContacts = async () => {
+        if (!('contacts' in navigator && 'ContactsManager' in window)) {
+          addToast('ייבוא אנשי קשר נתמך רק בדפדפן Chrome/Safari במובייל', 'error');
+          return;
+        }
+        try {
+          const contacts = await navigator.contacts.select(
+            ['name', 'tel'],
+            { multiple: true }
+          );
+          if (!contacts || contacts.length === 0) return;
+
+          // Check plan limit
+          const spotsLeft = limits.guests - guests.length;
+          if (spotsLeft <= 0) {
+            addToast(`הגעתם למגבלת ${limits.guests} מוזמנים. שדרגו כדי להוסיף עוד.`, 'error');
+            setUpsellFeature('guests');
+            return;
+          }
+
+          const toImport = contacts.slice(0, spotsLeft);
+          const existingPhones = new Set(guests.map(g => g.phone?.replace(/[\s\-()]/g, '')).filter(Boolean));
+
+          const newGuests = [];
+          let skipped = 0;
+          for (const c of toImport) {
+            const name = (c.name && c.name[0]) || '';
+            let phone = (c.tel && c.tel[0]) || '';
+            phone = phone.replace(/[\s\-()]/g, '');
+            if (!name && !phone) { skipped++; continue; }
+            // Normalize phone
+            if (phone.startsWith('+972')) phone = '0' + phone.slice(4);
+            if (existingPhones.has(phone)) { skipped++; continue; }
+            existingPhones.add(phone);
+            newGuests.push({
+              event_id: event.id,
+              name: name.trim(),
+              phone,
+              group_name: 'כללי',
+              expected_guests: 1,
+              rsvp_token: generateToken(),
+            });
+          }
+
+          if (newGuests.length === 0) {
+            addToast(skipped > 0 ? `${skipped} אנשי קשר כבר קיימים ברשימה` : 'לא נמצאו אנשי קשר להוספה', 'error');
+            return;
+          }
+
+          const { data, error } = await client.from('guests').insert(newGuests).select();
+          if (error) { addToast('שגיאה בייבוא: ' + error.message, 'error'); return; }
+          setGuests(prev => [...(data || []), ...prev]);
+          const msg = `${data?.length || 0} אנשי קשר יובאו בהצלחה ✓` + (skipped > 0 ? ` (${skipped} דולגו — כפילויות)` : '');
+          addToast(msg, 'success');
+
+          if (contacts.length > spotsLeft) {
+            addToast(`רק ${spotsLeft} מתוך ${contacts.length} יובאו — מגבלת תוכנית`, 'error');
+          }
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            addToast('שגיאה בייבוא אנשי קשר', 'error');
+          }
+        }
+      };
+
       const handleAdd = async (form) => {
         // Plan limit check
         if (guests.length >= limits.guests) {
@@ -4050,6 +4138,12 @@
                 <Icon name="Upload" size={18} />
                 <span className="hide-mobile">ייבוא</span>
               </button>
+              {'contacts' in navigator && (
+                <button className="btn btn-secondary" onClick={importFromContacts} title="ייבוא מאנשי קשר" style={{ padding: '10px 14px' }}>
+                  <Icon name="BookUser" size={18} />
+                  <span className="hide-mobile">אנשי קשר</span>
+                </button>
+              )}
               <button
                 className="btn btn-primary"
                 onClick={() => {
@@ -5546,10 +5640,11 @@
       const w = isRect ? 120 : 80;
       const h = isRect ? 52 : 80;
       const color = isFull ? '#EF4444' : occupied > 0 ? '#10B981' : '#94A3B8';
+      const rotation = table.rotation || 0;
 
       return (
         <g
-          transform={`translate(${table.position_x || 80}, ${table.position_y || 80})`}
+          transform={`translate(${table.position_x || 80}, ${table.position_y || 80}) rotate(${rotation})`}
           style={{ cursor: locked ? 'default' : 'grab', userSelect: 'none' }}
           onMouseDown={e => { if (locked) return; e.stopPropagation(); onDragTable(table, e); }}
           onTouchStart={e => { if (locked || !onTouchTable) return; e.stopPropagation(); onTouchTable(table, e); }}
@@ -5691,6 +5786,7 @@
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
+      const isMobile = useIsMobile();
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -5937,8 +6033,10 @@
         const onMove = (me) => {
           const dx = (me.clientX - startX) / zoom;
           const dy = (me.clientY - startY) / zoom;
+          const newX = Math.max(40, Math.min(1160, startPosX + dx));
+          const newY = Math.max(40, Math.min(760, startPosY + dy));
           setTables(prev => prev.map(t => t.id === table.id
-            ? { ...t, position_x: startPosX + dx, position_y: startPosY + dy }
+            ? { ...t, position_x: newX, position_y: newY }
             : t
           ));
         };
@@ -5974,8 +6072,10 @@
           const t = me.touches[0];
           const dx = (t.clientX - startX) / zoom;
           const dy = (t.clientY - startY) / zoom;
+          const newX = Math.max(40, Math.min(1160, startPosX + dx));
+          const newY = Math.max(40, Math.min(760, startPosY + dy));
           setTables(prev => prev.map(tb => tb.id === table.id
-            ? { ...tb, position_x: startPosX + dx, position_y: startPosY + dy }
+            ? { ...tb, position_x: newX, position_y: newY }
             : tb
           ));
         };
@@ -6421,7 +6521,7 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
-                <div className="floorplan-wrap" style={{ height: 520 }}>
+                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 240px)' : 520, minHeight: 350 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.2))}><Icon name="Plus" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.4, z - 0.2))}><Icon name="Minus" size={14}/></div>
@@ -6464,6 +6564,8 @@
                     onTouchEnd={() => setIsPanning(false)}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+                      {/* Visible boundary so users see the floor plan edges */}
+                      <rect x="0" y="0" width="1200" height="800" fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.5" />
                       {/* Floor plan background image */}
                       {event?.settings?.floorplan_url && (
                         <image
@@ -6535,6 +6637,14 @@
                           </div>
                         )}
                         <div style={{ display:'flex', gap:6 }}>
+                          <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={async ()=>{
+                            const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
+                            await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
+                            setTables(prev => prev.map(t => t.id === selectedFloorTable.id ? { ...t, rotation: newRot } : t));
+                            setSelectedFloorTable(prev => ({ ...prev, rotation: newRot }));
+                          }}>
+                            <Icon name="RotateCw" size={13}/>סובב
+                          </button>
                           <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null);}}>
                             <Icon name="Pencil" size={13}/>ערוך
                           </button>
@@ -7942,6 +8052,7 @@
     // ============================================
     function UpgradeModal({ onClose }) {
       const { plan, openCheckout } = useContext(PlanContext);
+      const [selectedPlan, setSelectedPlan] = useState(plan === 'pro' ? 'enterprise' : 'pro');
 
       // If already enterprise, nothing to upgrade
       if (plan === 'enterprise') {
@@ -7957,6 +8068,9 @@
         );
       }
 
+      const isProSelected = selectedPlan === 'pro';
+      const isEntSelected = selectedPlan === 'enterprise';
+
       return (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
           <div className="modal-content animate-scale-in" style={{ maxWidth: 440, padding: 0, overflow: 'hidden' }}>
@@ -7966,7 +8080,7 @@
             }}>
               <div style={{ fontSize: 36, marginBottom: 4 }}>✦</div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
-                {plan === 'pro' ? 'שדרגו ל-Enterprise' : 'שדרגו ל-Pro'}
+                {plan === 'pro' ? 'שדרגו ל-Enterprise' : 'בחרו תוכנית'}
               </div>
               <div style={{ fontSize: 14, opacity: 0.9 }}>תשלום חד פעמי לאירוע. ללא מנוי. ללא חיוב חוזר.</div>
             </div>
@@ -7974,19 +8088,36 @@
             <div style={{ padding: '24px' }}>
               {/* Show Pro option only for Free users */}
               {plan === 'free' && (
-                <div style={{
-                  border: '2px solid var(--gold-400)', borderRadius: 'var(--radius-lg)',
-                  padding: '20px', marginBottom: 16, position: 'relative', background: 'var(--bg-secondary)'
-                }}>
-                  <div style={{
-                    position: 'absolute', top: -10, right: 16,
-                    background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
-                    color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
-                    borderRadius: 20, letterSpacing: 0.5
-                  }}>הכי פופולרי</div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                    <span style={{ fontSize: 36, fontWeight: 900 }}>99₪</span>
-                    <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                <div
+                  onClick={() => setSelectedPlan('pro')}
+                  style={{
+                    border: isProSelected ? '2px solid var(--gold-400)' : '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-lg)',
+                    padding: '20px', marginBottom: 16, position: 'relative',
+                    background: isProSelected ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: isProSelected ? 1 : 0.75,
+                  }}
+                >
+                  {isProSelected && (
+                    <div style={{
+                      position: 'absolute', top: -10, right: 16,
+                      background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                      color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
+                      borderRadius: 20, letterSpacing: 0.5
+                    }}>הכי פופולרי</div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: isProSelected ? '6px solid var(--gold-400)' : '2px solid var(--border-default)',
+                      transition: 'all 0.2s ease', flexShrink: 0,
+                    }} />
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                      <span style={{ fontSize: 32, fontWeight: 900 }}>99₪</span>
+                      <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                    </div>
                   </div>
                   {[
                     'אירוע אחד', 'עד 200 מוזמנים', 'עד 25 שולחנות', 'סבבי הודעות ללא הגבלה',
@@ -7996,20 +8127,31 @@
                       <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
                     </div>
                   ))}
-                  <button className="btn btn-primary" style={{ width: '100%', marginTop: 16, padding: '12px 0', fontSize: 15 }}
-                    onClick={() => { openCheckout('pro'); onClose(); }}>
-                    <Icon name="Zap" size={16} />שדרגו ל-Pro
-                  </button>
                 </div>
               )}
 
-              {/* Enterprise option - highlighted for Pro users */}
-              <div style={{
-                border: plan === 'pro' ? '2px solid var(--gold-400)' : '1px solid var(--border-default)', 
-                borderRadius: 'var(--radius-lg)',
-                padding: '20px', background: 'var(--bg-secondary)',
-                position: 'relative'
-              }}>
+              {/* Enterprise option */}
+              <div
+                onClick={() => setSelectedPlan('enterprise')}
+                style={{
+                  border: isEntSelected ? '2px solid var(--gold-400)' : '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '20px',
+                  background: isEntSelected ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  opacity: isEntSelected ? 1 : 0.75,
+                }}
+              >
+                {isEntSelected && plan === 'free' && (
+                  <div style={{
+                    position: 'absolute', top: -10, right: 16,
+                    background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                    color: '#1A1A1A', fontSize: 11, fontWeight: 800, padding: '2px 10px',
+                    borderRadius: 20, letterSpacing: 0.5
+                  }}>הכי משתלם</div>
+                )}
                 {plan === 'pro' && (
                   <div style={{
                     position: 'absolute', top: -10, right: 16,
@@ -8018,9 +8160,18 @@
                     borderRadius: 20, letterSpacing: 0.5
                   }}>שדרוג מומלץ</div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
-                  <span style={{ fontSize: plan === 'pro' ? 36 : 28, fontWeight: 900 }}>249₪</span>
-                  <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  {plan === 'free' && (
+                    <div style={{
+                      width: 20, height: 20, borderRadius: '50%',
+                      border: isEntSelected ? '6px solid var(--gold-400)' : '2px solid var(--border-default)',
+                      transition: 'all 0.2s ease', flexShrink: 0,
+                    }} />
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                    <span style={{ fontSize: 32, fontWeight: 900 }}>249₪</span>
+                    <span style={{ fontSize: 14, color: 'var(--text-tertiary)' }}>לאירוע</span>
+                  </div>
                 </div>
                 {[
                   'עד 5 אירועים', 'עד 600 מוזמנים לאירוע', 'עד 60 שולחנות', 'כל פיצ\'רי Pro', 'תמיכה עדיפותית',
@@ -8029,13 +8180,15 @@
                     <span style={{ color: 'var(--emerald-500)' }}>✓</span><span>{f}</span>
                   </div>
                 ))}
-                <button className={plan === 'pro' ? 'btn btn-primary' : 'btn btn-outline'} 
-                  style={{ width: '100%', marginTop: 16, padding: plan === 'pro' ? '12px 0' : '10px 0', fontSize: plan === 'pro' ? 15 : 14 }}
-                  onClick={() => { openCheckout('enterprise'); onClose(); }}>
-                  {plan === 'pro' && <Icon name="Zap" size={16} />}
-                  שדרגו ל-Enterprise
-                </button>
               </div>
+
+              {/* Unified purchase button */}
+              <button className="btn btn-primary"
+                style={{ width: '100%', marginTop: 20, padding: '14px 0', fontSize: 16 }}
+                onClick={() => { openCheckout(selectedPlan); onClose(); }}>
+                <Icon name="Zap" size={18} />
+                {selectedPlan === 'pro' ? 'שדרגו ל-Pro — 99₪' : 'שדרגו ל-Enterprise — 249₪'}
+              </button>
 
               {/* Current plan indicator */}
               {plan !== 'free' && (
