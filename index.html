@@ -5805,6 +5805,7 @@
       const [selectedFloorTable, setSelectedFloorTable] = useState(null);
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
+      const [showFullscreenFloor, setShowFullscreenFloor] = useState(false);
       const [tablesLocked, setTablesLocked] = useState(() => {
         try { return localStorage.getItem('seatsync_tables_locked_' + event?.id) === 'true'; } catch { return false; }
       });
@@ -5821,19 +5822,24 @@
       const panStart = useRef(null);
       const svgRef = useRef(null);
 
-      // Auto-fit zoom on mobile when entering floor view
+      // Auto-fit zoom on mobile when entering floor view or fullscreen
       useEffect(() => {
-        if (viewMode === 'floor' && isMobile && svgRef.current) {
+        if ((viewMode === 'floor' || showFullscreenFloor) && svgRef.current) {
           const wrapEl = svgRef.current.parentElement;
           if (wrapEl) {
-            const wrapW = wrapEl.clientWidth;
-            const wrapH = wrapEl.clientHeight;
-            const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
-            setZoom(Math.max(0.3, fitZoom * 0.95));
-            setPan({ x: 0, y: 0 });
+            // Small delay to let DOM settle for fullscreen
+            setTimeout(() => {
+              const wrapW = wrapEl.clientWidth;
+              const wrapH = wrapEl.clientHeight;
+              if (wrapW > 0 && wrapH > 0) {
+                const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
+                setZoom(Math.max(0.25, fitZoom * 0.92));
+                setPan({ x: 0, y: 0 });
+              }
+            }, 50);
           }
         }
-      }, [viewMode, isMobile]);
+      }, [viewMode, showFullscreenFloor]);
 
       // Table drag on floor plan
       const tableDragRef = useRef(null);
@@ -6359,9 +6365,16 @@
                     { v: 'dnd', icon: 'Move', label: 'גרירה' },
                     { v: 'floor', icon: 'LayoutDashboard', label: 'מפת אולם' },
                   ].map(m => (
-                    <button key={m.v} className={`view-mode-btn ${viewMode === m.v ? 'active' : ''}`} onClick={() => setViewMode(m.v)}>
+                    <button key={m.v} className={`view-mode-btn ${viewMode === m.v ? 'active' : ''}`} onClick={() => {
+                      if (m.v === 'floor' && isMobile) {
+                        setShowFullscreenFloor(true);
+                      } else {
+                        setViewMode(m.v);
+                      }
+                    }}>
                       <Icon name={m.icon} size={14} />
                       {m.label}
+                      {m.v === 'floor' && isMobile && <Icon name="Expand" size={12} style={{ marginRight: 2 }} />}
                     </button>
                   ))}
                 </div>
@@ -6813,6 +6826,195 @@
           )}
 
           {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
+
+          {/* ── FULLSCREEN FLOOR PLAN (Mobile) ── */}
+          {showFullscreenFloor && (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999,
+              background: 'var(--bg-primary)',
+              display: 'flex', flexDirection: 'column',
+              animation: 'fadeIn 0.2s ease both',
+            }}>
+              {/* Toolbar */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 12px', borderBottom: '1px solid var(--border-default)',
+                background: 'var(--bg-elevated)', flexShrink: 0,
+              }}>
+                <button className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: 13 }} onClick={() => { setShowFullscreenFloor(false); setSelectedFloorTable(null); }}>
+                  <Icon name="X" size={18} />סגור
+                </button>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>מפת אולם</div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 8px', background: tablesLocked ? 'var(--accent-light)' : undefined, borderColor: tablesLocked ? 'var(--accent)' : undefined, color: tablesLocked ? 'var(--accent)' : undefined }}
+                    onClick={() => setTablesLocked(l => !l)}
+                  >
+                    <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={15} />
+                  </button>
+                  <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => {
+                    if (!svgRef.current) return;
+                    const wrapEl = svgRef.current.parentElement;
+                    if (wrapEl) {
+                      const fitZoom = Math.min(wrapEl.clientWidth / 1200, wrapEl.clientHeight / 800, 1);
+                      setZoom(Math.max(0.25, fitZoom * 0.92));
+                      setPan({ x: 0, y: 0 });
+                    }
+                  }}>
+                    <Icon name="Maximize2" size={15} />
+                  </button>
+                  <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => setZoom(z => Math.min(2.5, z + 0.15))}>
+                    <Icon name="ZoomIn" size={15} />
+                  </button>
+                  <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => setZoom(z => Math.max(0.15, z - 0.15))}>
+                    <Icon name="ZoomOut" size={15} />
+                  </button>
+                </div>
+              </div>
+
+              {/* SVG Canvas */}
+              <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                <svg
+                  ref={svgRef}
+                  width="100%"
+                  height="100%"
+                  style={{ touchAction: 'none', background: 'var(--bg-secondary)' }}
+                  onTouchStart={e => {
+                    if (e.touches.length === 2) {
+                      const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                      panStart.current = { pinchDist: d, startZoom: zoom };
+                      setIsPanning(false);
+                    } else if (e.touches.length === 1) {
+                      const t = e.touches[0];
+                      if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image' || e.target.tagName === 'rect') {
+                        setIsPanning(true);
+                        panStart.current = { x: t.clientX - pan.x, y: t.clientY - pan.y };
+                      }
+                    }
+                  }}
+                  onTouchMove={e => {
+                    if (e.touches.length === 2 && panStart.current?.pinchDist) {
+                      e.preventDefault();
+                      const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+                      const scale = d / panStart.current.pinchDist;
+                      setZoom(Math.max(0.15, Math.min(2.5, panStart.current.startZoom * scale)));
+                    } else if (isPanning && panStart.current && e.touches.length === 1) {
+                      e.preventDefault();
+                      const t = e.touches[0];
+                      setPan({ x: t.clientX - panStart.current.x, y: t.clientY - panStart.current.y });
+                    }
+                  }}
+                  onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
+                  onMouseDown={e => {
+                    if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
+                      setIsPanning(true);
+                      panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+                    }
+                  }}
+                  onMouseMove={e => {
+                    if (isPanning && panStart.current) {
+                      setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
+                    }
+                  }}
+                  onMouseUp={() => setIsPanning(false)}
+                  onMouseLeave={() => setIsPanning(false)}
+                >
+                  <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+                    <rect x="0" y="0" width="1200" height="800" fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.5" />
+                    {event?.settings?.floorplan_url && (
+                      <image
+                        href={event.settings.floorplan_url}
+                        x="0" y="0"
+                        width="1200" height="800"
+                        preserveAspectRatio="xMidYMid meet"
+                        opacity="0.3"
+                        style={{ pointerEvents: 'none' }}
+                      />
+                    )}
+                    {tables.map(table => (
+                      <FloorTable
+                        key={table.id}
+                        table={table}
+                        guests={guests}
+                        selected={selectedFloorTable?.id === table.id}
+                        locked={tablesLocked}
+                        onDragTable={handleTableMouseDown}
+                        onTouchTable={handleTableTouchStart}
+                        onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
+                      />
+                    ))}
+                  </g>
+                </svg>
+
+                {/* Selected table — bottom sheet */}
+                {selectedFloorTable && (() => {
+                  const tGuests = guests.filter(g => g.table_id === selectedFloorTable.id);
+                  return (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 0, left: 0, right: 0,
+                      background: 'var(--bg-elevated)',
+                      borderTop: '1px solid var(--border-default)',
+                      borderRadius: '16px 16px 0 0',
+                      padding: '14px 16px',
+                      boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
+                      zIndex: 10,
+                      animation: 'slideUp 0.2s ease both',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <div>
+                          <span style={{ fontWeight: 700, fontSize: 15 }}>{selectedFloorTable.name}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginRight: 8 }}>
+                            {tGuests.reduce((s,g)=>s+(g.confirmed_guests||1),0)}/{selectedFloorTable.seats} מקומות
+                          </span>
+                        </div>
+                        <button className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => setSelectedFloorTable(null)}><Icon name="X" size={16}/></button>
+                      </div>
+                      {tGuests.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10, maxHeight: 50, overflowY: 'auto' }}>
+                          {tGuests.map(g => (
+                            <span key={g.id} style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, padding:'2px 8px', background:'var(--bg-tertiary)', borderRadius:20 }}>
+                              <span style={{ width:5, height:5, borderRadius:'50%', background:getGroupColor(g.group_name) }}/>
+                              {g.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
+                          const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
+                          await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
+                          setTables(prev => prev.map(t => t.id === selectedFloorTable.id ? { ...t, rotation: newRot } : t));
+                          setSelectedFloorTable(prev => ({ ...prev, rotation: newRot }));
+                        }}>
+                          <Icon name="RotateCw" size={14}/>סובב
+                        </button>
+                        <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{setEditTable(selectedFloorTable); setSelectedFloorTable(null); setShowFullscreenFloor(false);}}>
+                          <Icon name="Pencil" size={14}/>ערוך
+                        </button>
+                        <button className="btn btn-danger" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={()=>{ confirmDeleteTable(selectedFloorTable.id); setSelectedFloorTable(null); }}>
+                          <Icon name="Trash2" size={14}/>מחק
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Stats bar */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-around', padding: '8px 12px',
+                borderTop: '1px solid var(--border-default)', background: 'var(--bg-elevated)',
+                fontSize: 12, flexShrink: 0,
+              }}>
+                <span><strong>{tables.length}</strong> שולחנות</span>
+                <span><strong>{totalSeats}</strong> מקומות</span>
+                <span style={{ color: 'var(--emerald-500)' }}><strong>{assignedCount}</strong> מושבים</span>
+                <span style={{ color: 'var(--amber-500)' }}><strong>{unassigned.length}</strong> חסרים</span>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -7478,6 +7680,59 @@
     }
 
     // ============================================
+    // App Legal Footer — used in SettingsPage
+    function AppLegalFooter() {
+      const [showTerms, setShowTerms] = useState(false);
+      return (
+        <>
+          <div style={{ textAlign: 'center', padding: '20px 0 8px', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 16, justifyContent: 'center', fontSize: 13 }}>
+              <a href="#" onClick={e => { e.preventDefault(); setShowTerms(true); }} style={{ color: 'var(--text-secondary)', textDecoration: 'underline', cursor: 'pointer' }}>תנאי שימוש ופרטיות</a>
+              <a href="mailto:avivmed3@gmail.com" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>צרו קשר</a>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>✉️ avivmed3@gmail.com</div>
+          </div>
+          {showTerms && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowTerms(false)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, position: 'sticky', top: 0, background: 'var(--bg-elevated)', paddingBottom: 8 }}>
+                  <div className="modal-title">תנאי שימוש ומדיניות פרטיות</div>
+                  <button className="icon-btn" onClick={() => setShowTerms(false)}><Icon name="X" size={20} /></button>
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.9, color: 'var(--text-secondary)' }}>
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>1. כללי</strong><br/>
+                  ברוכים הבאים ל-SeatSync (להלן: "השירות"). השימוש בשירות מהווה הסכמה לתנאים אלו. השירות מופעל על ידי אביב ("המפעיל"). ליצירת קשר: avivmed3@gmail.com.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>2. השירות</strong><br/>
+                  SeatSync מספק כלי ניהול אישורי הגעה וסידורי הושבה לאירועים. השירות כולל ניהול מוזמנים, שליחת הודעות, מעקב אישורים וסידורי הושבה ויזואליים.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>3. הרשמה וחשבון</strong><br/>
+                  השימוש בשירות מותנה ביצירת חשבון עם כתובת אימייל תקינה. המשתמש אחראי לשמירת פרטי הגישה שלו ולכל פעולה שמתבצעת תחת חשבונו.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>4. פרטיות ומידע אישי</strong><br/>
+                  המידע שנאסף כולל: שם, אימייל, מספרי טלפון של מוזמנים, ונתוני אירוע. המידע מאוחסן בשרתי Supabase מאובטחים. איננו מוכרים או משתפים מידע אישי עם צדדים שלישיים. המשתמש רשאי לייצא את כל הנתונים שלו בכל עת ולמחוק את חשבונו.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>5. שימוש הוגן</strong><br/>
+                  אין להשתמש בשירות למטרות בלתי חוקיות, שליחת ספאם, או באופן שפוגע בשירות או במשתמשים אחרים. המפעיל רשאי להשעות חשבונות המפרים תנאים אלו.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>6. תוכניות ומחירים</strong><br/>
+                  השירות מציע תוכניות Free, Pro ו-Enterprise. המחירים עשויים להשתנות בהתראה מוקדמת. תוכנית Free ניתנת ללא הגבלת זמן.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>7. הגבלת אחריות</strong><br/>
+                  השירות ניתן "כפי שהוא" (AS IS). המפעיל אינו אחראי לנזקים ישירים או עקיפים הנובעים מהשימוש בשירות, לרבות אובדן נתונים.</p>
+
+                  <p style={{ marginBottom: 14 }}><strong style={{ color: 'var(--text-primary)' }}>8. שינויים בתנאים</strong><br/>
+                  המפעיל רשאי לעדכן תנאים אלו מעת לעת. המשך השימוש לאחר עדכון מהווה הסכמה לתנאים המעודכנים.</p>
+
+                  <p style={{ color: 'var(--text-tertiary)', marginTop: 16 }}>עדכון אחרון: אפריל 2026</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
     // Phase 6 — Settings Page
     // ============================================
     function SettingsPage({ event, onEventUpdate }) {
@@ -7592,6 +7847,8 @@
               </div>
             </div>
           </div>
+
+          <AppLegalFooter />
         </div>
       );
 
@@ -8051,6 +8308,8 @@
           <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-tertiary)', marginTop: 8 }}>
             SeatSync v2.2.0 🚀
           </div>
+
+          <AppLegalFooter />
         </div>
       );
     }
