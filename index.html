@@ -1599,6 +1599,33 @@
     @media (max-width: 768px) {
       .seating-sidebar { width: 100%; max-height: 300px; }
     }
+    @media (orientation: landscape) and (max-height: 600px) {
+      .seating-layout { flex-direction: row !important; }
+      .seating-sidebar { width: 200px !important; max-height: calc(100dvh - 140px) !important; }
+      .seating-sidebar.sidebar-collapsed {
+        width: 36px !important;
+        min-width: 36px !important;
+        padding: 6px 4px !important;
+        overflow: hidden;
+      }
+    }
+    .sidebar-collapsed-toggle {
+      display: none;
+      position: absolute;
+      left: -14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-default);
+      border-radius: 50%;
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow-sm);
+      z-index: 2;
+    }
     .sidebar-title {
       display: flex;
       align-items: center;
@@ -1979,6 +2006,24 @@
         return () => window.removeEventListener('resize', handler);
       }, [breakpoint]);
       return isMobile;
+    }
+
+    function useIsLandscapeMobile() {
+      const check = () => {
+        const w = window.innerWidth, h = window.innerHeight;
+        return w > h && w < 1024 && h < 600;
+      };
+      const [val, setVal] = useState(check);
+      useEffect(() => {
+        const handler = () => setVal(check());
+        window.addEventListener('resize', handler);
+        window.addEventListener('orientationchange', handler);
+        return () => {
+          window.removeEventListener('resize', handler);
+          window.removeEventListener('orientationchange', handler);
+        };
+      }, []);
+      return val;
     }
 
     // ============================================
@@ -5701,14 +5746,19 @@
       const handleSave = () => {
         if (!form.name.trim() && !bulkMode) return;
         if (bulkMode) {
-          const tables = Array.from({ length: bulkCount }, (_, i) => ({
-            event_id: eventId,
-            name: `שולחן ${i + 1}`,
-            table_type: form.table_type,
-            seats: parseInt(bulkSeats) || 10,
-            position_x: 100 + (i % 5) * 180,
-            position_y: 100 + Math.floor(i / 5) * 180,
-          }));
+          // Layout in a 6-column grid, wrap every 30 tables, clamped to canvas (1200x800)
+          const cols = 6, rowSpacing = 150, colSpacing = 190;
+          const tables = Array.from({ length: bulkCount }, (_, i) => {
+            const idx = i % 30;
+            return {
+              event_id: eventId,
+              name: `שולחן ${i + 1}`,
+              table_type: form.table_type,
+              seats: parseInt(bulkSeats) || 10,
+              position_x: Math.min(1120, 80 + (idx % cols) * colSpacing),
+              position_y: Math.min(720, 80 + Math.floor(idx / cols) * rowSpacing),
+            };
+          });
           onSave(tables, true);
         } else {
           onSave({ ...form, seats: parseInt(form.seats) || 10, event_id: eventId });
@@ -5794,6 +5844,7 @@
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
+      const isLandscapeMobile = useIsLandscapeMobile();
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -5806,6 +5857,7 @@
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
       const [showFullscreenFloor, setShowFullscreenFloor] = useState(false);
+      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
       const [tablesLocked, setTablesLocked] = useState(() => {
         try { return localStorage.getItem('seatsync_tables_locked_' + event?.id) === 'true'; } catch { return false; }
       });
@@ -5822,23 +5874,30 @@
       const panStart = useRef(null);
       const svgRef = useRef(null);
 
-      // Auto-fit zoom on mobile when entering floor view or fullscreen
+      // Auto-fit zoom when entering floor view, fullscreen, or on orientation change
       useEffect(() => {
-        if ((viewMode === 'floor' || showFullscreenFloor) && svgRef.current) {
-          const wrapEl = svgRef.current.parentElement;
-          if (wrapEl) {
-            // Small delay to let DOM settle for fullscreen
-            setTimeout(() => {
-              const wrapW = wrapEl.clientWidth;
-              const wrapH = wrapEl.clientHeight;
-              if (wrapW > 0 && wrapH > 0) {
-                const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
-                setZoom(Math.max(0.25, fitZoom * 0.92));
-                setPan({ x: 0, y: 0 });
-              }
-            }, 50);
-          }
-        }
+        if (!((viewMode === 'floor' || showFullscreenFloor) && svgRef.current)) return;
+        const doFit = () => {
+          const wrapEl = svgRef.current?.parentElement;
+          if (!wrapEl) return;
+          setTimeout(() => {
+            const wrapW = wrapEl.clientWidth;
+            const wrapH = wrapEl.clientHeight;
+            if (wrapW > 0 && wrapH > 0) {
+              const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
+              setZoom(Math.max(0.25, fitZoom * 0.92));
+              setPan({ x: 0, y: 0 });
+            }
+          }, 150);
+        };
+        doFit();
+        const onOrientationChange = () => doFit();
+        window.addEventListener('orientationchange', onOrientationChange);
+        window.addEventListener('resize', onOrientationChange);
+        return () => {
+          window.removeEventListener('orientationchange', onOrientationChange);
+          window.removeEventListener('resize', onOrientationChange);
+        };
       }, [viewMode, showFullscreenFloor]);
 
       // Table drag on floor plan
@@ -5892,11 +5951,12 @@
           const { data, error } = await client.from('tables').insert(formOrArray).select();
           if (!error) { setTables(prev => [...prev, ...(data || [])]); addToast(`${data?.length} שולחנות נוצרו ✓`, 'success'); }
         } else {
+          const tIdx = tables.length % 30;
           const { data, error } = await client.from('tables').insert({
             ...formOrArray,
             event_id: event.id,
-            position_x: 100 + (tables.length % 5) * 180,
-            position_y: 100 + Math.floor(tables.length / 5) * 180,
+            position_x: Math.min(1120, 80 + (tIdx % 6) * 190),
+            position_y: Math.min(720, 80 + Math.floor(tIdx / 6) * 150),
           }).select().single();
           if (!error) { setTables(prev => [...prev, data]); addToast(`${data.name} נוסף ✓`, 'success'); }
         }
@@ -6067,8 +6127,8 @@
         const onMove = (me) => {
           const dx = (me.clientX - startX) / zoom;
           const dy = (me.clientY - startY) / zoom;
-          const newX = Math.max(40, Math.min(1160, startPosX + dx));
-          const newY = Math.max(40, Math.min(760, startPosY + dy));
+          const newX = Math.max(80, Math.min(1120, startPosX + dx));
+          const newY = Math.max(80, Math.min(720, startPosY + dy));
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(t => t.id === table.id
@@ -6106,8 +6166,8 @@
           const t = me.touches[0];
           const dx = (t.clientX - startX) / zoom;
           const dy = (t.clientY - startY) / zoom;
-          const newX = Math.max(40, Math.min(1160, startPosX + dx));
-          const newY = Math.max(40, Math.min(760, startPosY + dy));
+          const newX = Math.max(80, Math.min(1120, startPosX + dx));
+          const newY = Math.max(80, Math.min(720, startPosY + dy));
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(tb => tb.id === table.id
@@ -6366,7 +6426,7 @@
                     { v: 'floor', icon: 'LayoutDashboard', label: 'מפת אולם' },
                   ].map(m => (
                     <button key={m.v} className={`view-mode-btn ${viewMode === m.v ? 'active' : ''}`} onClick={() => {
-                      if (m.v === 'floor' && isMobile) {
+                      if (m.v === 'floor' && (isMobile || isLandscapeMobile)) {
                         setShowFullscreenFloor(true);
                       } else {
                         setViewMode(m.v);
@@ -6374,7 +6434,7 @@
                     }}>
                       <Icon name={m.icon} size={14} />
                       {m.label}
-                      {m.v === 'floor' && isMobile && <Icon name="Expand" size={12} style={{ marginRight: 2 }} />}
+                      {m.v === 'floor' && (isMobile || isLandscapeMobile) && <Icon name="Expand" size={12} style={{ marginRight: 2 }} />}
                     </button>
                   ))}
                 </div>
@@ -6471,18 +6531,45 @@
 
               {/* ── DRAG & DROP VIEW ── */}
               {viewMode === 'dnd' && (
-                <div className="seating-layout">
+                <div className="seating-layout" style={{ position: 'relative' }}>
                   {/* Sidebar — unassigned */}
                   <div
-                    className="seating-sidebar"
+                    className={`seating-sidebar${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}
+                    style={{ position: 'relative', transition: 'width 0.2s ease, min-width 0.2s ease' }}
                     onDragOver={e => e.preventDefault()}
                     onDrop={handleDropUnassigned}
                   >
-                    <div className="sidebar-title">
-                      <span>לא מושבים</span>
-                      <span style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-full)', padding: '1px 8px', fontSize: 12 }}>{unassigned.length}</span>
-                    </div>
-                    {unassigned.length === 0 ? (
+                    {/* Collapse toggle button */}
+                    <button
+                      onClick={() => setSidebarCollapsed(c => !c)}
+                      title={sidebarCollapsed ? 'הצג רשימה' : 'כווץ רשימה'}
+                      style={{
+                        position: 'absolute',
+                        left: sidebarCollapsed ? -14 : -14,
+                        top: 12,
+                        width: 28,
+                        height: 28,
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: 'var(--shadow-sm)',
+                        zIndex: 2,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Icon name={sidebarCollapsed ? 'ChevronLeft' : 'ChevronRight'} size={14} />
+                    </button>
+                    {!sidebarCollapsed && (
+                      <div className="sidebar-title">
+                        <span>לא מושבים</span>
+                        <span style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-full)', padding: '1px 8px', fontSize: 12 }}>{unassigned.length}</span>
+                      </div>
+                    )}
+                    {!sidebarCollapsed && (unassigned.length === 0 ? (
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
                         🎉 כל האורחים מושבים!
                       </div>
@@ -6512,7 +6599,7 @@
                           ))}
                         </div>
                       ))
-                    )}
+                    ))}
                   </div>
 
                   {/* Tables drop area */}
@@ -6568,7 +6655,7 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
-                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 520, minHeight: 300 }}>
+                <div className="floorplan-wrap" style={{ height: (isMobile || isLandscapeMobile) ? 'calc(100dvh - 260px)' : 520, minHeight: 280 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.15))}><Icon name="Plus" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><Icon name="Minus" size={14}/></div>
