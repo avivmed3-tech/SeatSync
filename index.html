@@ -1016,26 +1016,27 @@
     /* Landscape mode — compact UI when phone is rotated */
     @media (orientation: landscape) and (max-height: 500px) {
       .bottom-nav {
-        height: 48px;
-        padding: 2px 8px;
+        height: calc(44px + env(safe-area-inset-bottom, 0px));
+        padding: 0 4px;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
       }
       .bottom-nav-item {
-        padding: 4px 8px;
-        font-size: 10px;
-        gap: 2px;
+        padding: 4px 6px;
+        gap: 1px;
       }
-      .bottom-nav-label { font-size: 9px; }
+      .bottom-nav-label { display: none !important; }
+      .bottom-nav-item svg { width: 20px; height: 20px; }
       .main-content {
-        padding: 12px 16px;
-        padding-bottom: 56px;
+        padding: 8px 12px;
+        padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px));
       }
-      .top-bar { height: 44px; padding: 0 12px; }
-      .top-bar h1 { font-size: 16px; }
-      .page-header { margin-bottom: 12px; }
-      .page-title { font-size: 18px; }
-      .card { padding: 12px; }
-      .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-      .kpi-card { padding: 10px; }
+      .top-bar { height: 40px; padding: 0 10px; }
+      .top-bar h1 { font-size: 15px; }
+      .page-header { margin-bottom: 8px; }
+      .page-title { font-size: 16px; }
+      .card { padding: 10px; }
+      .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .kpi-card { padding: 8px; }
     }
 
     /* ============================================
@@ -2004,6 +2005,19 @@
         return () => window.removeEventListener('resize', handler);
       }, [breakpoint]);
       return isMobile;
+    }
+
+    function useIsLandscape() {
+      const [isLandscape, setIsLandscape] = useState(
+        () => window.innerWidth > window.innerHeight && window.innerHeight < 500
+      );
+      useEffect(() => {
+        const h = () => setIsLandscape(window.innerWidth > window.innerHeight && window.innerHeight < 500);
+        window.addEventListener('resize', h);
+        window.addEventListener('orientationchange', h);
+        return () => { window.removeEventListener('resize', h); window.removeEventListener('orientationchange', h); };
+      }, []);
+      return isLandscape;
     }
 
     // ============================================
@@ -5728,6 +5742,13 @@
             </>
           )}
           <circle cx={30} cy={-30} r="8" fill={color} stroke={isDark ? '#2a2a2a' : 'white'} strokeWidth="1.5" style={{ display: occupied > 0 ? 'block' : 'none' }}/>
+          {locked && (
+            <g transform={`translate(${isRect ? -w/2 + 8 : -26}, ${isRect ? -h/2 + 8 : -26})`} style={{ pointerEvents: 'none' }}>
+              <circle r="8" fill="rgba(30,30,30,0.75)" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+              <rect x="-4" y="-1" width="8" height="6" rx="1.5" fill="white"/>
+              <path d="M -2.5 -1 L -2.5 -3.5 A 2.5 2.5 0 0 1 2.5 -3.5 L 2.5 -1" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
+            </g>
+          )}
         </g>
       );
     }
@@ -5835,11 +5856,15 @@
     // ============================================
     // Phase 4 — Seating Page Full
     // ============================================
+    const CANVAS_W = 1200;
+    const CANVAS_H = 800;
+
     function SeatingPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
+      const isLandscape = useIsLandscape();
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -5852,14 +5877,20 @@
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
       const [showFullscreenFloor, setShowFullscreenFloor] = useState(false);
-      const [tablesLocked, setTablesLocked] = useState(() => {
-        try { return localStorage.getItem('seatsync_tables_locked_' + event?.id) === 'true'; } catch { return false; }
+      const [lockedTables, setLockedTables] = useState(() => {
+        try {
+          const raw = localStorage.getItem('seatsync_locked_tables_' + event?.id);
+          return raw ? JSON.parse(raw) : {};
+        } catch { return {}; }
       });
-      const tablesLockedRef = useRef(tablesLocked);
+      const lockedTablesRef = useRef(lockedTables);
       useEffect(() => {
-        tablesLockedRef.current = tablesLocked;
-        try { localStorage.setItem('seatsync_tables_locked_' + event?.id, tablesLocked); } catch {}
-      }, [tablesLocked]);
+        lockedTablesRef.current = lockedTables;
+        try { localStorage.setItem('seatsync_locked_tables_' + event?.id, JSON.stringify(lockedTables)); } catch {}
+      }, [lockedTables]);
+
+      // Derived: true when every table is individually locked
+      const allTablesLocked = tables.length > 0 && tables.every(t => lockedTables[t.id]);
 
       // Floor plan state
       const [zoom, setZoom] = useState(1);
@@ -5868,27 +5899,17 @@
       const panStart = useRef(null);
       const svgRef = useRef(null);
 
-      // Calculate bounding box from actual table positions
-      const getCanvasBounds = () => {
-        if (tables.length === 0) return { w: 1200, h: 800 };
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        tables.forEach(t => {
-          const x = t.position_x || 80;
-          const y = t.position_y || 80;
-          minX = Math.min(minX, x - 80);
-          minY = Math.min(minY, y - 80);
-          maxX = Math.max(maxX, x + 80);
-          maxY = Math.max(maxY, y + 80);
-        });
-        // Add padding and ensure minimum size
-        const padding = 100;
+      // Fixed canvas dimensions — tables are constrained to this area
+      const canvasBounds = { w: CANVAS_W, h: CANVAS_H };
+
+      // Clamp pan so canvas cannot scroll completely off-screen
+      const clampPan = (rawX, rawY, currentZoom, wrapW, wrapH) => {
+        const margin = 100;
         return {
-          w: Math.max(800, maxX + padding),
-          h: Math.max(600, maxY + padding),
+          x: Math.max(-(CANVAS_W * currentZoom - margin), Math.min(wrapW - margin, rawX)),
+          y: Math.max(-(CANVAS_H * currentZoom - margin), Math.min(wrapH - margin, rawY)),
         };
       };
-
-      const canvasBounds = getCanvasBounds();
 
       // Auto-fit zoom on mobile when entering floor view or fullscreen
       useEffect(() => {
@@ -5900,7 +5921,7 @@
               const wrapW = wrapEl.clientWidth;
               const wrapH = wrapEl.clientHeight;
               if (wrapW > 0 && wrapH > 0) {
-                const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
+                const fitZoom = Math.min(wrapW / CANVAS_W, wrapH / CANVAS_H, 1.5);
                 setZoom(Math.max(0.15, fitZoom * 0.9));
                 setPan({ x: 0, y: 0 });
               }
@@ -6123,7 +6144,7 @@
       // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return;
+        if (lockedTablesRef.current[table.id]) return;
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
@@ -6135,8 +6156,8 @@
         const onMove = (me) => {
           const dx = (me.clientX - startX) / zoom;
           const dy = (me.clientY - startY) / zoom;
-          const newX = Math.max(40, startPosX + dx);
-          const newY = Math.max(40, startPosY + dy);
+          const newX = Math.max(50, Math.min(CANVAS_W - 50, startPosX + dx));
+          const newY = Math.max(50, Math.min(CANVAS_H - 50, startPosY + dy));
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(t => t.id === table.id
@@ -6158,7 +6179,7 @@
       // Floor plan: drag tables (touch — mobile)
       const handleTableTouchStart = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return;
+        if (lockedTablesRef.current[table.id]) return;
         if (e.touches.length !== 1) return;
         e.stopPropagation();
         const touch = e.touches[0];
@@ -6174,8 +6195,8 @@
           const t = me.touches[0];
           const dx = (t.clientX - startX) / zoom;
           const dy = (t.clientY - startY) / zoom;
-          const newX = Math.max(40, startPosX + dx);
-          const newY = Math.max(40, startPosY + dy);
+          const newX = Math.max(50, Math.min(CANVAS_W - 50, startPosX + dx));
+          const newY = Math.max(50, Math.min(CANVAS_H - 50, startPosY + dy));
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(tb => tb.id === table.id
@@ -6450,11 +6471,19 @@
                   <div style={{ display: 'flex', gap: 4, marginRight: 'auto' }}>
                     <button
                       className="btn btn-secondary"
-                      style={{ padding: '6px 10px', background: tablesLocked ? 'var(--accent-light)' : undefined, borderColor: tablesLocked ? 'var(--accent)' : undefined, color: tablesLocked ? 'var(--accent)' : undefined }}
-                      onClick={() => setTablesLocked(l => !l)}
-                      title={tablesLocked ? 'שחרר נעילת שולחנות' : 'נעל מיקום שולחנות'}
+                      style={{ padding: '6px 10px', background: allTablesLocked ? 'var(--accent-light)' : undefined, borderColor: allTablesLocked ? 'var(--accent)' : undefined, color: allTablesLocked ? 'var(--accent)' : undefined }}
+                      onClick={() => {
+                        if (allTablesLocked) {
+                          setLockedTables({});
+                        } else {
+                          const all = {};
+                          tables.forEach(t => { all[t.id] = true; });
+                          setLockedTables(all);
+                        }
+                      }}
+                      title={allTablesLocked ? 'שחרר נעילת שולחנות' : 'נעל מיקום שולחנות'}
                     >
-                      <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={16} />
+                      <Icon name={allTablesLocked ? 'Lock' : 'Unlock'} size={16} />
                     </button>
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => setZoom(z => Math.min(2, z + 0.2))}>
                       <Icon name="ZoomIn" size={16} />
@@ -6465,7 +6494,7 @@
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => {
                       const wrapEl = svgRef.current?.parentElement;
                       if (wrapEl) {
-                        const fitZoom = Math.min(wrapEl.clientWidth / canvasBounds.w, wrapEl.clientHeight / canvasBounds.h, 1.5);
+                        const fitZoom = Math.min(wrapEl.clientWidth / CANVAS_W, wrapEl.clientHeight / CANVAS_H, 1.5);
                         setZoom(Math.max(0.15, fitZoom * 0.9));
                         setPan({ x: 0, y: 0 });
                       }
@@ -6636,7 +6665,7 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
-                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 520, minHeight: 300 }}>
+                <div className="floorplan-wrap" style={{ height: isMobile ? (isLandscape ? 'calc(100dvh - 120px)' : 'calc(100vh - 260px)') : 520, minHeight: 200 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.15))}><Icon name="Plus" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><Icon name="Minus" size={14}/></div>
@@ -6646,7 +6675,7 @@
                       if (wrapEl) {
                         const wrapW = wrapEl.clientWidth;
                         const wrapH = wrapEl.clientHeight;
-                        const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
+                        const fitZoom = Math.min(wrapW / CANVAS_W, wrapH / CANVAS_H, 1.5);
                         setZoom(Math.max(0.15, fitZoom * 0.9));
                         setPan({ x: 0, y: 0 });
                       }
@@ -6657,11 +6686,19 @@
                     <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 5, display: 'flex', gap: 4 }}>
                       <button
                         className="floorplan-btn"
-                        style={{ width: 'auto', padding: '4px 10px', fontSize: 11, fontWeight: 600, fontFamily: 'Heebo', gap: 4, display: 'flex', alignItems: 'center' }}
-                        onClick={() => setTablesLocked(l => !l)}
+                        style={{ width: 'auto', padding: '4px 10px', fontSize: 11, fontWeight: 600, fontFamily: 'Heebo', gap: 4, display: 'flex', alignItems: 'center', background: allTablesLocked ? 'var(--accent-light)' : undefined, borderColor: allTablesLocked ? 'var(--accent)' : undefined, color: allTablesLocked ? 'var(--accent)' : undefined }}
+                        onClick={() => {
+                          if (allTablesLocked) {
+                            setLockedTables({});
+                          } else {
+                            const all = {};
+                            tables.forEach(t => { all[t.id] = true; });
+                            setLockedTables(all);
+                          }
+                        }}
                       >
-                        <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={13}/>
-                        {tablesLocked ? 'נעול' : 'נעל'}
+                        <Icon name={allTablesLocked ? 'Lock' : 'Unlock'} size={13}/>
+                        {allTablesLocked ? 'נעול' : 'נעל'}
                       </button>
                     </div>
                   )}
@@ -6678,7 +6715,10 @@
                     }}
                     onMouseMove={e => {
                       if (isPanning && panStart.current) {
-                        setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
+                        const wrapEl = svgRef.current?.parentElement;
+                        const rawX = e.clientX - panStart.current.x;
+                        const rawY = e.clientY - panStart.current.y;
+                        setPan(clampPan(rawX, rawY, zoom, wrapEl?.clientWidth || 800, wrapEl?.clientHeight || 600));
                       }
                     }}
                     onMouseUp={() => setIsPanning(false)}
@@ -6706,21 +6746,24 @@
                       } else if (isPanning && panStart.current && e.touches.length === 1) {
                         e.preventDefault();
                         const t = e.touches[0];
-                        setPan({ x: t.clientX - panStart.current.x, y: t.clientY - panStart.current.y });
+                        const wrapEl = svgRef.current?.parentElement;
+                        const rawX = t.clientX - panStart.current.x;
+                        const rawY = t.clientY - panStart.current.y;
+                        setPan(clampPan(rawX, rawY, zoom, wrapEl?.clientWidth || 800, wrapEl?.clientHeight || 600));
                       }
                     }}
                     onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                      {/* Dynamic boundary based on table positions */}
-                      <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.4" />
+                      {/* Fixed canvas boundary */}
+                      <rect x="0" y="0" width={CANVAS_W} height={CANVAS_H} fill="var(--bg-primary)" opacity="0.4" stroke="var(--border-default)" strokeWidth="1.5" rx="8" />
                       {/* Floor plan background image */}
                       {event?.settings?.floorplan_url && (
                         <image
                           href={event.settings.floorplan_url}
                           x="0" y="0"
-                          width={canvasBounds.w} height={canvasBounds.h}
-                          preserveAspectRatio="xMidYMid meet"
+                          width={CANVAS_W} height={CANVAS_H}
+                          preserveAspectRatio="xMidYMid slice"
                           opacity="0.3"
                           style={{ pointerEvents: 'none' }}
                         />
@@ -6731,7 +6774,7 @@
                           table={table}
                           guests={guests}
                           selected={selectedFloorTable?.id === table.id}
-                          locked={tablesLocked}
+                          locked={!!lockedTables[table.id]}
                           onDragTable={handleTableMouseDown}
                           onTouchTable={handleTableTouchStart}
                           onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
@@ -6778,6 +6821,14 @@
                             </div>
                           )}
                           <div style={{ display:'flex', gap:8 }}>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ flex:1, padding:'8px 0', fontSize:13, background: lockedTables[selectedFloorTable.id] ? 'var(--accent-light)' : undefined, color: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined, borderColor: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined }}
+                              onClick={() => setLockedTables(prev => ({ ...prev, [selectedFloorTable.id]: !prev[selectedFloorTable.id] }))}
+                            >
+                              <Icon name={lockedTables[selectedFloorTable.id] ? 'Lock' : 'Unlock'} size={14}/>
+                              {lockedTables[selectedFloorTable.id] ? 'נעול' : 'נעל'}
+                            </button>
                             <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
                               const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                               await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
@@ -6839,6 +6890,14 @@
                           </div>
                         )}
                         <div style={{ display:'flex', gap:6 }}>
+                          <button
+                            className="btn btn-secondary"
+                            style={{ flex:1, padding:'6px 0', fontSize:12, background: lockedTables[selectedFloorTable.id] ? 'var(--accent-light)' : undefined, color: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined, borderColor: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined }}
+                            onClick={() => setLockedTables(prev => ({ ...prev, [selectedFloorTable.id]: !prev[selectedFloorTable.id] }))}
+                          >
+                            <Icon name={lockedTables[selectedFloorTable.id] ? 'Lock' : 'Unlock'} size={13}/>
+                            {lockedTables[selectedFloorTable.id] ? 'נעול' : 'נעל'}
+                          </button>
                           <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={async ()=>{
                             const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                             await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
@@ -6916,16 +6975,24 @@
                 <div style={{ display: 'flex', gap: 4 }}>
                   <button
                     className="btn btn-secondary"
-                    style={{ padding: '6px 8px', background: tablesLocked ? 'var(--accent-light)' : undefined, borderColor: tablesLocked ? 'var(--accent)' : undefined, color: tablesLocked ? 'var(--accent)' : undefined }}
-                    onClick={() => setTablesLocked(l => !l)}
+                    style={{ padding: '6px 8px', background: allTablesLocked ? 'var(--accent-light)' : undefined, borderColor: allTablesLocked ? 'var(--accent)' : undefined, color: allTablesLocked ? 'var(--accent)' : undefined }}
+                    onClick={() => {
+                      if (allTablesLocked) {
+                        setLockedTables({});
+                      } else {
+                        const all = {};
+                        tables.forEach(t => { all[t.id] = true; });
+                        setLockedTables(all);
+                      }
+                    }}
                   >
-                    <Icon name={tablesLocked ? 'Lock' : 'Unlock'} size={15} />
+                    <Icon name={allTablesLocked ? 'Lock' : 'Unlock'} size={15} />
                   </button>
                   <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => {
                     if (!svgRef.current) return;
                     const wrapEl = svgRef.current.parentElement;
                     if (wrapEl) {
-                      const fitZoom = Math.min(wrapEl.clientWidth / canvasBounds.w, wrapEl.clientHeight / canvasBounds.h, 1.5);
+                      const fitZoom = Math.min(wrapEl.clientWidth / CANVAS_W, wrapEl.clientHeight / CANVAS_H, 1.5);
                       setZoom(Math.max(0.15, fitZoom * 0.9));
                       setPan({ x: 0, y: 0 });
                     }
@@ -6970,7 +7037,10 @@
                     } else if (isPanning && panStart.current && e.touches.length === 1) {
                       e.preventDefault();
                       const t = e.touches[0];
-                      setPan({ x: t.clientX - panStart.current.x, y: t.clientY - panStart.current.y });
+                      const wrapEl = svgRef.current?.parentElement;
+                      const rawX = t.clientX - panStart.current.x;
+                      const rawY = t.clientY - panStart.current.y;
+                      setPan(clampPan(rawX, rawY, zoom, wrapEl?.clientWidth || 800, wrapEl?.clientHeight || 600));
                     }
                   }}
                   onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
@@ -6982,20 +7052,23 @@
                   }}
                   onMouseMove={e => {
                     if (isPanning && panStart.current) {
-                      setPan({ x: e.clientX - panStart.current.x, y: e.clientY - panStart.current.y });
+                      const wrapEl = svgRef.current?.parentElement;
+                      const rawX = e.clientX - panStart.current.x;
+                      const rawY = e.clientY - panStart.current.y;
+                      setPan(clampPan(rawX, rawY, zoom, wrapEl?.clientWidth || 800, wrapEl?.clientHeight || 600));
                     }
                   }}
                   onMouseUp={() => setIsPanning(false)}
                   onMouseLeave={() => setIsPanning(false)}
                 >
                   <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                    <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.4" />
+                    <rect x="0" y="0" width={CANVAS_W} height={CANVAS_H} fill="var(--bg-primary)" opacity="0.4" stroke="var(--border-default)" strokeWidth="1.5" rx="8" />
                     {event?.settings?.floorplan_url && (
                       <image
                         href={event.settings.floorplan_url}
                         x="0" y="0"
-                        width={canvasBounds.w} height={canvasBounds.h}
-                        preserveAspectRatio="xMidYMid meet"
+                        width={CANVAS_W} height={CANVAS_H}
+                        preserveAspectRatio="xMidYMid slice"
                         opacity="0.3"
                         style={{ pointerEvents: 'none' }}
                       />
@@ -7006,7 +7079,7 @@
                         table={table}
                         guests={guests}
                         selected={selectedFloorTable?.id === table.id}
-                        locked={tablesLocked}
+                        locked={!!lockedTables[table.id]}
                         onDragTable={handleTableMouseDown}
                         onTouchTable={handleTableTouchStart}
                         onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
@@ -7050,6 +7123,14 @@
                         </div>
                       )}
                       <div style={{ display:'flex', gap:8 }}>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ flex:1, padding:'8px 0', fontSize:13, background: lockedTables[selectedFloorTable.id] ? 'var(--accent-light)' : undefined, color: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined, borderColor: lockedTables[selectedFloorTable.id] ? 'var(--accent)' : undefined }}
+                          onClick={() => setLockedTables(prev => ({ ...prev, [selectedFloorTable.id]: !prev[selectedFloorTable.id] }))}
+                        >
+                          <Icon name={lockedTables[selectedFloorTable.id] ? 'Lock' : 'Unlock'} size={14}/>
+                          {lockedTables[selectedFloorTable.id] ? 'נעול' : 'נעל'}
+                        </button>
                         <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
                           const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                           await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
@@ -7481,7 +7562,7 @@
               aria-label={item.label}
             >
               <Icon name={item.icon} size={22} />
-              <span>{item.label}</span>
+              <span className="bottom-nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
