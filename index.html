@@ -1015,6 +1015,7 @@
 
     /* Landscape mode — compact UI when phone is rotated */
     @media (orientation: landscape) and (max-height: 500px) {
+      /* Bottom nav (portrait mobile layout, width < 768px) */
       .bottom-nav {
         height: calc(44px + env(safe-area-inset-bottom, 0px));
         padding: 0 4px;
@@ -1037,6 +1038,29 @@
       .card { padding: 10px; }
       .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
       .kpi-card { padding: 8px; }
+    }
+
+    /* Landscape + wide device (>= 768px) — sidebar turns icon-only narrow column */
+    @media (orientation: landscape) and (max-height: 500px) and (min-width: 768px) {
+      .bottom-nav {
+        width: 56px;
+        height: auto;
+        padding: 8px 4px;
+      }
+      .bottom-nav-item {
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 4px;
+        gap: 0;
+        font-size: 0;
+      }
+      .bottom-nav-item svg { width: 22px; height: 22px; }
+      .main-content {
+        margin-right: 56px;
+        padding: 8px 10px;
+        padding-bottom: 16px;
+      }
     }
 
     /* ============================================
@@ -5911,24 +5935,26 @@
         };
       };
 
-      // Auto-fit zoom on mobile when entering floor view or fullscreen
+      // Auto-fit zoom when entering floor view, fullscreen, or on orientation change
       useEffect(() => {
         if ((viewMode === 'floor' || showFullscreenFloor) && svgRef.current) {
           const wrapEl = svgRef.current.parentElement;
           if (wrapEl) {
-            // Small delay to let DOM settle for fullscreen
-            setTimeout(() => {
-              const wrapW = wrapEl.clientWidth;
-              const wrapH = wrapEl.clientHeight;
-              if (wrapW > 0 && wrapH > 0) {
-                const fitZoom = Math.min(wrapW / CANVAS_W, wrapH / CANVAS_H, 1.5);
-                setZoom(Math.max(0.15, fitZoom * 0.9));
-                setPan({ x: 0, y: 0 });
-              }
-            }, 50);
+            // Double rAF ensures the browser has finished layout (more reliable than setTimeout)
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const wrapW = wrapEl.clientWidth;
+                const wrapH = wrapEl.clientHeight;
+                if (wrapW > 0 && wrapH > 0) {
+                  const fitZoom = Math.min(wrapW / CANVAS_W, wrapH / CANVAS_H, 1.5);
+                  setZoom(Math.max(0.15, fitZoom * 0.9));
+                  setPan({ x: 0, y: 0 });
+                }
+              });
+            });
           }
         }
-      }, [viewMode, showFullscreenFloor, tables.length]);
+      }, [viewMode, showFullscreenFloor, tables.length, isLandscape]);
 
       // Table drag on floor plan
       const tableDragRef = useRef(null);
