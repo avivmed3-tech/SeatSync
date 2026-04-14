@@ -117,35 +117,35 @@
       --duration-slow: 400ms;
     }
 
-    /* Dark Mode */
+    /* Dark Mode — Prestige Slate & Gold */
     [data-theme="dark"] {
-      --bg-primary: #0A0E1A;
-      --bg-secondary: #111827;
-      --bg-tertiary: #1A2035;
-      --bg-elevated: #1E2642;
-      --bg-hover: rgba(255, 255, 255, 0.04);
-      --bg-active: rgba(255, 255, 255, 0.08);
-      --bg-overlay: rgba(0, 0, 0, 0.6);
+      --bg-primary: #131313;
+      --bg-secondary: #1c1b1b;
+      --bg-tertiary: #2a2a2a;
+      --bg-elevated: #242424;
+      --bg-hover: rgba(255, 255, 255, 0.05);
+      --bg-active: rgba(255, 255, 255, 0.09);
+      --bg-overlay: rgba(0, 0, 0, 0.7);
 
-      --text-primary: #F1F5F9;
-      --text-secondary: #94A3B8;
-      --text-tertiary: #64748B;
-      --text-inverse: #0A0E1A;
+      --text-primary: #F0ECE3;
+      --text-secondary: #9C9689;
+      --text-tertiary: #6B6560;
+      --text-inverse: #131313;
       --text-brand: var(--gold-400);
 
-      --border-default: #1E293B;
-      --border-light: #162032;
+      --border-default: rgba(255,255,255,0.08);
+      --border-light: rgba(255,255,255,0.04);
       --border-focus: var(--gold-500);
 
       --accent: var(--gold-400);
       --accent-hover: var(--gold-300);
       --accent-light: rgba(245, 197, 24, 0.08);
-      --accent-text: #0A0E1A;
+      --accent-text: #131313;
 
-      --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-      --shadow-lg: 0 8px 30px rgba(0,0,0,0.5);
-      --shadow-xl: 0 20px 60px rgba(0,0,0,0.6);
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,0.6);
+      --shadow-xl: 0 20px 60px rgba(0,0,0,0.7);
     }
 
     /* ============================================
@@ -1013,6 +1013,31 @@
       .hide-mobile { display: none !important; }
     }
 
+    /* Landscape mode — compact UI when phone is rotated */
+    @media (orientation: landscape) and (max-height: 500px) {
+      .bottom-nav {
+        height: 48px;
+        padding: 2px 8px;
+      }
+      .bottom-nav-item {
+        padding: 4px 8px;
+        font-size: 10px;
+        gap: 2px;
+      }
+      .bottom-nav-label { font-size: 9px; }
+      .main-content {
+        padding: 12px 16px;
+        padding-bottom: 56px;
+      }
+      .top-bar { height: 44px; padding: 0 12px; }
+      .top-bar h1 { font-size: 16px; }
+      .page-header { margin-bottom: 12px; }
+      .page-title { font-size: 18px; }
+      .card { padding: 12px; }
+      .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .kpi-card { padding: 10px; }
+    }
+
     /* ============================================
        Guests Module Styles
        ============================================ */
@@ -1599,33 +1624,6 @@
     @media (max-width: 768px) {
       .seating-sidebar { width: 100%; max-height: 300px; }
     }
-    @media (orientation: landscape) and (max-height: 600px) {
-      .seating-layout { flex-direction: row !important; }
-      .seating-sidebar { width: 200px !important; max-height: calc(100dvh - 140px) !important; }
-      .seating-sidebar.sidebar-collapsed {
-        width: 36px !important;
-        min-width: 36px !important;
-        padding: 6px 4px !important;
-        overflow: hidden;
-      }
-    }
-    .sidebar-collapsed-toggle {
-      display: none;
-      position: absolute;
-      left: -14px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 28px;
-      height: 28px;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-default);
-      border-radius: 50%;
-      cursor: pointer;
-      align-items: center;
-      justify-content: center;
-      box-shadow: var(--shadow-sm);
-      z-index: 2;
-    }
     .sidebar-title {
       display: flex;
       align-items: center;
@@ -2006,24 +2004,6 @@
         return () => window.removeEventListener('resize', handler);
       }, [breakpoint]);
       return isMobile;
-    }
-
-    function useIsLandscapeMobile() {
-      const check = () => {
-        const w = window.innerWidth, h = window.innerHeight;
-        return w > h && w < 1024 && h < 600;
-      };
-      const [val, setVal] = useState(check);
-      useEffect(() => {
-        const handler = () => setVal(check());
-        window.addEventListener('resize', handler);
-        window.addEventListener('orientationchange', handler);
-        return () => {
-          window.removeEventListener('resize', handler);
-          window.removeEventListener('orientationchange', handler);
-        };
-      }, []);
-      return val;
     }
 
     // ============================================
@@ -2745,17 +2725,32 @@
       );
 
       return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ width: '100%', maxWidth: 380 }}>
-            <div className="hero-section animate-slide-up">
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+          background: 'linear-gradient(135deg, #131313 0%, #1c1b1b 40%, #2a2318 100%)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Warm ambient glow */}
+          <div style={{
+            position: 'absolute', top: '-30%', right: '-20%', width: '60%', height: '60%',
+            background: 'radial-gradient(ellipse, rgba(245,197,24,0.06) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{
+            position: 'absolute', bottom: '-20%', left: '-10%', width: '50%', height: '50%',
+            background: 'radial-gradient(ellipse, rgba(212,168,8,0.04) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          <div style={{ width: '100%', maxWidth: 380, position: 'relative', zIndex: 1 }}>
+            <div className="hero-section animate-slide-up" style={{ color: '#F0ECE3' }}>
               <div className="hero-logo">
                 <Icon name="Armchair" size={36} />
               </div>
-              <div className="hero-title">SeatSync</div>
-              <div className="hero-text">ניהול אישורי הגעה וסידורי הושבה חכם לכל אירוע</div>
+              <div className="hero-title" style={{ color: '#F5C518' }}>SeatSync</div>
+              <div className="hero-text" style={{ color: '#9C9689', letterSpacing: '0.15em', textTransform: 'uppercase', fontSize: 11, fontWeight: 500 }}>Elevating Guest Experiences</div>
             </div>
 
-            <div className="card animate-slide-up stagger-2" style={{ marginTop: 10 }}>
+            <div className="card animate-slide-up stagger-2" style={{ marginTop: 10, background: 'rgba(28,27,27,0.85)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.06)' }}>
               {(mode === 'login' || mode === 'register') && (
                 <div style={{ display: 'flex', gap: 0, marginBottom: 20, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', padding: 3 }}>
                   <button
@@ -5694,6 +5689,14 @@
       const color = isFull ? '#EF4444' : occupied > 0 ? '#10B981' : '#94A3B8';
       const rotation = table.rotation || 0;
 
+      // Theme-aware colors
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const tableFill = isDark ? '#C4A46B' : '#C4A46B';
+      const tableStroke = isDark ? '#8B7355' : '#8B7355';
+      const outerFill = selected ? (isDark ? '#3D3520' : '#FFF0BF') : (isDark ? '#2a2a2a' : 'white');
+      const outerStroke = selected ? '#F5C518' : (isDark ? 'rgba(255,255,255,0.12)' : '#CBD5E1');
+      const emptyChair = isDark ? '#3a3a3a' : '#E2E8F0';
+
       return (
         <g
           transform={`translate(${table.position_x || 80}, ${table.position_y || 80}) rotate(${rotation})`}
@@ -5704,29 +5707,27 @@
         >
           {table.table_type === 'round' ? (
             <>
-              <circle r="38" fill={selected ? '#FFF0BF' : 'white'} stroke={selected ? 'var(--gold-400)' : '#CBD5E1'} strokeWidth={selected ? 2.5 : 1.5}/>
-              <circle r="26" fill="#C4A46B" stroke="#8B7355" strokeWidth="2"/>
+              <circle r="38" fill={outerFill} stroke={outerStroke} strokeWidth={selected ? 2.5 : 1.5}/>
+              <circle r="26" fill={tableFill} stroke={tableStroke} strokeWidth="2"/>
               <text y="4" textAnchor="middle" fontSize="9" fill="white" fontWeight="700" fontFamily="Heebo">{table.name}</text>
               <text y="14" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.8)" fontFamily="Heebo">{occupied}/{table.seats}</text>
-              {/* Mini chairs */}
               {Array.from({ length: Math.min(table.seats, 12) }).map((_, i) => {
                 const angle = (i / Math.min(table.seats, 12)) * Math.PI * 2 - Math.PI/2;
                 const cr = 34;
                 const cx2 = Math.cos(angle) * cr; const cy2 = Math.sin(angle) * cr;
                 const g = tGuests[i];
-                return <circle key={i} cx={cx2} cy={cy2} r="6" fill={g ? getGroupColor(g.group_name) : '#E2E8F0'} stroke="white" strokeWidth="1"/>;
+                return <circle key={i} cx={cx2} cy={cy2} r="6" fill={g ? getGroupColor(g.group_name) : emptyChair} stroke={isDark ? 'rgba(255,255,255,0.15)' : 'white'} strokeWidth="1"/>;
               })}
             </>
           ) : (
             <>
-              <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx="10" fill={selected ? '#FFF0BF' : 'white'} stroke={selected ? 'var(--gold-400)' : '#CBD5E1'} strokeWidth={selected ? 2.5 : 1.5}/>
-              <rect x={-w/2} y={-h/2} width={w} height={h} rx="6" fill="#C4A46B" stroke="#8B7355" strokeWidth="2"/>
+              <rect x={-w/2-8} y={-h/2-8} width={w+16} height={h+16} rx="10" fill={outerFill} stroke={outerStroke} strokeWidth={selected ? 2.5 : 1.5}/>
+              <rect x={-w/2} y={-h/2} width={w} height={h} rx="6" fill={tableFill} stroke={tableStroke} strokeWidth="2"/>
               <text y="4" textAnchor="middle" fontSize="9" fill="white" fontWeight="700" fontFamily="Heebo">{table.name}</text>
               <text y="14" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.8)" fontFamily="Heebo">{occupied}/{table.seats}</text>
             </>
           )}
-          {/* Occupied indicator */}
-          <circle cx={30} cy={-30} r="8" fill={color} stroke="white" strokeWidth="1.5" style={{ display: occupied > 0 ? 'block' : 'none' }}/>
+          <circle cx={30} cy={-30} r="8" fill={color} stroke={isDark ? '#2a2a2a' : 'white'} strokeWidth="1.5" style={{ display: occupied > 0 ? 'block' : 'none' }}/>
         </g>
       );
     }
@@ -5746,19 +5747,14 @@
       const handleSave = () => {
         if (!form.name.trim() && !bulkMode) return;
         if (bulkMode) {
-          // Layout in a 6-column grid, wrap every 30 tables, clamped to canvas (1200x800)
-          const cols = 6, rowSpacing = 150, colSpacing = 190;
-          const tables = Array.from({ length: bulkCount }, (_, i) => {
-            const idx = i % 30;
-            return {
-              event_id: eventId,
-              name: `שולחן ${i + 1}`,
-              table_type: form.table_type,
-              seats: parseInt(bulkSeats) || 10,
-              position_x: Math.min(1120, 80 + (idx % cols) * colSpacing),
-              position_y: Math.min(720, 80 + Math.floor(idx / cols) * rowSpacing),
-            };
-          });
+          const tables = Array.from({ length: bulkCount }, (_, i) => ({
+            event_id: eventId,
+            name: `שולחן ${i + 1}`,
+            table_type: form.table_type,
+            seats: parseInt(bulkSeats) || 10,
+            position_x: 100 + (i % 5) * 180,
+            position_y: 100 + Math.floor(i / 5) * 180,
+          }));
           onSave(tables, true);
         } else {
           onSave({ ...form, seats: parseInt(form.seats) || 10, event_id: eventId });
@@ -5844,7 +5840,6 @@
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
-      const isLandscapeMobile = useIsLandscapeMobile();
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -5857,7 +5852,6 @@
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
       const [showFullscreenFloor, setShowFullscreenFloor] = useState(false);
-      const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
       const [tablesLocked, setTablesLocked] = useState(() => {
         try { return localStorage.getItem('seatsync_tables_locked_' + event?.id) === 'true'; } catch { return false; }
       });
@@ -5874,31 +5868,46 @@
       const panStart = useRef(null);
       const svgRef = useRef(null);
 
-      // Auto-fit zoom when entering floor view, fullscreen, or on orientation change
+      // Calculate bounding box from actual table positions
+      const getCanvasBounds = () => {
+        if (tables.length === 0) return { w: 1200, h: 800 };
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        tables.forEach(t => {
+          const x = t.position_x || 80;
+          const y = t.position_y || 80;
+          minX = Math.min(minX, x - 80);
+          minY = Math.min(minY, y - 80);
+          maxX = Math.max(maxX, x + 80);
+          maxY = Math.max(maxY, y + 80);
+        });
+        // Add padding and ensure minimum size
+        const padding = 100;
+        return {
+          w: Math.max(800, maxX + padding),
+          h: Math.max(600, maxY + padding),
+        };
+      };
+
+      const canvasBounds = getCanvasBounds();
+
+      // Auto-fit zoom on mobile when entering floor view or fullscreen
       useEffect(() => {
-        if (!((viewMode === 'floor' || showFullscreenFloor) && svgRef.current)) return;
-        const doFit = () => {
-          const wrapEl = svgRef.current?.parentElement;
-          if (!wrapEl) return;
-          setTimeout(() => {
-            const wrapW = wrapEl.clientWidth;
-            const wrapH = wrapEl.clientHeight;
-            if (wrapW > 0 && wrapH > 0) {
-              const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
-              setZoom(Math.max(0.25, fitZoom * 0.92));
-              setPan({ x: 0, y: 0 });
-            }
-          }, 150);
-        };
-        doFit();
-        const onOrientationChange = () => doFit();
-        window.addEventListener('orientationchange', onOrientationChange);
-        window.addEventListener('resize', onOrientationChange);
-        return () => {
-          window.removeEventListener('orientationchange', onOrientationChange);
-          window.removeEventListener('resize', onOrientationChange);
-        };
-      }, [viewMode, showFullscreenFloor]);
+        if ((viewMode === 'floor' || showFullscreenFloor) && svgRef.current) {
+          const wrapEl = svgRef.current.parentElement;
+          if (wrapEl) {
+            // Small delay to let DOM settle for fullscreen
+            setTimeout(() => {
+              const wrapW = wrapEl.clientWidth;
+              const wrapH = wrapEl.clientHeight;
+              if (wrapW > 0 && wrapH > 0) {
+                const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
+                setZoom(Math.max(0.15, fitZoom * 0.9));
+                setPan({ x: 0, y: 0 });
+              }
+            }, 50);
+          }
+        }
+      }, [viewMode, showFullscreenFloor, tables.length]);
 
       // Table drag on floor plan
       const tableDragRef = useRef(null);
@@ -5951,12 +5960,11 @@
           const { data, error } = await client.from('tables').insert(formOrArray).select();
           if (!error) { setTables(prev => [...prev, ...(data || [])]); addToast(`${data?.length} שולחנות נוצרו ✓`, 'success'); }
         } else {
-          const tIdx = tables.length % 30;
           const { data, error } = await client.from('tables').insert({
             ...formOrArray,
             event_id: event.id,
-            position_x: Math.min(1120, 80 + (tIdx % 6) * 190),
-            position_y: Math.min(720, 80 + Math.floor(tIdx / 6) * 150),
+            position_x: 100 + (tables.length % 5) * 180,
+            position_y: 100 + Math.floor(tables.length / 5) * 180,
           }).select().single();
           if (!error) { setTables(prev => [...prev, data]); addToast(`${data.name} נוסף ✓`, 'success'); }
         }
@@ -6127,8 +6135,8 @@
         const onMove = (me) => {
           const dx = (me.clientX - startX) / zoom;
           const dy = (me.clientY - startY) / zoom;
-          const newX = Math.max(80, Math.min(1120, startPosX + dx));
-          const newY = Math.max(80, Math.min(720, startPosY + dy));
+          const newX = Math.max(40, startPosX + dx);
+          const newY = Math.max(40, startPosY + dy);
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(t => t.id === table.id
@@ -6166,8 +6174,8 @@
           const t = me.touches[0];
           const dx = (t.clientX - startX) / zoom;
           const dy = (t.clientY - startY) / zoom;
-          const newX = Math.max(80, Math.min(1120, startPosX + dx));
-          const newY = Math.max(80, Math.min(720, startPosY + dy));
+          const newX = Math.max(40, startPosX + dx);
+          const newY = Math.max(40, startPosY + dy);
           finalPos.x = newX;
           finalPos.y = newY;
           setTables(prev => prev.map(tb => tb.id === table.id
@@ -6426,7 +6434,7 @@
                     { v: 'floor', icon: 'LayoutDashboard', label: 'מפת אולם' },
                   ].map(m => (
                     <button key={m.v} className={`view-mode-btn ${viewMode === m.v ? 'active' : ''}`} onClick={() => {
-                      if (m.v === 'floor' && (isMobile || isLandscapeMobile)) {
+                      if (m.v === 'floor' && isMobile) {
                         setShowFullscreenFloor(true);
                       } else {
                         setViewMode(m.v);
@@ -6434,7 +6442,7 @@
                     }}>
                       <Icon name={m.icon} size={14} />
                       {m.label}
-                      {m.v === 'floor' && (isMobile || isLandscapeMobile) && <Icon name="Expand" size={12} style={{ marginRight: 2 }} />}
+                      {m.v === 'floor' && isMobile && <Icon name="Expand" size={12} style={{ marginRight: 2 }} />}
                     </button>
                   ))}
                 </div>
@@ -6457,8 +6465,8 @@
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => {
                       const wrapEl = svgRef.current?.parentElement;
                       if (wrapEl) {
-                        const fitZoom = Math.min(wrapEl.clientWidth / 1200, wrapEl.clientHeight / 800, 1);
-                        setZoom(Math.max(0.25, fitZoom * 0.92));
+                        const fitZoom = Math.min(wrapEl.clientWidth / canvasBounds.w, wrapEl.clientHeight / canvasBounds.h, 1.5);
+                        setZoom(Math.max(0.15, fitZoom * 0.9));
                         setPan({ x: 0, y: 0 });
                       }
                     }}>
@@ -6531,45 +6539,18 @@
 
               {/* ── DRAG & DROP VIEW ── */}
               {viewMode === 'dnd' && (
-                <div className="seating-layout" style={{ position: 'relative' }}>
+                <div className="seating-layout">
                   {/* Sidebar — unassigned */}
                   <div
-                    className={`seating-sidebar${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}
-                    style={{ position: 'relative', transition: 'width 0.2s ease, min-width 0.2s ease' }}
+                    className="seating-sidebar"
                     onDragOver={e => e.preventDefault()}
                     onDrop={handleDropUnassigned}
                   >
-                    {/* Collapse toggle button */}
-                    <button
-                      onClick={() => setSidebarCollapsed(c => !c)}
-                      title={sidebarCollapsed ? 'הצג רשימה' : 'כווץ רשימה'}
-                      style={{
-                        position: 'absolute',
-                        left: sidebarCollapsed ? -14 : -14,
-                        top: 12,
-                        width: 28,
-                        height: 28,
-                        background: 'var(--bg-elevated)',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: '50%',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'var(--shadow-sm)',
-                        zIndex: 2,
-                        flexShrink: 0,
-                      }}
-                    >
-                      <Icon name={sidebarCollapsed ? 'ChevronLeft' : 'ChevronRight'} size={14} />
-                    </button>
-                    {!sidebarCollapsed && (
-                      <div className="sidebar-title">
-                        <span>לא מושבים</span>
-                        <span style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-full)', padding: '1px 8px', fontSize: 12 }}>{unassigned.length}</span>
-                      </div>
-                    )}
-                    {!sidebarCollapsed && (unassigned.length === 0 ? (
+                    <div className="sidebar-title">
+                      <span>לא מושבים</span>
+                      <span style={{ background: 'var(--accent-light)', color: 'var(--accent)', borderRadius: 'var(--radius-full)', padding: '1px 8px', fontSize: 12 }}>{unassigned.length}</span>
+                    </div>
+                    {unassigned.length === 0 ? (
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', textAlign: 'center', padding: 20 }}>
                         🎉 כל האורחים מושבים!
                       </div>
@@ -6599,7 +6580,7 @@
                           ))}
                         </div>
                       ))
-                    ))}
+                    )}
                   </div>
 
                   {/* Tables drop area */}
@@ -6655,7 +6636,7 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
-                <div className="floorplan-wrap" style={{ height: (isMobile || isLandscapeMobile) ? 'calc(100dvh - 260px)' : 520, minHeight: 280 }}>
+                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 520, minHeight: 300 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2, z + 0.15))}><Icon name="Plus" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><Icon name="Minus" size={14}/></div>
@@ -6665,8 +6646,8 @@
                       if (wrapEl) {
                         const wrapW = wrapEl.clientWidth;
                         const wrapH = wrapEl.clientHeight;
-                        const fitZoom = Math.min(wrapW / 1200, wrapH / 800, 1);
-                        setZoom(Math.max(0.25, fitZoom * 0.92));
+                        const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
+                        setZoom(Math.max(0.15, fitZoom * 0.9));
                         setPan({ x: 0, y: 0 });
                       }
                     }} title="התאם למסך"><Icon name="Maximize2" size={14}/></div>
@@ -6731,14 +6712,14 @@
                     onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
                   >
                     <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                      {/* Visible boundary so users see the floor plan edges */}
-                      <rect x="0" y="0" width="1200" height="800" fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.5" />
+                      {/* Dynamic boundary based on table positions */}
+                      <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.4" />
                       {/* Floor plan background image */}
                       {event?.settings?.floorplan_url && (
                         <image
                           href={event.settings.floorplan_url}
                           x="0" y="0"
-                          width="1200" height="800"
+                          width={canvasBounds.w} height={canvasBounds.h}
                           preserveAspectRatio="xMidYMid meet"
                           opacity="0.3"
                           style={{ pointerEvents: 'none' }}
@@ -6944,8 +6925,8 @@
                     if (!svgRef.current) return;
                     const wrapEl = svgRef.current.parentElement;
                     if (wrapEl) {
-                      const fitZoom = Math.min(wrapEl.clientWidth / 1200, wrapEl.clientHeight / 800, 1);
-                      setZoom(Math.max(0.25, fitZoom * 0.92));
+                      const fitZoom = Math.min(wrapEl.clientWidth / canvasBounds.w, wrapEl.clientHeight / canvasBounds.h, 1.5);
+                      setZoom(Math.max(0.15, fitZoom * 0.9));
                       setPan({ x: 0, y: 0 });
                     }
                   }}>
@@ -7008,12 +6989,12 @@
                   onMouseLeave={() => setIsPanning(false)}
                 >
                   <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-                    <rect x="0" y="0" width="1200" height="800" fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.5" />
+                    <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="8 4" rx="8" opacity="0.4" />
                     {event?.settings?.floorplan_url && (
                       <image
                         href={event.settings.floorplan_url}
                         x="0" y="0"
-                        width="1200" height="800"
+                        width={canvasBounds.w} height={canvasBounds.h}
                         preserveAspectRatio="xMidYMid meet"
                         opacity="0.3"
                         style={{ pointerEvents: 'none' }}
