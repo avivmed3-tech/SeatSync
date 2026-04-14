@@ -5763,6 +5763,32 @@
               <rect x={-w/2} y={-h/2} width={w} height={h} rx="6" fill={tableFill} stroke={tableStroke} strokeWidth="2"/>
               <text y="4" textAnchor="middle" fontSize="9" fill="white" fontWeight="700" fontFamily="Heebo">{table.name}</text>
               <text y="14" textAnchor="middle" fontSize="8" fill="rgba(255,255,255,0.8)" fontFamily="Heebo">{occupied}/{table.seats}</text>
+              {/* Seat circles — rectangle: top + bottom rows; square: circular */}
+              {Array.from({ length: Math.min(table.seats, isRect ? 16 : 12) }).map((_, i) => {
+                const n = Math.min(table.seats, isRect ? 16 : 12);
+                let cx, cy;
+                if (isRect) {
+                  const topN = Math.ceil(n / 2);
+                  const botN = n - topN;
+                  if (i < topN) {
+                    const step = (w + 8) / (topN + 1);
+                    cx = -(w / 2 + 4) + (i + 1) * step;
+                    cy = -(h / 2 + 18);
+                  } else {
+                    const j = i - topN;
+                    const step = (w + 8) / (botN + 1);
+                    cx = -(w / 2 + 4) + (j + 1) * step;
+                    cy = h / 2 + 18;
+                  }
+                } else {
+                  // Square — circular arrangement like round table
+                  const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+                  cx = Math.cos(angle) * 50;
+                  cy = Math.sin(angle) * 50;
+                }
+                const g = tGuests[i];
+                return <circle key={i} cx={cx} cy={cy} r="6" fill={g ? getGroupColor(g.group_name) : emptyChair} stroke={isDark ? 'rgba(255,255,255,0.15)' : 'white'} strokeWidth="1"/>;
+              })}
             </>
           )}
           <circle cx={30} cy={-30} r="8" fill={color} stroke={isDark ? '#2a2a2a' : 'white'} strokeWidth="1.5" style={{ display: occupied > 0 ? 'block' : 'none' }}/>
@@ -5901,16 +5927,12 @@
       const [draggingGuest, setDraggingGuest] = useState(null);
       const [upsellFeature, setUpsellFeature] = useState(null);
       const [showFullscreenFloor, setShowFullscreenFloor] = useState(false);
-      const [lockedTables, setLockedTables] = useState(() => {
-        try {
-          const raw = localStorage.getItem('seatsync_locked_tables_' + event?.id);
-          return raw ? JSON.parse(raw) : {};
-        } catch { return {}; }
-      });
-      const lockedTablesRef = useRef(lockedTables);
+      // Lock state is session-only (not persisted) — avoids tables getting
+      // permanently stuck if user accidentally locks all and reloads
+      const [lockedTables, setLockedTables] = useState({});
+      const lockedTablesRef = useRef({});
       useEffect(() => {
         lockedTablesRef.current = lockedTables;
-        try { localStorage.setItem('seatsync_locked_tables_' + event?.id, JSON.stringify(lockedTables)); } catch {}
       }, [lockedTables]);
 
       // Derived: true when every table is individually locked
