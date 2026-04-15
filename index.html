@@ -6049,12 +6049,30 @@
       const [sketchVisible, setSketchVisible] = useState(true);
       const [sketchOpacity, setSketchOpacity] = useState(0.3);
 
-      // Floor plan state
-      const [zoom, setZoom] = useState(1);
-      const [pan, setPan] = useState({ x: 0, y: 0 });
+      // Floor plan state — restore saved pan/zoom from localStorage
+      const zoomChangeCount = useRef(0);
+      const panChangeCount = useRef(0);
+      const [zoom, setZoom] = useState(() => {
+        try { const z = parseFloat(localStorage.getItem('seatsync_zoom_' + event?.id)); return (z > 0 && z <= 3) ? z : 1; } catch { return 1; }
+      });
+      const [pan, setPan] = useState(() => {
+        try { const p = JSON.parse(localStorage.getItem('seatsync_pan_' + event?.id)); return (p && typeof p.x === 'number') ? p : { x: 0, y: 0 }; } catch { return { x: 0, y: 0 }; }
+      });
       const [isPanning, setIsPanning] = useState(false);
       const panStart = useRef(null);
       const svgRef = useRef(null);
+      // Track whether initial auto-fit has happened (only auto-fit once per mount if not locked)
+      const didAutoFit = useRef(false);
+
+      // Persist zoom/pan to localStorage — skip first fire (initial value from useState)
+      useEffect(() => {
+        if (zoomChangeCount.current++ === 0) return;
+        try { localStorage.setItem('seatsync_zoom_' + event?.id, zoom); } catch {}
+      }, [zoom]);
+      useEffect(() => {
+        if (panChangeCount.current++ === 0) return;
+        try { localStorage.setItem('seatsync_pan_' + event?.id, JSON.stringify(pan)); } catch {}
+      }, [pan]);
 
       // Canvas dimensions — user-configurable, saved in event.settings
       const DEFAULT_W = 1400;
@@ -6148,23 +6166,28 @@
         addToast('שולחנות סודרו אוטומטית ✓', 'success');
       };
 
-      // Auto-fit zoom on mobile when entering floor view or fullscreen
+      // Auto-fit zoom when entering floor view or fullscreen — only on first load if no saved view
       useEffect(() => {
-        if ((viewMode === 'floor' || showFullscreenFloor) && svgRef.current) {
-          const wrapEl = svgRef.current.parentElement;
-          if (wrapEl) {
-            // Small delay to let DOM settle for fullscreen
-            setTimeout(() => {
-              const wrapW = wrapEl.clientWidth;
-              const wrapH = wrapEl.clientHeight;
-              if (wrapW > 0 && wrapH > 0) {
-                const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
-                setZoom(Math.max(0.15, fitZoom * 0.9));
-                setPan({ x: 0, y: 0 });
-              }
-            }, 50);
+        if (!(viewMode === 'floor' || showFullscreenFloor)) return;
+        if (!svgRef.current || didAutoFit.current) return;
+        // If canvas is locked or user already has saved zoom, skip auto-fit
+        if (canvasLocked) { didAutoFit.current = true; return; }
+        const hasSavedZoom = (() => { try { return localStorage.getItem('seatsync_zoom_' + event?.id) !== null; } catch { return false; } })();
+        if (hasSavedZoom) { didAutoFit.current = true; return; }
+        const wrapEl = svgRef.current.parentElement;
+        if (!wrapEl || tables.length === 0) return;
+        // Small delay to let DOM settle for fullscreen
+        setTimeout(() => {
+          if (didAutoFit.current) return;
+          const wrapW = wrapEl.clientWidth;
+          const wrapH = wrapEl.clientHeight;
+          if (wrapW > 0 && wrapH > 0) {
+            const fitZoom = Math.min(wrapW / canvasBounds.w, wrapH / canvasBounds.h, 1.5);
+            setZoom(Math.max(0.15, fitZoom * 0.9));
+            setPan({ x: 0, y: 0 });
+            didAutoFit.current = true;
           }
-        }
+        }, 50);
       }, [viewMode, showFullscreenFloor, tables.length]);
 
       // Table drag on floor plan
