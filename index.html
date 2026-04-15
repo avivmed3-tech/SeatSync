@@ -1052,26 +1052,59 @@
     /* Landscape mode — compact UI when phone is rotated */
     @media (orientation: landscape) and (max-height: 500px) {
       .bottom-nav {
-        height: 48px;
-        padding: 2px 8px;
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: auto;
+        width: 52px;
+        height: 100vh;
+        flex-direction: column;
+        border-top: none;
+        border-inline-start: 1px solid var(--border-default);
+        padding: 6px 0;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        gap: 0;
+        justify-content: center;
+        align-items: center;
       }
       .bottom-nav-item {
-        padding: 4px 8px;
-        font-size: 10px;
-        gap: 2px;
+        flex: unset;
+        padding: 7px 0;
+        font-size: 8px;
+        gap: 1px;
       }
-      .bottom-nav-label { font-size: 9px; }
+      .bottom-nav-item svg { width: 18px; height: 18px; }
+      .bottom-nav-label { font-size: 8px; }
+      .bottom-nav-item::before {
+        top: 50%;
+        right: 0;
+        left: auto;
+        transform: translateY(-50%) scaleX(0);
+        width: 2.5px;
+        height: 20px;
+        border-radius: 2px 0 0 2px;
+      }
+      .bottom-nav-item.active::before {
+        transform: translateY(-50%) scaleX(1);
+      }
+      .top-bar { height: 38px; padding: 0 10px; margin-right: 52px; }
+      .top-bar h1 { font-size: 14px; }
+      .top-bar-logo-icon { width: 26px; height: 26px; }
+      .top-bar-logo-text { font-size: 16px; }
       .main-content {
-        padding: 12px 16px;
-        padding-bottom: 56px;
+        padding: 8px 12px;
+        padding-bottom: 12px;
+        margin-right: 52px;
       }
-      .top-bar { height: 44px; padding: 0 12px; }
-      .top-bar h1 { font-size: 16px; }
-      .page-header { margin-bottom: 12px; }
-      .page-title { font-size: 18px; }
-      .card { padding: 12px; }
-      .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-      .kpi-card { padding: 10px; }
+      .page-header { margin-bottom: 8px; }
+      .page-title { font-size: 16px; }
+      .card { padding: 10px; }
+      .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+      .kpi-card { padding: 8px; }
+      .floorplan-controls { gap: 2px; }
+      .floorplan-btn { width: 26px; height: 26px; }
+      .floorplan-btn svg { width: 12px; height: 12px; }
     }
 
     /* ============================================
@@ -2041,6 +2074,18 @@
         return () => window.removeEventListener('resize', handler);
       }, [breakpoint]);
       return isMobile;
+    }
+
+    function useIsLandscape() {
+      const [isLandscape, setIsLandscape] = useState(
+        window.innerWidth > window.innerHeight && window.innerHeight <= 500
+      );
+      useEffect(() => {
+        const handler = () => setIsLandscape(window.innerWidth > window.innerHeight && window.innerHeight <= 500);
+        window.addEventListener('resize', handler);
+        return () => window.removeEventListener('resize', handler);
+      }, []);
+      return isLandscape;
     }
 
     // ============================================
@@ -6027,6 +6072,7 @@
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
+      const isLandscape = useIsLandscape();
 
       const [tables, setTables] = useState([]);
       const [guests, setGuests] = useState([]);
@@ -7015,7 +7061,7 @@
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
                 <>
-                <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 560, minHeight: 300 }}>
+                <div className="floorplan-wrap" style={{ height: isLandscape ? 'calc(100vh - 90px)' : isMobile ? 'calc(100vh - 260px)' : 560, minHeight: 300 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2.5, z + 0.15))}><Icon name="Plus" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.max(0.2, z - 0.15))}><Icon name="Minus" size={14}/></div>
