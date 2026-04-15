@@ -250,6 +250,42 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Splash screen animations */
+    @keyframes splash-logo-enter {
+      0% { opacity: 0; transform: scale(0.6) rotate(-8deg); }
+      60% { opacity: 1; transform: scale(1.05) rotate(1deg); }
+      100% { opacity: 1; transform: scale(1) rotate(0deg); }
+    }
+    @keyframes splash-glow-pulse {
+      0%, 100% { box-shadow: 0 0 30px rgba(212,168,8,0.3), 0 0 60px rgba(212,168,8,0.1); }
+      50% { box-shadow: 0 0 50px rgba(212,168,8,0.5), 0 0 100px rgba(212,168,8,0.2); }
+    }
+    @keyframes splash-text-enter {
+      0% { opacity: 0; transform: translateY(16px); letter-spacing: 0.3em; }
+      100% { opacity: 1; transform: translateY(0); letter-spacing: 0.02em; }
+    }
+    @keyframes splash-subtitle-enter {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 0.7; transform: translateY(0); }
+    }
+    @keyframes splash-bar-fill {
+      0% { width: 0%; }
+      100% { width: 100%; }
+    }
+    @keyframes splash-particles {
+      0% { transform: translateY(0) scale(1); opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { transform: translateY(-80px) scale(0); opacity: 0; }
+    }
+    @keyframes splash-ring {
+      0% { transform: scale(0.8); opacity: 0.5; border-color: rgba(212,168,8,0.4); }
+      100% { transform: scale(2.2); opacity: 0; border-color: rgba(212,168,8,0); }
+    }
+    @keyframes splash-gold-line {
+      0% { transform: scaleX(0); }
+      100% { transform: scaleX(1); }
+    }
+
     .animate-fade-in { animation: fadeIn var(--duration-normal) var(--ease-out) both; }
     .animate-slide-up { animation: slideUp var(--duration-slow) var(--ease-out) both; }
     .animate-scale-in { animation: scaleIn var(--duration-normal) var(--ease-spring) both; }
@@ -6045,9 +6081,19 @@
         await client.from('tables').update({ scale: newScale }).eq('id', tableId);
       };
 
-      // Floor plan sketch opacity & visibility
-      const [sketchVisible, setSketchVisible] = useState(true);
-      const [sketchOpacity, setSketchOpacity] = useState(0.3);
+      // Floor plan sketch opacity & visibility — persist to localStorage
+      const [sketchVisible, setSketchVisible] = useState(() => {
+        try { const v = localStorage.getItem('seatsync_sketch_visible_' + event?.id); return v === null ? true : v === 'true'; } catch { return true; }
+      });
+      const [sketchOpacity, setSketchOpacity] = useState(() => {
+        try { const v = parseFloat(localStorage.getItem('seatsync_sketch_opacity_' + event?.id)); return (v >= 0 && v <= 1) ? v : 0.3; } catch { return 0.3; }
+      });
+      useEffect(() => {
+        try { localStorage.setItem('seatsync_sketch_visible_' + event?.id, sketchVisible); } catch {}
+      }, [sketchVisible]);
+      useEffect(() => {
+        try { localStorage.setItem('seatsync_sketch_opacity_' + event?.id, sketchOpacity); } catch {}
+      }, [sketchOpacity]);
 
       // Floor plan state — restore saved pan/zoom from localStorage
       const zoomChangeCount = useRef(0);
@@ -9274,11 +9320,93 @@
       if (!isConfigured) return <ConfigModal onSave={saveConfig} />;
 
       if (loading) return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-          <div className="hero-logo" style={{ animation: 'float 1.5s ease-in-out infinite' }}>
-            <Icon name="Armchair" size={36} />
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexDirection: 'column', gap: 0,
+          background: 'radial-gradient(ellipse at 50% 40%, #1a1708 0%, #0d0d0d 50%, #000000 100%)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* Ambient gold glow behind logo */}
+          <div style={{
+            position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: 300, height: 300,
+            background: 'radial-gradient(circle, rgba(212,168,8,0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+          {/* Expanding ring */}
+          <div style={{
+            position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%, -50%)',
+            width: 100, height: 100, borderRadius: '50%',
+            border: '2px solid rgba(212,168,8,0.3)',
+            animation: 'splash-ring 2s ease-out infinite',
+            pointerEvents: 'none',
+          }} />
+          {/* Floating particles */}
+          {[...Array(6)].map((_, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: `${20 + i * 12}%`,
+              top: '55%',
+              width: 3, height: 3, borderRadius: '50%',
+              background: 'rgba(212,168,8,0.5)',
+              animation: `splash-particles ${2 + i * 0.4}s ease-out ${i * 0.3}s infinite`,
+              pointerEvents: 'none',
+            }} />
+          ))}
+          {/* Logo container */}
+          <div style={{
+            width: 96, height: 96, borderRadius: 24,
+            background: 'linear-gradient(145deg, #1c1b1b, #0a0a0a)',
+            border: '1px solid rgba(212,168,8,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'splash-logo-enter 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) both, splash-glow-pulse 2.5s ease-in-out 0.8s infinite',
+            position: 'relative', zIndex: 2,
+          }}>
+            <Icon name="Armchair" size={44} style={{ color: '#D4A808' }} />
           </div>
-          <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>טוען SeatSync...</div>
+          {/* Brand name */}
+          <div style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 36, fontWeight: 800,
+            color: '#D4A808',
+            marginTop: 20,
+            animation: 'splash-text-enter 0.7s ease-out 0.4s both',
+            position: 'relative', zIndex: 2,
+          }}>SeatSync</div>
+          {/* Gold line separator */}
+          <div style={{
+            width: 60, height: 1,
+            background: 'linear-gradient(90deg, transparent, #D4A808, transparent)',
+            marginTop: 10,
+            animation: 'splash-gold-line 0.6s ease-out 0.8s both',
+            transformOrigin: 'center',
+            position: 'relative', zIndex: 2,
+          }} />
+          {/* Subtitle */}
+          <div style={{
+            fontSize: 11, fontWeight: 500,
+            color: '#9C9689',
+            letterSpacing: '0.2em', textTransform: 'uppercase',
+            marginTop: 10,
+            animation: 'splash-subtitle-enter 0.6s ease-out 1s both',
+            position: 'relative', zIndex: 2,
+          }}>עושים סדר באירוע שלך</div>
+          {/* Loading progress bar */}
+          <div style={{
+            width: 120, height: 2,
+            background: 'rgba(212,168,8,0.15)',
+            borderRadius: 1, marginTop: 32,
+            overflow: 'hidden',
+            animation: 'fadeIn 0.5s ease-out 1.2s both',
+            position: 'relative', zIndex: 2,
+          }}>
+            <div style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, #D4A808, #F5C518)',
+              borderRadius: 1,
+              animation: 'splash-bar-fill 2.5s ease-in-out 1.3s both',
+            }} />
+          </div>
         </div>
       );
 
