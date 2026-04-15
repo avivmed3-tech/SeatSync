@@ -6945,6 +6945,7 @@
 
               {/* ── FLOOR PLAN VIEW ── */}
               {viewMode === 'floor' && (
+                <>
                 <div className="floorplan-wrap" style={{ height: isMobile ? 'calc(100vh - 260px)' : 560, minHeight: 300 }}>
                   <div className="floorplan-controls">
                     <div className="floorplan-btn" onClick={() => setZoom(z => Math.min(2.5, z + 0.15))}><Icon name="Plus" size={14}/></div>
@@ -7087,23 +7088,23 @@
                       ))}
                     </g>
                   </svg>
+                </div>
 
-                  {/* Selected table panel */}
+                  {/* Selected table panel — rendered OUTSIDE floorplan-wrap to avoid overflow:hidden clipping */}
                   {selectedFloorTable && (() => {
                     const tGuests = guests.filter(g => g.table_id === selectedFloorTable.id);
 
-                    // On mobile: bottom sheet. On desktop: near the table
+                    // On mobile: bottom sheet inside floorplan
                     if (isMobile) {
                       return (
                         <div style={{
-                          position: 'absolute',
-                          bottom: 0, left: 0, right: 0,
+                          position: 'relative',
                           background: 'var(--bg-elevated)',
                           borderTop: '1px solid var(--border-default)',
-                          borderRadius: '16px 16px 0 0',
+                          borderRadius: '0 0 var(--radius-lg) var(--radius-lg)',
                           padding: '14px 16px',
-                          boxShadow: '0 -4px 20px rgba(0,0,0,0.12)',
-                          zIndex: 10,
+                          marginTop: -1,
+                          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                           animation: 'slideUp 0.2s ease both',
                         }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -7157,25 +7158,26 @@
                       );
                     }
 
-                    // Desktop: floating panel near table
+                    // Desktop: floating panel near table — use fixed position relative to viewport
                     const wrapEl = svgRef.current?.parentElement;
-                    const wrapRect = wrapEl ? { w: wrapEl.clientWidth, h: wrapEl.clientHeight } : { w: 800, h: 560 };
-                    const tx = (selectedFloorTable.position_x || 80) * zoom + pan.x;
-                    const ty = (selectedFloorTable.position_y || 80) * zoom + pan.y;
-                    const panelW = 220;
-                    const panelH = 180;
-                    // Try to place panel to the left of the table; if it doesn't fit, place to the right
+                    const wrapBR = wrapEl?.getBoundingClientRect() || { left: 0, top: 0, width: 800, height: 560 };
+                    const tx = (selectedFloorTable.position_x || 80) * zoom + pan.x + wrapBR.left;
+                    const ty = (selectedFloorTable.position_y || 80) * zoom + pan.y + wrapBR.top;
+                    const panelW = 230;
+                    const panelH = 220;
+                    const vpW = window.innerWidth;
+                    const vpH = window.innerHeight;
+                    // Try left of table, fallback right, fallback center
                     let left = tx - panelW - 15;
                     if (left < 8) left = tx + 70;
-                    // If still overflows right, center it
-                    if (left + panelW > wrapRect.w - 8) left = Math.max(8, (wrapRect.w - panelW) / 2);
+                    if (left + panelW > vpW - 8) left = Math.max(8, vpW - panelW - 16);
                     let top = ty - panelH / 2 + 20;
-                    if (top < 8) top = 8;
-                    if (top + panelH > wrapRect.h - 8) top = Math.max(8, wrapRect.h - panelH - 8);
+                    if (top < wrapBR.top) top = wrapBR.top + 8;
+                    if (top + panelH > vpH - 8) top = Math.max(8, vpH - panelH - 8);
 
                     return (
                       <div style={{
-                        position: 'absolute',
+                        position: 'fixed',
                         left, top,
                         width: panelW,
                         background: 'var(--bg-elevated)',
@@ -7234,7 +7236,7 @@
                       </div>
                     );
                   })()}
-                </div>
+              </>
               )}
             </>
           )}
