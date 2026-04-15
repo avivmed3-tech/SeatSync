@@ -1983,7 +1983,42 @@
     }
   </style>
 </head>
-<body>
+<body style="background:#000">
+  <!-- Static splash — visible before React mounts, hidden after -->
+  <div id="static-splash" style="position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#1a1708 0%,#0d0d0d 50%,#000 100%);display:flex;align-items:center;justify-content:center;flex-direction:column;transition:opacity 0.4s ease-out;">
+    <style>
+      @keyframes ss-logo{0%{opacity:0;transform:scale(0.6) rotate(-8deg)}60%{opacity:1;transform:scale(1.05) rotate(1deg)}100%{opacity:1;transform:scale(1) rotate(0deg)}}
+      @keyframes ss-glow{0%,100%{box-shadow:0 0 30px rgba(212,168,8,0.3),0 0 60px rgba(212,168,8,0.1)}50%{box-shadow:0 0 50px rgba(212,168,8,0.5),0 0 100px rgba(212,168,8,0.2)}}
+      @keyframes ss-ring{0%{transform:translate(-50%,-50%) scale(0.8);opacity:0.5}100%{transform:translate(-50%,-50%) scale(2.2);opacity:0}}
+      @keyframes ss-text{0%{opacity:0;transform:translateY(16px);letter-spacing:0.3em}100%{opacity:1;transform:translateY(0);letter-spacing:0.02em}}
+      @keyframes ss-sub{0%{opacity:0;transform:translateY(10px)}100%{opacity:0.7;transform:translateY(0)}}
+      @keyframes ss-line{0%{transform:scaleX(0)}100%{transform:scaleX(1)}}
+      @keyframes ss-bar{0%{width:0%}100%{width:100%}}
+      @keyframes ss-particle{0%{transform:translateY(0) scale(1);opacity:0.6}50%{opacity:1}100%{transform:translateY(-80px) scale(0);opacity:0}}
+    </style>
+    <!-- Ring -->
+    <div style="position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);width:100px;height:100px;border-radius:50%;border:2px solid rgba(212,168,8,0.3);animation:ss-ring 2s ease-out infinite;pointer-events:none"></div>
+    <!-- Particles -->
+    <div style="position:absolute;left:20%;top:55%;width:3px;height:3px;border-radius:50%;background:rgba(212,168,8,0.5);animation:ss-particle 2s ease-out 0s infinite"></div>
+    <div style="position:absolute;left:35%;top:55%;width:3px;height:3px;border-radius:50%;background:rgba(212,168,8,0.5);animation:ss-particle 2.5s ease-out 0.3s infinite"></div>
+    <div style="position:absolute;left:50%;top:55%;width:3px;height:3px;border-radius:50%;background:rgba(212,168,8,0.5);animation:ss-particle 3s ease-out 0.6s infinite"></div>
+    <div style="position:absolute;left:65%;top:55%;width:3px;height:3px;border-radius:50%;background:rgba(212,168,8,0.5);animation:ss-particle 3.5s ease-out 0.9s infinite"></div>
+    <div style="position:absolute;left:80%;top:55%;width:3px;height:3px;border-radius:50%;background:rgba(212,168,8,0.5);animation:ss-particle 4s ease-out 1.2s infinite"></div>
+    <!-- Logo box -->
+    <div style="width:96px;height:96px;border-radius:24px;background:linear-gradient(145deg,#1c1b1b,#0a0a0a);border:1px solid rgba(212,168,8,0.3);display:flex;align-items:center;justify-content:center;animation:ss-logo 0.8s cubic-bezier(0.34,1.56,0.64,1) both,ss-glow 2.5s ease-in-out 0.8s infinite;position:relative;z-index:2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#D4A808" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-9a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"/><path d="M5 18v2"/><path d="M19 18v2"/></svg>
+    </div>
+    <!-- Title -->
+    <div style="font-family:'Playfair Display',serif;font-size:36px;font-weight:800;color:#D4A808;margin-top:20px;animation:ss-text 0.7s ease-out 0.4s both;position:relative;z-index:2">SeatSync</div>
+    <!-- Gold line -->
+    <div style="width:60px;height:1px;background:linear-gradient(90deg,transparent,#D4A808,transparent);margin-top:10px;animation:ss-line 0.6s ease-out 0.8s both;transform-origin:center;position:relative;z-index:2"></div>
+    <!-- Subtitle -->
+    <div style="font-size:11px;font-weight:500;color:#9C9689;letter-spacing:0.2em;text-transform:uppercase;margin-top:10px;animation:ss-sub 0.6s ease-out 1s both;position:relative;z-index:2;font-family:'Heebo',sans-serif">עושים סדר באירוע שלך</div>
+    <!-- Progress bar -->
+    <div style="width:120px;height:2px;background:rgba(212,168,8,0.15);border-radius:1px;margin-top:32px;overflow:hidden;opacity:0;animation:ss-sub 0.5s ease-out 1.2s both;position:relative;z-index:2">
+      <div style="height:100%;background:linear-gradient(90deg,#D4A808,#F5C518);border-radius:1px;animation:ss-bar 3s ease-in-out 1.3s both"></div>
+    </div>
+  </div>
   <div id="root"></div>
 
   <script>
@@ -9363,6 +9398,11 @@
         };
       }, [user, currentRoute, selectedEvent]);
 
+      // Dismiss static HTML splash once React loading is done
+      useEffect(() => {
+        if (!loading) window.__dismissSplash?.();
+      }, [loading]);
+
       if (!isConfigured) return <ConfigModal onSave={saveConfig} />;
 
       if (loading) return (
@@ -9527,6 +9567,15 @@
         </ThemeProvider>
       );
     }
+
+    // Hide static splash screen
+    window.__dismissSplash = function() {
+      const el = document.getElementById('static-splash');
+      if (el) {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 400);
+      }
+    };
 
     ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
   </script>
