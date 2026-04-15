@@ -3974,69 +3974,104 @@
       };
 
       // Import from phone contacts (Contact Picker API)
+      const [showContactsPaste, setShowContactsPaste] = useState(false);
+      const [contactsPasteText, setContactsPasteText] = useState('');
+
       const importFromContacts = async () => {
-        if (!('contacts' in navigator && 'ContactsManager' in window)) {
-          addToast('ייבוא אנשי קשר נתמך רק בדפדפן Chrome/Safari במובייל', 'error');
+        // Try Contact Picker API first (Chrome Android)
+        if ('contacts' in navigator && 'ContactsManager' in window) {
+          try {
+            const contacts = await navigator.contacts.select(
+              ['name', 'tel'],
+              { multiple: true }
+            );
+            if (!contacts || contacts.length === 0) return;
+            processImportedContacts(contacts.map(c => ({
+              name: (c.name && c.name[0]) || '',
+              phone: (c.tel && c.tel[0]) || '',
+            })));
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              addToast('שגיאה בייבוא אנשי קשר', 'error');
+            }
+          }
+        } else {
+          // Fallback: show paste dialog
+          setShowContactsPaste(true);
+        }
+      };
+
+      const processImportedContacts = (rawContacts) => {
+        const spotsLeft = limits.guests - guests.length;
+        if (spotsLeft <= 0) {
+          addToast(`הגעתם למגבלת ${limits.guests} מוזמנים. שדרגו כדי להוסיף עוד.`, 'error');
+          setUpsellFeature('guests');
           return;
         }
-        try {
-          const contacts = await navigator.contacts.select(
-            ['name', 'tel'],
-            { multiple: true }
-          );
-          if (!contacts || contacts.length === 0) return;
 
-          // Check plan limit
-          const spotsLeft = limits.guests - guests.length;
-          if (spotsLeft <= 0) {
-            addToast(`הגעתם למגבלת ${limits.guests} מוזמנים. שדרגו כדי להוסיף עוד.`, 'error');
-            setUpsellFeature('guests');
-            return;
-          }
+        const toImport = rawContacts.slice(0, spotsLeft);
+        const existingPhones = new Set(guests.map(g => g.phone?.replace(/[\s\-()]/g, '')).filter(Boolean));
 
-          const toImport = contacts.slice(0, spotsLeft);
-          const existingPhones = new Set(guests.map(g => g.phone?.replace(/[\s\-()]/g, '')).filter(Boolean));
+        const newGuests = [];
+        let skipped = 0;
+        for (const c of toImport) {
+          let name = (c.name || '').trim();
+          let phone = (c.phone || '').replace(/[\s\-()]/g, '');
+          if (!name && !phone) { skipped++; continue; }
+          if (phone.startsWith('+972')) phone = '0' + phone.slice(4);
+          if (existingPhones.has(phone)) { skipped++; continue; }
+          existingPhones.add(phone);
+          newGuests.push({
+            event_id: event.id,
+            name,
+            phone,
+            group_name: 'כללי',
+            expected_guests: 1,
+            rsvp_token: generateToken(),
+          });
+        }
 
-          const newGuests = [];
-          let skipped = 0;
-          for (const c of toImport) {
-            const name = (c.name && c.name[0]) || '';
-            let phone = (c.tel && c.tel[0]) || '';
-            phone = phone.replace(/[\s\-()]/g, '');
-            if (!name && !phone) { skipped++; continue; }
-            // Normalize phone
-            if (phone.startsWith('+972')) phone = '0' + phone.slice(4);
-            if (existingPhones.has(phone)) { skipped++; continue; }
-            existingPhones.add(phone);
-            newGuests.push({
-              event_id: event.id,
-              name: name.trim(),
-              phone,
-              group_name: 'כללי',
-              expected_guests: 1,
-              rsvp_token: generateToken(),
-            });
-          }
+        if (newGuests.length === 0) {
+          addToast(skipped > 0 ? `${skipped} אנשי קשר כבר קיימים ברשימה` : 'לא נמצאו אנשי קשר להוספה', 'error');
+          return;
+        }
 
-          if (newGuests.length === 0) {
-            addToast(skipped > 0 ? `${skipped} אנשי קשר כבר קיימים ברשימה` : 'לא נמצאו אנשי קשר להוספה', 'error');
-            return;
-          }
-
+        (async () => {
           const { data, error } = await client.from('guests').insert(newGuests).select();
           if (error) { addToast('שגיאה בייבוא: ' + error.message, 'error'); return; }
           setGuests(prev => [...(data || []), ...prev]);
           const msg = `${data?.length || 0} אנשי קשר יובאו בהצלחה ✓` + (skipped > 0 ? ` (${skipped} דולגו — כפילויות)` : '');
           addToast(msg, 'success');
+          setShowContactsPaste(false);
+          setContactsPasteText('');
 
-          if (contacts.length > spotsLeft) {
-            addToast(`רק ${spotsLeft} מתוך ${contacts.length} יובאו — מגבלת תוכנית`, 'error');
+          if (rawContacts.length > spotsLeft) {
+            addToast(`רק ${spotsLeft} מתוך ${rawContacts.length} יובאו — מגבלת תוכנית`, 'error');
           }
-        } catch (err) {
-          if (err.name !== 'AbortError') {
-            addToast('שגיאה בייבוא אנשי קשר', 'error');
+        })();
+      };
+
+      const handleContactsPaste = () => {
+        if (!contactsPasteText.trim()) return;
+        // Parse pasted text: each line is "name, phone" or "name\tphone" or just "name phone"
+        const lines = contactsPasteText.split('\n').filter(l => l.trim());
+        const contacts = lines.map(line => {
+          // Try tab, comma, or multiple spaces as separator
+          let parts = line.includes('\t') ? line.split('\t') : line.includes(',') ? line.split(',') : line.split(/\s{2,}/);
+          if (parts.length === 1) {
+            // Try to extract phone from the end
+            const phoneMatch = line.match(/(0[0-9]{9,10}|\\+972[0-9]{9,10})\s*$/);
+            if (phoneMatch) {
+              return { name: line.replace(phoneMatch[0], '').trim(), phone: phoneMatch[0].trim() };
+            }
+            return { name: line.trim(), phone: '' };
           }
-        }
+          // Find which part looks like a phone
+          const phonePart = parts.find(p => /^[\d\+\-\s()]{7,}$/.test(p.trim()));
+          const namePart = parts.find(p => p !== phonePart) || parts[0];
+          return { name: (namePart || '').trim(), phone: (phonePart || '').trim() };
+        });
+        processImportedContacts(contacts);
       };
 
       const handleAdd = async (form) => {
@@ -4185,12 +4220,10 @@
                 <Icon name="Upload" size={16} />
                 ייבוא
               </button>
-              {'contacts' in navigator && (
-                <button className="btn btn-secondary" onClick={importFromContacts} title="ייבוא מאנשי קשר" style={{ padding: '8px 10px', fontSize: 12 }}>
-                  <Icon name="BookUser" size={16} />
-                  אנשי קשר
-                </button>
-              )}
+              <button className="btn btn-secondary" onClick={importFromContacts} title="ייבוא מאנשי קשר" style={{ padding: '8px 10px', fontSize: 12 }}>
+                <Icon name="BookUser" size={16} />
+                אנשי קשר
+              </button>
               <button
                 className="btn btn-primary"
                 onClick={() => {
@@ -4548,6 +4581,43 @@
           )}
 
           {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
+
+          {/* Contacts paste modal (fallback when Contact Picker API unavailable) */}
+          {showContactsPaste && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowContactsPaste(false)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 480 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div className="modal-title">ייבוא מאנשי קשר</div>
+                  <button className="icon-btn" onClick={() => { setShowContactsPaste(false); setContactsPasteText(''); }}><Icon name="X" size={20} /></button>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.7 }}>
+                  הדפדפן שלכם לא תומך בבחירה ישירה מאנשי קשר.
+                  <br/>
+                  <strong>במקום — הדביקו רשימה כאן:</strong> כל שורה = איש קשר אחד.
+                  <br/>
+                  <span style={{ fontSize: 12 }}>פורמט: <code style={{ background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 3 }}>שם, טלפון</code> או <code style={{ background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 3 }}>שם  טלפון</code></span>
+                </div>
+                <textarea
+                  className="input-field"
+                  style={{ width: '100%', height: 160, fontSize: 13, fontFamily: 'Heebo, sans-serif', resize: 'vertical', direction: 'rtl' }}
+                  placeholder={`דוד כהן, 0501234567\nשרה לוי, 0521234567\nמשה ישראלי  0541234567`}
+                  value={contactsPasteText}
+                  onChange={e => setContactsPasteText(e.target.value)}
+                  autoFocus
+                />
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6, marginBottom: 16 }}>
+                  💡 טיפ: אפשר להעתיק ישירות מאפליקציית אנשי הקשר, מאקסל, או מכל רשימה
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost" onClick={() => { setShowContactsPaste(false); setContactsPasteText(''); }}>ביטול</button>
+                  <button className="btn btn-primary" onClick={handleContactsPaste} disabled={!contactsPasteText.trim()}>
+                    <Icon name="UserPlus" size={18} />
+                    ייבוא {contactsPasteText.trim() ? `(${contactsPasteText.split('\n').filter(l => l.trim()).length})` : ''}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -5801,6 +5871,13 @@
           )}
           {/* Status dot */}
           <circle cx={30} cy={-30} r="8" fill={color} stroke={isDark ? '#2a2a2a' : 'white'} strokeWidth="1.5" style={{ display: occupied > 0 ? 'block' : 'none' }}/>
+          {/* Per-table lock indicator */}
+          {locked && !selected && (
+            <g transform="translate(-30, -30)">
+              <circle r="7" fill={isDark ? '#444' : '#F1F5F9'} stroke={isDark ? '#666' : '#94A3B8'} strokeWidth="1"/>
+              <text textAnchor="middle" y="3.5" fontSize="8" fill={isDark ? '#aaa' : '#64748B'}>🔒</text>
+            </g>
+          )}
         </g>
       );
     }
@@ -5934,6 +6011,32 @@
         try { localStorage.setItem('seatsync_tables_locked_' + event?.id, tablesLocked); } catch {}
       }, [tablesLocked]);
 
+      // Per-table lock: set of locked table IDs
+      const [lockedTableIds, setLockedTableIds] = useState(() => {
+        try {
+          const saved = localStorage.getItem('seatsync_locked_tables_' + event?.id);
+          return saved ? new Set(JSON.parse(saved)) : new Set();
+        } catch { return new Set(); }
+      });
+      useEffect(() => {
+        try { localStorage.setItem('seatsync_locked_tables_' + event?.id, JSON.stringify([...lockedTableIds])); } catch {}
+      }, [lockedTableIds]);
+
+      const toggleTableLock = (tableId) => {
+        setLockedTableIds(prev => {
+          const next = new Set(prev);
+          if (next.has(tableId)) next.delete(tableId);
+          else next.add(tableId);
+          return next;
+        });
+      };
+
+      const isTableLocked = (tableId) => tablesLocked || lockedTableIds.has(tableId);
+
+      // Floor plan sketch opacity & visibility
+      const [sketchVisible, setSketchVisible] = useState(true);
+      const [sketchOpacity, setSketchOpacity] = useState(0.3);
+
       // Floor plan state
       const [zoom, setZoom] = useState(1);
       const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -5941,12 +6044,45 @@
       const panStart = useRef(null);
       const svgRef = useRef(null);
 
-      // Fixed canvas dimensions — tables are clamped within these bounds
-      const CANVAS_W = 1400;
-      const CANVAS_H = 900;
-      const canvasBounds = { w: CANVAS_W, h: CANVAS_H };
-      const TABLE_MARGIN = 50; // min distance from canvas edge
-      const GRID_SIZE = 20; // snap-to-grid unit
+      // Canvas dimensions — user-configurable, saved in event.settings
+      const DEFAULT_W = 1400;
+      const DEFAULT_H = 900;
+      const [canvasW, setCanvasW] = useState(event?.settings?.canvas_w || DEFAULT_W);
+      const [canvasH, setCanvasH] = useState(event?.settings?.canvas_h || DEFAULT_H);
+      const canvasBounds = { w: canvasW, h: canvasH };
+      const TABLE_MARGIN = 50;
+      const GRID_SIZE = 20;
+
+      // Canvas lock — prevents panning when enabled
+      const [canvasLocked, setCanvasLocked] = useState(() => {
+        try { return localStorage.getItem('seatsync_canvas_locked_' + event?.id) === 'true'; } catch { return false; }
+      });
+      useEffect(() => {
+        try { localStorage.setItem('seatsync_canvas_locked_' + event?.id, canvasLocked); } catch {}
+      }, [canvasLocked]);
+
+      // Show canvas size editor
+      const [showCanvasSize, setShowCanvasSize] = useState(false);
+      const [canvasSizeForm, setCanvasSizeForm] = useState({ w: canvasW, h: canvasH });
+
+      const saveCanvasSize = async () => {
+        const w = Math.max(400, Math.min(3000, parseInt(canvasSizeForm.w) || DEFAULT_W));
+        const h = Math.max(300, Math.min(2000, parseInt(canvasSizeForm.h) || DEFAULT_H));
+        setCanvasW(w);
+        setCanvasH(h);
+        setShowCanvasSize(false);
+        // Persist to event settings
+        const settings = { ...(event.settings || {}), canvas_w: w, canvas_h: h };
+        await client.from('events').update({ settings }).eq('id', event.id);
+        addToast(`גודל אולם עודכן: ${w}×${h}`, 'success');
+        // Re-clamp any tables that are now out of bounds
+        const outOfBounds = tables.filter(t => (t.position_x || 0) > w - TABLE_MARGIN || (t.position_y || 0) > h - TABLE_MARGIN);
+        for (const t of outOfBounds) {
+          const clamped = { x: Math.min(t.position_x, w - TABLE_MARGIN), y: Math.min(t.position_y, h - TABLE_MARGIN) };
+          await client.from('tables').update({ position_x: clamped.x, position_y: clamped.y }).eq('id', t.id);
+          setTables(prev => prev.map(tb => tb.id === t.id ? { ...tb, position_x: clamped.x, position_y: clamped.y } : tb));
+        }
+      };
 
       // Snap-to-grid state
       const [snapToGrid, setSnapToGrid] = useState(false);
@@ -5956,8 +6092,8 @@
 
       // Clamp table position within canvas bounds
       const clampPosition = (x, y) => ({
-        x: Math.max(TABLE_MARGIN, Math.min(CANVAS_W - TABLE_MARGIN, x)),
-        y: Math.max(TABLE_MARGIN, Math.min(CANVAS_H - TABLE_MARGIN, y)),
+        x: Math.max(TABLE_MARGIN, Math.min(canvasW - TABLE_MARGIN, x)),
+        y: Math.max(TABLE_MARGIN, Math.min(canvasH - TABLE_MARGIN, y)),
       });
 
       // Snap position to grid
@@ -5972,10 +6108,10 @@
       // Auto-layout tables in a nice grid
       const autoLayoutTables = async () => {
         if (tables.length === 0) return;
-        const cols = Math.ceil(Math.sqrt(tables.length * (CANVAS_W / CANVAS_H)));
+        const cols = Math.ceil(Math.sqrt(tables.length * (canvasW / canvasH)));
         const rows = Math.ceil(tables.length / cols);
-        const cellW = (CANVAS_W - TABLE_MARGIN * 2) / cols;
-        const cellH = (CANVAS_H - TABLE_MARGIN * 2) / rows;
+        const cellW = (canvasW - TABLE_MARGIN * 2) / cols;
+        const cellH = (canvasH - TABLE_MARGIN * 2) / rows;
         const spacing = Math.min(cellW, cellH);
         const startX = TABLE_MARGIN + spacing / 2;
         const startY = TABLE_MARGIN + spacing / 2;
@@ -6073,8 +6209,8 @@
           const { data, error } = await client.from('tables').insert({
             ...formOrArray,
             event_id: event.id,
-            position_x: Math.min(CANVAS_W - TABLE_MARGIN, TABLE_MARGIN + 100 + (tables.length % 5) * 200),
-            position_y: Math.min(CANVAS_H - TABLE_MARGIN, TABLE_MARGIN + 100 + Math.floor(tables.length / 5) * 200),
+            position_x: Math.min(canvasW - TABLE_MARGIN, TABLE_MARGIN + 100 + (tables.length % 5) * 200),
+            position_y: Math.min(canvasH - TABLE_MARGIN, TABLE_MARGIN + 100 + Math.floor(tables.length / 5) * 200),
           }).select().single();
           if (!error) { setTables(prev => [...prev, data]); addToast(`${data.name} נוסף ✓`, 'success'); }
         }
@@ -6233,7 +6369,7 @@
       // Floor plan: drag tables (mouse)
       const handleTableMouseDown = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return;
+        if (isTableLocked(table.id)) return;
         e.preventDefault();
         const startX = e.clientX;
         const startY = e.clientY;
@@ -6268,7 +6404,7 @@
       // Floor plan: drag tables (touch — mobile)
       const handleTableTouchStart = (table, e) => {
         if (viewMode !== 'floor') return;
-        if (tablesLockedRef.current) return;
+        if (isTableLocked(table.id)) return;
         if (e.touches.length !== 1) return;
         e.stopPropagation();
         const touch = e.touches[0];
@@ -6577,6 +6713,17 @@
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={autoLayoutTables} title="סדר שולחנות אוטומטית">
                       <Icon name="LayoutGrid" size={16} />
                     </button>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 10px', background: canvasLocked ? 'rgba(59,130,246,0.1)' : undefined, borderColor: canvasLocked ? 'var(--blue-400)' : undefined, color: canvasLocked ? 'var(--blue-500)' : undefined }}
+                      onClick={() => { setCanvasLocked(l => !l); if (!canvasLocked) { setPan({ x: 0, y: 0 }); } }}
+                      title={canvasLocked ? 'שחרר נעילת מפה — אפשר גלילה' : 'קבע מפה — מנע גלילה'}
+                    >
+                      <Icon name={canvasLocked ? 'Pin' : 'PinOff'} size={16} />
+                    </button>
+                    <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => { setCanvasSizeForm({ w: canvasW, h: canvasH }); setShowCanvasSize(true); }} title="גודל אולם">
+                      <Icon name="Ruler" size={16} />
+                    </button>
                     <div style={{ width: 1, background: 'var(--border-default)', margin: '0 2px' }} />
                     <button className="btn btn-secondary" style={{ padding: '6px 10px' }} onClick={() => setZoom(z => Math.min(2, z + 0.2))}>
                       <Icon name="ZoomIn" size={16} />
@@ -6805,6 +6952,28 @@
                     <div style={{ height: 1, background: 'var(--border-default)', margin: '2px 0' }} />
                     <div className="floorplan-btn" onClick={autoLayoutTables} title="סידור אוטומטי"><Icon name="LayoutGrid" size={14}/></div>
                     <div className="floorplan-btn" onClick={() => setSnapToGrid(s => !s)} title={snapToGrid ? 'בטל הצמדה' : 'הצמד לרשת'} style={{ background: snapToGrid ? 'var(--accent-light)' : undefined, color: snapToGrid ? 'var(--accent)' : undefined }}><Icon name="Grid3x3" size={14}/></div>
+                    <div className="floorplan-btn" onClick={() => { setCanvasLocked(l => !l); if (!canvasLocked) setPan({ x: 0, y: 0 }); }} title={canvasLocked ? 'שחרר מפה' : 'קבע מפה'} style={{ background: canvasLocked ? 'rgba(59,130,246,0.15)' : undefined, color: canvasLocked ? 'var(--blue-500)' : undefined }}><Icon name={canvasLocked ? 'Pin' : 'PinOff'} size={14}/></div>
+                    {event?.settings?.floorplan_url && (
+                      <>
+                        <div style={{ height: 1, background: 'var(--border-default)', margin: '2px 0' }} />
+                        <div className="floorplan-btn" onClick={() => setSketchVisible(v => !v)} title={sketchVisible ? 'הסתר סקיצה' : 'הצג סקיצה'} style={{ background: sketchVisible ? 'var(--accent-light)' : undefined, color: sketchVisible ? 'var(--accent)' : undefined }}><Icon name="Image" size={14}/></div>
+                        {sketchVisible && (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '4px 2px' }}>
+                            <input
+                              type="range"
+                              min="0.05"
+                              max="0.8"
+                              step="0.05"
+                              value={sketchOpacity}
+                              onChange={e => setSketchOpacity(parseFloat(e.target.value))}
+                              style={{ width: 28, height: 60, WebkitAppearance: 'slider-vertical', writingMode: 'vertical-lr', direction: 'rtl', cursor: 'pointer' }}
+                              title={`שקיפות: ${Math.round(sketchOpacity * 100)}%`}
+                            />
+                            <span style={{ fontSize: 8, color: 'var(--text-tertiary)' }}>{Math.round(sketchOpacity * 100)}%</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                   {/* Zoom indicator */}
                   <div style={{ position: 'absolute', bottom: 10, left: 10, zIndex: 5, fontSize: 10, color: 'var(--text-tertiary)', background: 'var(--bg-elevated)', padding: '2px 6px', borderRadius: 4, border: '1px solid var(--border-light)' }}>
@@ -6833,6 +7002,7 @@
                       setZoom(z => Math.max(0.2, Math.min(2.5, z + delta)));
                     }}
                     onMouseDown={e => {
+                      if (canvasLocked) return;
                       if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image' || e.target.tagName === 'rect' || e.target.tagName === 'line') {
                         setIsPanning(true);
                         panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -6850,14 +7020,14 @@
                         const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                         panStart.current = { pinchDist: d, startZoom: zoom };
                         setIsPanning(false);
-                      } else if (e.touches.length === 1) {
+                      } else if (e.touches.length === 1 && !canvasLocked) {
                         const t = e.touches[0];
                         if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image' || e.target.tagName === 'rect') {
                           setIsPanning(true);
                           panStart.current = { x: t.clientX - pan.x, y: t.clientY - pan.y };
                         }
                       }
-                    }}
+                    }}}
                     onTouchMove={e => {
                       if (e.touches.length === 2 && panStart.current?.pinchDist) {
                         e.preventDefault();
@@ -6882,13 +7052,13 @@
                       <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="url(#grid-dots)" rx="12" />
                       <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1.5" rx="12" opacity="0.5" />
                       {/* Floor plan background image */}
-                      {event?.settings?.floorplan_url && (
+                      {event?.settings?.floorplan_url && sketchVisible && (
                         <image
                           href={event.settings.floorplan_url}
                           x="0" y="0"
                           width={canvasBounds.w} height={canvasBounds.h}
                           preserveAspectRatio="xMidYMid meet"
-                          opacity="0.3"
+                          opacity={sketchOpacity}
                           style={{ pointerEvents: 'none' }}
                         />
                       )}
@@ -6898,7 +7068,7 @@
                           table={table}
                           guests={guests}
                           selected={selectedFloorTable?.id === table.id}
-                          locked={tablesLocked}
+                          locked={isTableLocked(table.id)}
                           onDragTable={handleTableMouseDown}
                           onTouchTable={handleTableTouchStart}
                           onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
@@ -6945,6 +7115,9 @@
                             </div>
                           )}
                           <div style={{ display:'flex', gap:8 }}>
+                            <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13, background: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent-light)' : undefined, borderColor: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined, color: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined }} onClick={() => toggleTableLock(selectedFloorTable.id)}>
+                              <Icon name={lockedTableIds.has(selectedFloorTable.id) ? 'Lock' : 'Unlock'} size={14}/>{lockedTableIds.has(selectedFloorTable.id) ? 'נעול' : 'נעל'}
+                            </button>
                             <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
                               const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                               await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
@@ -7006,6 +7179,9 @@
                           </div>
                         )}
                         <div style={{ display:'flex', gap:6 }}>
+                          <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12, background: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent-light)' : undefined, borderColor: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined, color: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined }} onClick={() => toggleTableLock(selectedFloorTable.id)}>
+                            <Icon name={lockedTableIds.has(selectedFloorTable.id) ? 'Lock' : 'Unlock'} size={13}/>{lockedTableIds.has(selectedFloorTable.id) ? 'נעול' : 'נעל'}
+                          </button>
                           <button className="btn btn-secondary" style={{ flex:1, padding:'6px 0', fontSize:12 }} onClick={async ()=>{
                             const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                             await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
@@ -7062,6 +7238,49 @@
 
           {upsellFeature && <UpsellModal feature={upsellFeature} onClose={() => setUpsellFeature(null)} />}
 
+          {/* Canvas size editor modal */}
+          {showCanvasSize && (
+            <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowCanvasSize(false)}>
+              <div className="modal-content animate-scale-in" style={{ maxWidth: 380 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div className="modal-title">גודל איזור ההושבה</div>
+                  <button className="icon-btn" onClick={() => setShowCanvasSize(false)}><Icon name="X" size={20} /></button>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 14, lineHeight: 1.6 }}>
+                  הגדירו את גודל המפה לפי מידות האולם. ניתן להשתמש ביחידות יחסיות או לבחור תבנית מוכנה.
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                  <div className="input-group">
+                    <label className="input-label">רוחב</label>
+                    <input className="input-field" type="number" min="400" max="3000" step="50" value={canvasSizeForm.w} onChange={e => setCanvasSizeForm(f => ({ ...f, w: e.target.value }))} />
+                  </div>
+                  <div className="input-group">
+                    <label className="input-label">אורך</label>
+                    <input className="input-field" type="number" min="300" max="2000" step="50" value={canvasSizeForm.h} onChange={e => setCanvasSizeForm(f => ({ ...f, h: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {[
+                    { label: 'קטן', w: 800, h: 600 },
+                    { label: 'בינוני', w: 1200, h: 800 },
+                    { label: 'גדול', w: 1600, h: 1000 },
+                    { label: 'ענק', w: 2200, h: 1400 },
+                  ].map(preset => (
+                    <button key={preset.label} className="btn btn-secondary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => setCanvasSizeForm({ w: preset.w, h: preset.h })}>
+                      {preset.label} ({preset.w}×{preset.h})
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-ghost" onClick={() => setShowCanvasSize(false)}>ביטול</button>
+                  <button className="btn btn-primary" onClick={saveCanvasSize}>
+                    <Icon name="Check" size={18} />שמור
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── FULLSCREEN FLOOR PLAN (Mobile) ── */}
           {showFullscreenFloor && (
             <div style={{
@@ -7091,6 +7310,14 @@
                   <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={autoLayoutTables} title="סידור אוטומטי">
                     <Icon name="LayoutGrid" size={15} />
                   </button>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ padding: '6px 8px', background: canvasLocked ? 'rgba(59,130,246,0.1)' : undefined, borderColor: canvasLocked ? 'var(--blue-400)' : undefined, color: canvasLocked ? 'var(--blue-500)' : undefined }}
+                    onClick={() => { setCanvasLocked(l => !l); if (!canvasLocked) setPan({ x: 0, y: 0 }); }}
+                    title={canvasLocked ? 'שחרר מפה' : 'קבע מפה'}
+                  >
+                    <Icon name={canvasLocked ? 'Pin' : 'PinOff'} size={15} />
+                  </button>
                   <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => {
                     if (!svgRef.current) return;
                     const wrapEl = svgRef.current.parentElement;
@@ -7108,6 +7335,16 @@
                   <button className="btn btn-secondary" style={{ padding: '6px 8px' }} onClick={() => setZoom(z => Math.max(0.15, z - 0.15))}>
                     <Icon name="ZoomOut" size={15} />
                   </button>
+                  {event?.settings?.floorplan_url && (
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '6px 8px', background: sketchVisible ? 'var(--accent-light)' : undefined, borderColor: sketchVisible ? 'var(--accent)' : undefined, color: sketchVisible ? 'var(--accent)' : undefined }}
+                      onClick={() => setSketchVisible(v => !v)}
+                      title={sketchVisible ? 'הסתר סקיצה' : 'הצג סקיצה'}
+                    >
+                      <Icon name="Image" size={15} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -7123,7 +7360,7 @@
                       const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                       panStart.current = { pinchDist: d, startZoom: zoom };
                       setIsPanning(false);
-                    } else if (e.touches.length === 1) {
+                    } else if (e.touches.length === 1 && !canvasLocked) {
                       const t = e.touches[0];
                       if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image' || e.target.tagName === 'rect') {
                         setIsPanning(true);
@@ -7145,6 +7382,7 @@
                   }}
                   onTouchEnd={() => { setIsPanning(false); if (panStart.current?.pinchDist) panStart.current = null; }}
                   onMouseDown={e => {
+                    if (canvasLocked) return;
                     if (e.target === svgRef.current || e.target.tagName === 'svg' || e.target.tagName === 'image') {
                       setIsPanning(true);
                       panStart.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
@@ -7166,13 +7404,13 @@
                   <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
                     <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="url(#grid-dots-fs)" rx="12" />
                     <rect x="0" y="0" width={canvasBounds.w} height={canvasBounds.h} fill="none" stroke="var(--border-default)" strokeWidth="1.5" rx="12" opacity="0.5" />
-                    {event?.settings?.floorplan_url && (
+                    {event?.settings?.floorplan_url && sketchVisible && (
                       <image
                         href={event.settings.floorplan_url}
                         x="0" y="0"
                         width={canvasBounds.w} height={canvasBounds.h}
                         preserveAspectRatio="xMidYMid meet"
-                        opacity="0.3"
+                        opacity={sketchOpacity}
                         style={{ pointerEvents: 'none' }}
                       />
                     )}
@@ -7182,7 +7420,7 @@
                         table={table}
                         guests={guests}
                         selected={selectedFloorTable?.id === table.id}
-                        locked={tablesLocked}
+                        locked={isTableLocked(table.id)}
                         onDragTable={handleTableMouseDown}
                         onTouchTable={handleTableTouchStart}
                         onClick={t => setSelectedFloorTable(selectedFloorTable?.id === t.id ? null : t)}
@@ -7190,6 +7428,26 @@
                     ))}
                   </g>
                 </svg>
+
+                {/* Sketch opacity slider (fullscreen) */}
+                {event?.settings?.floorplan_url && sketchVisible && (
+                  <div style={{
+                    position: 'absolute', bottom: 12, right: 12, zIndex: 5,
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+                    borderRadius: 'var(--radius-sm)', padding: '6px 10px',
+                    display: 'flex', alignItems: 'center', gap: 8, fontSize: 11,
+                    boxShadow: 'var(--shadow-sm)',
+                  }}>
+                    <Icon name="Image" size={12} style={{ color: 'var(--text-tertiary)' }} />
+                    <input
+                      type="range" min="0.05" max="0.8" step="0.05"
+                      value={sketchOpacity}
+                      onChange={e => setSketchOpacity(parseFloat(e.target.value))}
+                      style={{ width: 60, cursor: 'pointer', accentColor: 'var(--accent)' }}
+                    />
+                    <span style={{ color: 'var(--text-tertiary)', minWidth: 28 }}>{Math.round(sketchOpacity * 100)}%</span>
+                  </div>
+                )}
 
                 {/* Selected table — bottom sheet */}
                 {selectedFloorTable && (() => {
@@ -7226,6 +7484,9 @@
                         </div>
                       )}
                       <div style={{ display:'flex', gap:8 }}>
+                        <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13, background: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent-light)' : undefined, borderColor: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined, color: lockedTableIds.has(selectedFloorTable.id) ? 'var(--accent)' : undefined }} onClick={() => toggleTableLock(selectedFloorTable.id)}>
+                          <Icon name={lockedTableIds.has(selectedFloorTable.id) ? 'Lock' : 'Unlock'} size={14}/>{lockedTableIds.has(selectedFloorTable.id) ? 'נעול' : 'נעל'}
+                        </button>
                         <button className="btn btn-secondary" style={{ flex:1, padding:'8px 0', fontSize:13 }} onClick={async ()=>{
                           const newRot = ((selectedFloorTable.rotation || 0) + 45) % 360;
                           await client.from('tables').update({ rotation: newRot }).eq('id', selectedFloorTable.id);
