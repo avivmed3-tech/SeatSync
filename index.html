@@ -6878,7 +6878,6 @@
                         </div>
                       ));
                     })()}
-                    )}
                   </div>
 
                   {/* Tables drop area */}
@@ -7027,7 +7026,7 @@
                           panStart.current = { x: t.clientX - pan.x, y: t.clientY - pan.y };
                         }
                       }
-                    }}}
+                    }}
                     onTouchMove={e => {
                       if (e.touches.length === 2 && panStart.current?.pinchDist) {
                         e.preventDefault();
