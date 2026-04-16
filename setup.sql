@@ -377,6 +377,8 @@ DROP POLICY IF EXISTS "Users can manage expenses of own events" ON expenses;
 CREATE POLICY "Users can manage expenses of own events"
   ON expenses FOR ALL USING (
     event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
   );
 
 -- =====================================================
@@ -407,6 +409,8 @@ DROP POLICY IF EXISTS "Users can manage gifts of own events" ON gifts;
 CREATE POLICY "Users can manage gifts of own events"
   ON gifts FOR ALL USING (
     event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
   );
 
 -- =====================================================
@@ -414,6 +418,50 @@ CREATE POLICY "Users can manage gifts of own events"
 -- =====================================================
 
 ALTER TABLE tables ADD COLUMN IF NOT EXISTS scale FLOAT DEFAULT 1;
+
+-- Add expenses table if missing (run if upgrading from older version)
+CREATE TABLE IF NOT EXISTS expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'custom',
+  name TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_per_person BOOLEAN DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_expenses_event ON expenses(event_id);
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage expenses of own events" ON expenses;
+CREATE POLICY "Users can manage expenses of own events"
+  ON expenses FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
+
+-- Add gifts table if missing (run if upgrading from older version)
+CREATE TABLE IF NOT EXISTS gifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  guest_id UUID REFERENCES guests(id) ON DELETE SET NULL,
+  guest_name TEXT NOT NULL DEFAULT '',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_gifts_event ON gifts(event_id);
+CREATE INDEX IF NOT EXISTS idx_gifts_guest ON gifts(guest_id);
+ALTER TABLE gifts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage gifts of own events" ON gifts;
+CREATE POLICY "Users can manage gifts of own events"
+  ON gifts FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
 
 -- =====================================================
 -- DONE! Now create a user via the app's registration form.
