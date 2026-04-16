@@ -306,5 +306,65 @@ CREATE POLICY "Service role manages rate limits"
 ALTER PUBLICATION supabase_realtime ADD TABLE guests;
 
 -- =====================================================
+-- 7. EXPENSES TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'custom',
+  name TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_per_person BOOLEAN DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_expenses_event ON expenses(event_id);
+
+DROP TRIGGER IF EXISTS set_updated_at_expenses ON expenses;
+CREATE TRIGGER set_updated_at_expenses
+  BEFORE UPDATE ON expenses
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage expenses of own events" ON expenses;
+CREATE POLICY "Users can manage expenses of own events"
+  ON expenses FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
+
+-- =====================================================
+-- 8. GIFTS TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS gifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  guest_id UUID REFERENCES guests(id) ON DELETE SET NULL,
+  guest_name TEXT NOT NULL DEFAULT '',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_gifts_event ON gifts(event_id);
+CREATE INDEX IF NOT EXISTS idx_gifts_guest ON gifts(guest_id);
+
+DROP TRIGGER IF EXISTS set_updated_at_gifts ON gifts;
+CREATE TRIGGER set_updated_at_gifts
+  BEFORE UPDATE ON gifts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE gifts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage gifts of own events" ON gifts;
+CREATE POLICY "Users can manage gifts of own events"
+  ON gifts FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
+
+-- =====================================================
 -- DONE! Now create a user via the app's registration form.
 -- =====================================================

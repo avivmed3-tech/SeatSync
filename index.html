@@ -1945,6 +1945,226 @@
         width: 340px;
       }
     }
+
+    /* ============================================
+       Expenses & Gifts Module Styles
+       ============================================ */
+    .expense-categories {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .expense-item {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+
+    .expense-item:hover {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .expense-item-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .expense-item-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 1.8;
+    }
+
+    .expense-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .expense-item-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .expense-item-tag {
+      font-size: 11px;
+      color: var(--text-tertiary);
+    }
+
+    .expense-item-input {
+      width: 120px;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1.5px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: left;
+      direction: ltr;
+      outline: none;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+
+    .expense-item-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+      background: var(--bg-secondary);
+    }
+
+    .expense-item-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .expense-summary-card {
+      background: linear-gradient(135deg, var(--gold-50), var(--gold-100));
+      border: 1px solid var(--gold-200);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    [data-theme="dark"] .expense-summary-card {
+      background: linear-gradient(135deg, rgba(212,168,8,0.08), rgba(212,168,8,0.04));
+      border-color: rgba(212,168,8,0.2);
+    }
+
+    .expense-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .expense-summary-item {
+      text-align: center;
+    }
+
+    .expense-summary-value {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text-primary);
+      direction: ltr;
+    }
+
+    .expense-summary-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .gift-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-default);
+      border-radius: var(--radius-md);
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+
+    .gift-row:hover {
+      border-color: var(--border-focus);
+    }
+
+    .gift-row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .gift-row-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .gift-row-group {
+      font-size: 12px;
+      color: var(--text-tertiary);
+    }
+
+    .gift-amount-input {
+      width: 110px;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1.5px solid var(--border-default);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      text-align: left;
+      direction: ltr;
+      outline: none;
+      transition: all var(--duration-fast) var(--ease-out);
+    }
+
+    .gift-amount-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+      background: var(--bg-secondary);
+    }
+
+    .profit-banner {
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .profit-banner.positive {
+      background: linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03));
+      border: 1px solid rgba(16,185,129,0.25);
+    }
+
+    .profit-banner.negative {
+      background: linear-gradient(135deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03));
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+
+    .profit-banner.neutral {
+      background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
+      border: 1px solid rgba(59,130,246,0.25);
+    }
+
+    .profit-value {
+      font-size: 36px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      direction: ltr;
+    }
+
+    .profit-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .expense-categories { grid-template-columns: 1fr; }
+      .expense-summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .expense-item-input { width: 100px; }
+      .gift-amount-input { width: 90px; }
+      .profit-value { font-size: 28px; }
+    }
+
   </style>
 </head>
 <body>
@@ -2288,6 +2508,8 @@
       GUESTS: 'guests',
       MESSAGES: 'messages',
       SEATING: 'seating',
+      EXPENSES: 'expenses',
+      GIFTS: 'gifts',
       SETTINGS: 'settings',
       EVENTS: 'events',
     };
@@ -7995,7 +8217,8 @@
 
       const ROUTE_LABELS = {
         events: 'אירועים', dashboard: 'דשבורד', guests: 'מוזמנים',
-        messages: 'הודעות', seating: 'הושבה', settings: 'הגדרות',
+        messages: 'הודעות', seating: 'הושבה', expenses: 'הוצאות',
+        gifts: 'מתנות', settings: 'הגדרות',
       };
 
       return (
@@ -8056,6 +8279,8 @@
         { id: ROUTES.GUESTS,    icon: 'Users',           label: 'מוזמנים' },
         { id: ROUTES.MESSAGES,  icon: 'Send',            label: 'הודעות' },
         { id: ROUTES.SEATING,   icon: 'Armchair',        label: 'הושבה' },
+        { id: ROUTES.EXPENSES,  icon: 'Receipt',         label: 'הוצאות' },
+        { id: ROUTES.GIFTS,     icon: 'Gift',            label: 'מתנות' },
         { id: ROUTES.SETTINGS,  icon: 'Settings',        label: 'הגדרות' },
       ];
 
@@ -8073,6 +8298,726 @@
             </button>
           ))}
         </nav>
+      );
+    }
+
+    // ============================================
+    // Expenses Page
+    // ============================================
+    const BUILT_IN_EXPENSES = [
+      { category: 'venue_per_plate', name: 'מחיר למנה באולם', icon: 'UtensilsCrossed', color: '#10B981', bg: 'rgba(16,185,129,0.1)', is_per_person: true },
+      { category: 'dj',             name: 'DJ / מוזיקה',      icon: 'Music',           color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', is_per_person: false },
+      { category: 'rabbi',          name: 'רב / עורך טקס',   icon: 'BookOpen',        color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)', is_per_person: false },
+      { category: 'photographer',   name: 'צלם',              icon: 'Camera',          color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', is_per_person: false },
+      { category: 'videographer',   name: 'צלם וידאו',        icon: 'Video',           color: '#EF4444', bg: 'rgba(239,68,68,0.1)', is_per_person: false },
+      { category: 'flowers',        name: 'פרחים / עיצוב',   icon: 'Flower2',         color: '#EC4899', bg: 'rgba(236,72,153,0.1)', is_per_person: false },
+      { category: 'makeup_hair',    name: 'איפור ושיער',      icon: 'Sparkles',        color: '#F97316', bg: 'rgba(249,115,22,0.1)', is_per_person: false },
+      { category: 'dress',          name: 'שמלת כלה',         icon: 'Star',            color: '#A855F7', bg: 'rgba(168,85,247,0.1)', is_per_person: false },
+      { category: 'suit',           name: 'חליפת חתן',        icon: 'Briefcase',       color: '#6366F1', bg: 'rgba(99,102,241,0.1)', is_per_person: false },
+      { category: 'rings',          name: 'טבעות',            icon: 'Circle',          color: '#D4A808', bg: 'rgba(212,168,8,0.1)', is_per_person: false },
+      { category: 'cake',           name: 'עוגת חתונה',       icon: 'Cake',            color: '#F43F5E', bg: 'rgba(244,63,94,0.1)', is_per_person: false },
+      { category: 'invitations',    name: 'הזמנות',           icon: 'Mail',            color: '#0EA5E9', bg: 'rgba(14,165,233,0.1)', is_per_person: false },
+      { category: 'transportation', name: 'תחבורה / הסעות',  icon: 'Bus',             color: '#64748B', bg: 'rgba(100,116,139,0.1)', is_per_person: false },
+      { category: 'venue_rental',   name: 'שכירת אולם',       icon: 'Building2',       color: '#059669', bg: 'rgba(5,150,105,0.1)', is_per_person: false },
+      { category: 'lighting',       name: 'תאורה / סאונד',   icon: 'Lightbulb',       color: '#FBBF24', bg: 'rgba(251,191,36,0.1)', is_per_person: false },
+      { category: 'wedding_planner',name: 'מנהל אירוע',       icon: 'ClipboardList',   color: '#14B8A6', bg: 'rgba(20,184,166,0.1)', is_per_person: false },
+    ];
+
+    function ExpensesPage({ event }) {
+      const { client } = useContext(SupabaseContext);
+      const { addToast } = useContext(ToastContext);
+      const [expenses, setExpenses] = useState([]);
+      const [guests, setGuests] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [localAmounts, setLocalAmounts] = useState({});
+      const [showAddCustom, setShowAddCustom] = useState(false);
+      const [customName, setCustomName] = useState('');
+      const [customAmount, setCustomAmount] = useState('');
+      const [customPerPerson, setCustomPerPerson] = useState(false);
+
+      useEffect(() => {
+        if (!event?.id) return;
+        fetchData();
+      }, [client, event?.id]);
+
+      const fetchData = async () => {
+        if (!client || !event?.id) return;
+        setLoading(true);
+        const [{ data: exp }, { data: g }] = await Promise.all([
+          client.from('expenses').select('*').eq('event_id', event.id).order('created_at'),
+          client.from('guests').select('id,confirmed_guests,status').eq('event_id', event.id),
+        ]);
+        setExpenses(exp || []);
+        setGuests(g || []);
+        const amounts = {};
+        (exp || []).forEach(e => { amounts[e.category] = e.amount; });
+        setLocalAmounts(amounts);
+        setLoading(false);
+      };
+
+      const totalGuests = useMemo(() =>
+        guests.filter(g => g.status === 'confirmed').reduce((s, g) => s + (g.confirmed_guests || 0), 0),
+      [guests]);
+
+      const saveExpense = async (category, name, amount, isPerPerson) => {
+        if (!client || !event?.id) return;
+        setSaving(true);
+        const existing = expenses.find(e => e.category === category);
+        const val = parseFloat(amount) || 0;
+        if (existing) {
+          const { error } = await client.from('expenses').update({ amount: val }).eq('id', existing.id);
+          if (!error) setExpenses(prev => prev.map(e => e.category === category ? { ...e, amount: val } : e));
+        } else {
+          const { data, error } = await client.from('expenses').insert({
+            event_id: event.id, category, name, amount: val, is_per_person: isPerPerson
+          }).select().single();
+          if (!error && data) setExpenses(prev => [...prev, data]);
+        }
+        setSaving(false);
+      };
+
+      const deleteExpense = async (category) => {
+        if (!client || !event?.id) return;
+        const existing = expenses.find(e => e.category === category);
+        if (!existing) return;
+        await client.from('expenses').delete().eq('id', existing.id);
+        setExpenses(prev => prev.filter(e => e.category !== category));
+        setLocalAmounts(prev => { const n = { ...prev }; delete n[category]; return n; });
+        addToast('ההוצאה נמחקה', 'success');
+      };
+
+      const handleAmountBlur = (category, name, isPerPerson) => {
+        const val = localAmounts[category] || '0';
+        saveExpense(category, name, val, isPerPerson);
+      };
+
+      const addCustomExpense = async () => {
+        if (!customName.trim()) { addToast('הזינו שם להוצאה', 'error'); return; }
+        const cat = 'custom_' + Date.now();
+        await saveExpense(cat, customName.trim(), customAmount || '0', customPerPerson);
+        await fetchData();
+        setCustomName(''); setCustomAmount(''); setCustomPerPerson(false); setShowAddCustom(false);
+        addToast('הוצאה נוספה ✓', 'success');
+      };
+
+      const totalFixed = useMemo(() => expenses
+        .filter(e => !e.is_per_person)
+        .reduce((s, e) => s + parseFloat(e.amount || 0), 0), [expenses]);
+
+      const totalPerPerson = useMemo(() => expenses
+        .filter(e => e.is_per_person)
+        .reduce((s, e) => s + parseFloat(e.amount || 0), 0), [expenses]);
+
+      const totalEvent = totalFixed + totalPerPerson * (totalGuests || 0);
+      const costPerHead = totalGuests > 0 ? totalEvent / totalGuests : 0;
+
+      const exportExpensesExcel = () => {
+        const rows = [];
+        BUILT_IN_EXPENSES.forEach(b => {
+          const exp = expenses.find(e => e.category === b.category);
+          const amt = parseFloat(exp?.amount || 0);
+          if (amt > 0) rows.push({
+            'קטגוריה': b.name,
+            'סכום (₪)': amt,
+            'לפי נפש': b.is_per_person ? 'כן' : 'לא',
+            'סה"כ (₪)': b.is_per_person ? amt * totalGuests : amt,
+          });
+        });
+        expenses.filter(e => e.category.startsWith('custom_')).forEach(e => {
+          rows.push({
+            'קטגוריה': e.name,
+            'סכום (₪)': parseFloat(e.amount || 0),
+            'לפי נפש': e.is_per_person ? 'כן' : 'לא',
+            'סה"כ (₪)': e.is_per_person ? parseFloat(e.amount || 0) * totalGuests : parseFloat(e.amount || 0),
+          });
+        });
+        rows.push({});
+        rows.push({ 'קטגוריה': 'סה"כ הוצאות', 'סכום (₪)': '', 'לפי נפש': '', 'סה"כ (₪)': totalEvent });
+        rows.push({ 'קטגוריה': 'עלות לנפש', 'סכום (₪)': '', 'לפי נפש': '', 'סה"כ (₪)': Math.round(costPerHead) });
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 14 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'הוצאות');
+        XLSX.writeFile(wb, `הוצאות_${event.name}_${new Date().toLocaleDateString('he-IL').replace(/\./g,'-')}.xlsx`);
+        addToast('ייצוא אקסל הושלם ✓', 'success');
+      };
+
+      const exportExpensesPDF = async () => {
+        try {
+          addToast('מייצא PDF...', 'info');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const gold = [212, 168, 8];
+          const dark = [26, 26, 26];
+
+          doc.setFillColor(...gold);
+          doc.rect(0, 0, 210, 38, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(22);
+          doc.text('Event Expenses', 105, 16, { align: 'center' });
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'normal');
+          doc.text(event?.name || '', 105, 25, { align: 'center' });
+          doc.setFontSize(10);
+          doc.text(new Date().toLocaleDateString('he-IL'), 105, 33, { align: 'center' });
+
+          let y = 50;
+          const cols = [15, 95, 130, 165];
+          doc.setFillColor(240, 237, 230);
+          doc.rect(10, y - 5, 190, 10, 'F');
+          doc.setTextColor(...dark);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text('Category', cols[0], y);
+          doc.text('Amount', cols[1], y);
+          doc.text('Per Person', cols[2], y);
+          doc.text('Total', cols[3], y);
+          y += 8;
+
+          let rowIdx = 0;
+          const allExpenses = [
+            ...BUILT_IN_EXPENSES.filter(b => {
+              const e = expenses.find(ex => ex.category === b.category);
+              return e && parseFloat(e.amount || 0) > 0;
+            }).map(b => {
+              const e = expenses.find(ex => ex.category === b.category);
+              return { name: b.name, amount: parseFloat(e.amount || 0), is_per_person: b.is_per_person };
+            }),
+            ...expenses.filter(e => e.category.startsWith('custom_')).map(e => ({
+              name: e.name, amount: parseFloat(e.amount || 0), is_per_person: e.is_per_person
+            }))
+          ];
+
+          allExpenses.forEach(item => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            if (rowIdx % 2 === 0) {
+              doc.setFillColor(250, 249, 245);
+              doc.rect(10, y - 5, 190, 9, 'F');
+            }
+            doc.setTextColor(...dark);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            const total = item.is_per_person ? item.amount * totalGuests : item.amount;
+            doc.text(item.name, cols[0], y);
+            doc.text(`${item.amount.toLocaleString()} ILS`, cols[1], y);
+            doc.text(item.is_per_person ? 'Yes' : 'No', cols[2], y);
+            doc.text(`${total.toLocaleString()} ILS`, cols[3], y);
+            y += 9; rowIdx++;
+          });
+
+          y += 4;
+          doc.setDrawColor(...gold);
+          doc.setLineWidth(0.8);
+          doc.line(10, y, 200, y);
+          y += 8;
+          doc.setFillColor(...gold);
+          doc.rect(10, y - 5, 190, 26, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.text('Total Event Cost:', cols[0], y + 2);
+          doc.text(`${Math.round(totalEvent).toLocaleString()} ILS`, cols[3], y + 2);
+          doc.setFontSize(10);
+          doc.text(`Cost per guest (${totalGuests} guests):`, cols[0], y + 11);
+          doc.text(`${Math.round(costPerHead).toLocaleString()} ILS`, cols[3], y + 11);
+
+          doc.save(`expenses-${(event?.name || 'event').replace(/\s+/g, '-')}.pdf`);
+          addToast('PDF יוצא בהצלחה ✓', 'success');
+        } catch (err) {
+          console.error(err);
+          addToast('שגיאה בייצוא PDF', 'error');
+        }
+      };
+
+      if (!event) return (
+        <div className="empty-state animate-slide-up">
+          <div className="empty-state-icon"><Icon name="Receipt" size={36} /></div>
+          <div className="empty-state-title">בחרו אירוע</div>
+          <div className="empty-state-text">בחרו אירוע כדי לנהל הוצאות</div>
+        </div>
+      );
+
+      if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 68 }} />)}
+        </div>
+      );
+
+      const customExpenses = expenses.filter(e => e.category.startsWith('custom_'));
+
+      return (
+        <div className="animate-slide-up">
+          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div className="page-title">ניהול הוצאות</div>
+              <div className="page-subtitle">הזינו את עלויות האירוע וקבלו חישוב מלא לנפש</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesExcel}>
+                <Icon name="FileSpreadsheet" size={18} /><span className="hide-mobile">אקסל</span>
+              </button>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesPDF}>
+                <Icon name="FileText" size={18} /><span className="hide-mobile">PDF</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Summary banner */}
+          <div className="expense-summary-card animate-scale-in stagger-1">
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--gold-600)', marginBottom: 16, textAlign: 'center', letterSpacing: 0.5 }}>סיכום הוצאות</div>
+            <div className="expense-summary-grid">
+              <div className="expense-summary-item">
+                <div className="expense-summary-value" style={{ color: 'var(--gold-600)' }}>₪{Math.round(totalEvent).toLocaleString()}</div>
+                <div className="expense-summary-label">סה"כ עלות האירוע</div>
+              </div>
+              <div className="expense-summary-item">
+                <div className="expense-summary-value" style={{ color: 'var(--emerald-500)' }}>₪{Math.round(costPerHead).toLocaleString()}</div>
+                <div className="expense-summary-label">עלות לנפש</div>
+              </div>
+              <div className="expense-summary-item">
+                <div className="expense-summary-value" style={{ color: 'var(--blue-500)' }}>{totalGuests}</div>
+                <div className="expense-summary-label">אורחים מאושרים</div>
+              </div>
+              <div className="expense-summary-item">
+                <div className="expense-summary-value" style={{ color: 'var(--text-secondary)' }}>₪{Math.round(totalFixed).toLocaleString()}</div>
+                <div className="expense-summary-label">הוצאות קבועות</div>
+              </div>
+            </div>
+            {totalGuests === 0 && (
+              <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--amber-500)', marginTop: 12 }}>
+                ⚠ טרם אושרו אורחים — העלות לנפש תחושב אוטומטית עם אישורי הגעה
+              </div>
+            )}
+          </div>
+
+          {/* Built-in categories */}
+          <div className="card animate-slide-up stagger-2" style={{ marginBottom: 16 }}>
+            <div className="card-title" style={{ marginBottom: 4 }}>קטגוריות מובנות</div>
+            <div className="card-subtitle" style={{ marginBottom: 16 }}>הזינו 0 להוצאות שאינן רלוונטיות, שמרו אוטומטי בעת יציאה מהשדה</div>
+            <div className="expense-categories">
+              {BUILT_IN_EXPENSES.map(b => {
+                const saved = expenses.find(e => e.category === b.category);
+                const val = localAmounts[b.category] !== undefined ? localAmounts[b.category] : (saved?.amount || '');
+                return (
+                  <div key={b.category} className="expense-item">
+                    <div className="expense-item-icon" style={{ background: b.bg }}>
+                      <Icon name={b.icon} size={20} style={{ color: b.color }} />
+                    </div>
+                    <div className="expense-item-info">
+                      <div className="expense-item-name">{b.name}</div>
+                      <div className="expense-item-tag">
+                        {b.is_per_person ? `לפי נפש · ${totalGuests} אורחים = ₪${Math.round((parseFloat(val)||0)*totalGuests).toLocaleString()}` : 'תשלום קבוע'}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      className="expense-item-input"
+                      placeholder="₪0"
+                      value={val}
+                      onChange={e => setLocalAmounts(prev => ({ ...prev, [b.category]: e.target.value }))}
+                      onBlur={() => handleAmountBlur(b.category, b.name, b.is_per_person)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom expenses */}
+          <div className="card animate-slide-up stagger-3" style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <div className="card-title">הוצאות מותאמות אישית</div>
+                <div className="card-subtitle">{customExpenses.length} הוצאות נוספות</div>
+              </div>
+              <button className="btn btn-primary" style={{ padding: '8px 14px' }} onClick={() => setShowAddCustom(true)}>
+                <Icon name="Plus" size={16} />הוסף
+              </button>
+            </div>
+            {customExpenses.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-tertiary)', fontSize: 14 }}>
+                אין הוצאות מותאמות עדיין
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {customExpenses.map(exp => (
+                  <div key={exp.id} className="expense-item">
+                    <div className="expense-item-icon" style={{ background: 'rgba(100,116,139,0.1)' }}>
+                      <Icon name="Tag" size={20} style={{ color: 'var(--slate-500)' }} />
+                    </div>
+                    <div className="expense-item-info">
+                      <div className="expense-item-name">{exp.name}</div>
+                      <div className="expense-item-tag">
+                        {exp.is_per_person ? `לפי נפש · ₪${Math.round(parseFloat(exp.amount||0)*totalGuests).toLocaleString()} סה"כ` : 'תשלום קבוע'}
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      className="expense-item-input"
+                      value={localAmounts[exp.category] !== undefined ? localAmounts[exp.category] : exp.amount}
+                      onChange={e => setLocalAmounts(prev => ({ ...prev, [exp.category]: e.target.value }))}
+                      onBlur={() => handleAmountBlur(exp.category, exp.name, exp.is_per_person)}
+                    />
+                    <button className="btn btn-ghost" style={{ padding: 6, color: 'var(--red-500)' }} onClick={() => deleteExpense(exp.category)}>
+                      <Icon name="Trash2" size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add custom modal */}
+          {showAddCustom && (
+            <div className="modal-overlay" onClick={() => setShowAddCustom(false)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-title">הוספת הוצאה מותאמת</div>
+                <div className="modal-subtitle">הגדירו הוצאה ייחודית לאירוע שלכם</div>
+                <div className="input-group">
+                  <label className="input-label">שם ההוצאה</label>
+                  <input className="input-field" placeholder="לדוגמה: נופש לאחר החתונה" value={customName} onChange={e => setCustomName(e.target.value)} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">סכום (₪)</label>
+                  <input className="input-field" type="number" min="0" placeholder="0" value={customAmount} onChange={e => setCustomAmount(e.target.value)} />
+                </div>
+                <div className="input-group" style={{ marginBottom: 20 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 14 }}>
+                    <input type="checkbox" checked={customPerPerson} onChange={e => setCustomPerPerson(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--accent)' }} />
+                    <span>חישוב לפי מספר אורחים (לנפש)</span>
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-primary" style={{ flex: 1 }} onClick={addCustomExpense}>הוסף הוצאה</button>
+                  <button className="btn btn-secondary" onClick={() => setShowAddCustom(false)}>ביטול</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================
+    // Gifts Page
+    // ============================================
+    function GiftsPage({ event }) {
+      const { client } = useContext(SupabaseContext);
+      const { addToast } = useContext(ToastContext);
+      const [guests, setGuests] = useState([]);
+      const [gifts, setGifts] = useState([]);
+      const [expenses, setExpenses] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [localGifts, setLocalGifts] = useState({});
+      const [search, setSearch] = useState('');
+      const [filterGroup, setFilterGroup] = useState('all');
+
+      useEffect(() => {
+        if (!event?.id) return;
+        fetchData();
+      }, [client, event?.id]);
+
+      const fetchData = async () => {
+        if (!client || !event?.id) return;
+        setLoading(true);
+        const [{ data: g }, { data: gi }, { data: exp }] = await Promise.all([
+          client.from('guests').select('*').eq('event_id', event.id).neq('status', 'declined').order('name'),
+          client.from('gifts').select('*').eq('event_id', event.id),
+          client.from('expenses').select('amount,is_per_person').eq('event_id', event.id),
+        ]);
+        setGuests(g || []);
+        setGifts(gi || []);
+        setExpenses(exp || []);
+        const amounts = {};
+        (gi || []).forEach(gift => { if (gift.guest_id) amounts[gift.guest_id] = gift.amount; });
+        setLocalGifts(amounts);
+        setLoading(false);
+      };
+
+      const totalGuests = useMemo(() =>
+        guests.filter(g => g.status === 'confirmed').reduce((s, g) => s + (g.confirmed_guests || 0), 0),
+      [guests]);
+
+      const totalExpenses = useMemo(() => {
+        const tg = totalGuests || 0;
+        return expenses.reduce((s, e) => s + (e.is_per_person ? parseFloat(e.amount||0) * tg : parseFloat(e.amount||0)), 0);
+      }, [expenses, totalGuests]);
+
+      const totalGifts = useMemo(() =>
+        Object.values(localGifts).reduce((s, v) => s + (parseFloat(v) || 0), 0),
+      [localGifts]);
+
+      const saveGift = async (guest, amount) => {
+        if (!client || !event?.id) return;
+        const val = parseFloat(amount) || 0;
+        const existing = gifts.find(gi => gi.guest_id === guest.id);
+        if (existing) {
+          const { error } = await client.from('gifts').update({ amount: val }).eq('id', existing.id);
+          if (!error) setGifts(prev => prev.map(gi => gi.guest_id === guest.id ? { ...gi, amount: val } : gi));
+        } else {
+          const { data, error } = await client.from('gifts').insert({
+            event_id: event.id, guest_id: guest.id, guest_name: guest.name, amount: val
+          }).select().single();
+          if (!error && data) setGifts(prev => [...prev, data]);
+        }
+      };
+
+      const groups = useMemo(() => [...new Set(guests.map(g => g.group_name || 'כללי'))].sort(), [guests]);
+
+      const filtered = useMemo(() => {
+        let list = [...guests];
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          list = list.filter(g => g.name?.toLowerCase().includes(q) || g.group_name?.toLowerCase().includes(q));
+        }
+        if (filterGroup !== 'all') list = list.filter(g => (g.group_name || 'כללי') === filterGroup);
+        return list;
+      }, [guests, search, filterGroup]);
+
+      const profit = totalGifts - totalExpenses;
+      const isProfitable = profit >= 0;
+
+      const exportGiftsExcel = () => {
+        const rows = guests.map(g => ({
+          'שם': g.name,
+          'קבוצה': g.group_name || 'כללי',
+          'סטטוס': g.status === 'confirmed' ? 'מגיע' : g.status === 'maybe' ? 'אולי' : 'ממתין',
+          'אורחים מגיעים': g.confirmed_guests || 0,
+          'מתנה (₪)': parseFloat(localGifts[g.id] || 0),
+        }));
+        rows.push({});
+        rows.push({ 'שם': 'סה"כ מתנות', 'מתנה (₪)': Math.round(totalGifts) });
+        rows.push({ 'שם': 'סה"כ הוצאות', 'מתנה (₪)': Math.round(totalExpenses) });
+        rows.push({ 'שם': isProfitable ? 'רווח' : 'גירעון', 'מתנה (₪)': Math.round(Math.abs(profit)) });
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 14 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'מתנות');
+        XLSX.writeFile(wb, `מתנות_${event.name}_${new Date().toLocaleDateString('he-IL').replace(/\./g,'-')}.xlsx`);
+        addToast('ייצוא אקסל הושלם ✓', 'success');
+      };
+
+      const exportGiftsPDF = async () => {
+        try {
+          addToast('מייצא PDF...', 'info');
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+          const gold = [212, 168, 8];
+          const green = [16, 185, 129];
+          const red = [239, 68, 68];
+          const dark = [26, 26, 26];
+          const profitColor = isProfitable ? green : red;
+
+          doc.setFillColor(...gold);
+          doc.rect(0, 0, 210, 38, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(22);
+          doc.text('Gift Tracking', 105, 16, { align: 'center' });
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'normal');
+          doc.text(event?.name || '', 105, 25, { align: 'center' });
+          doc.setFontSize(10);
+          doc.text(new Date().toLocaleDateString('he-IL'), 105, 33, { align: 'center' });
+
+          let y = 50;
+          doc.setFillColor(...profitColor);
+          doc.rect(10, y - 5, 190, 28, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(14);
+          doc.text(isProfitable ? 'Profitable Event' : 'Event Deficit', 105, y + 4, { align: 'center' });
+          doc.setFontSize(11);
+          doc.text(`${isProfitable ? '+' : '-'}${Math.round(Math.abs(profit)).toLocaleString()} ILS`, 105, y + 13, { align: 'center' });
+          y += 36;
+
+          const summaryItems = [
+            ['Total Gifts', `${Math.round(totalGifts).toLocaleString()} ILS`],
+            ['Total Expenses', `${Math.round(totalExpenses).toLocaleString()} ILS`],
+            [`${isProfitable ? 'Profit' : 'Deficit'}`, `${Math.round(Math.abs(profit)).toLocaleString()} ILS`],
+          ];
+          summaryItems.forEach(([label, val], i) => {
+            doc.setFillColor(i % 2 === 0 ? 250 : 244, i % 2 === 0 ? 249 : 243, i % 2 === 0 ? 245 : 236);
+            doc.rect(10, y - 5, 190, 10, 'F');
+            doc.setTextColor(...dark);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text(label, 15, y + 1);
+            doc.setFont('helvetica', 'bold');
+            doc.text(val, 195, y + 1, { align: 'right' });
+            y += 10;
+          });
+
+          y += 8;
+          doc.setFillColor(240, 237, 230);
+          doc.rect(10, y - 5, 190, 10, 'F');
+          doc.setTextColor(...dark);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.text('Guest Name', 15, y);
+          doc.text('Group', 75, y);
+          doc.text('Guests', 125, y);
+          doc.text('Gift Amount', 165, y);
+          y += 8;
+
+          let rowIdx = 0;
+          guests.forEach(g => {
+            if (y > 270) { doc.addPage(); y = 20; }
+            const amt = parseFloat(localGifts[g.id] || 0);
+            if (rowIdx % 2 === 0) {
+              doc.setFillColor(250, 249, 245);
+              doc.rect(10, y - 5, 190, 9, 'F');
+            }
+            doc.setTextColor(...dark);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.text(g.name || '', 15, y);
+            doc.text(g.group_name || 'General', 75, y);
+            doc.text(String(g.confirmed_guests || 0), 130, y);
+            if (amt > 0) {
+              doc.setTextColor(...green);
+              doc.setFont('helvetica', 'bold');
+            }
+            doc.text(amt > 0 ? `${amt.toLocaleString()} ILS` : '-', 195, y, { align: 'right' });
+            doc.setTextColor(...dark);
+            doc.setFont('helvetica', 'normal');
+            y += 9; rowIdx++;
+          });
+
+          doc.save(`gifts-${(event?.name || 'event').replace(/\s+/g, '-')}.pdf`);
+          addToast('PDF יוצא בהצלחה ✓', 'success');
+        } catch (err) {
+          console.error(err);
+          addToast('שגיאה בייצוא PDF', 'error');
+        }
+      };
+
+      if (!event) return (
+        <div className="empty-state animate-slide-up">
+          <div className="empty-state-icon"><Icon name="Gift" size={36} /></div>
+          <div className="empty-state-title">בחרו אירוע</div>
+          <div className="empty-state-text">בחרו אירוע כדי לעקוב אחר מתנות</div>
+        </div>
+      );
+
+      if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {[1,2,3,4,5].map(i => <div key={i} className="skeleton" style={{ height: 60 }} />)}
+        </div>
+      );
+
+      return (
+        <div className="animate-slide-up">
+          <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div className="page-title">מעקב מתנות</div>
+              <div className="page-subtitle">הזינו כמה כל אורח נתן ובדקו אם האירוע היה רווחי</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsExcel}>
+                <Icon name="FileSpreadsheet" size={18} /><span className="hide-mobile">אקסל</span>
+              </button>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsPDF}>
+                <Icon name="FileText" size={18} /><span className="hide-mobile">PDF</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Profit/Loss banner */}
+          <div className={`profit-banner ${totalGifts === 0 && totalExpenses === 0 ? 'neutral' : isProfitable ? 'positive' : 'negative'} animate-scale-in stagger-1`}>
+            <div className="profit-value" style={{ color: totalGifts === 0 && totalExpenses === 0 ? 'var(--blue-500)' : isProfitable ? 'var(--emerald-500)' : 'var(--red-500)' }}>
+              {totalGifts === 0 && totalExpenses === 0 ? '—' : `${isProfitable ? '+' : '-'}₪${Math.round(Math.abs(profit)).toLocaleString()}`}
+            </div>
+            <div className="profit-label">
+              {totalGifts === 0 && totalExpenses === 0 ? 'הזינו נתוני הוצאות ומתנות לחישוב' : isProfitable ? 'האירוע היה רווחי 🎉' : 'האירוע היה בגירעון'}
+            </div>
+          </div>
+
+          {/* KPI row */}
+          <div className="kpi-grid" style={{ marginBottom: 16 }}>
+            <div className="kpi-card green animate-scale-in stagger-2">
+              <div className="kpi-value">₪{Math.round(totalGifts).toLocaleString()}</div>
+              <div className="kpi-label">סה"כ מתנות</div>
+            </div>
+            <div className="kpi-card red animate-scale-in stagger-3">
+              <div className="kpi-value">₪{Math.round(totalExpenses).toLocaleString()}</div>
+              <div className="kpi-label">סה"כ הוצאות</div>
+            </div>
+            <div className="kpi-card blue animate-scale-in stagger-4">
+              <div className="kpi-value">{guests.filter(g => (localGifts[g.id] || 0) > 0).length}</div>
+              <div className="kpi-label">נתנו מתנה</div>
+            </div>
+            <div className="kpi-card gold animate-scale-in stagger-5">
+              <div className="kpi-value">
+                {guests.filter(g => (localGifts[g.id] || 0) > 0).length > 0
+                  ? `₪${Math.round(totalGifts / guests.filter(g => (localGifts[g.id]||0)>0).length).toLocaleString()}`
+                  : '—'}
+              </div>
+              <div className="kpi-label">ממוצע מתנה</div>
+            </div>
+          </div>
+
+          {/* Search + filter */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+            <input
+              className="input-field"
+              style={{ flex: 1, minWidth: 160, padding: '9px 14px' }}
+              placeholder="חיפוש אורח..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+            <select className="input-field" style={{ width: 150, padding: '9px 14px' }} value={filterGroup} onChange={e => setFilterGroup(e.target.value)}>
+              <option value="all">כל הקבוצות</option>
+              {groups.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+
+          {/* Guest list */}
+          {guests.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon"><Icon name="Users" size={36} /></div>
+              <div className="empty-state-title">אין אורחים</div>
+              <div className="empty-state-text">הוסיפו אורחים בעמוד המוזמנים</div>
+            </div>
+          ) : (
+            <div className="card animate-slide-up stagger-3">
+              <div className="card-title" style={{ marginBottom: 12 }}>מתנות לפי אורח ({filtered.length})</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {filtered.map(g => (
+                  <div key={g.id} className="gift-row">
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                      background: g.status === 'confirmed' ? 'rgba(16,185,129,0.1)' : 'rgba(59,130,246,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <Icon name={g.status === 'confirmed' ? 'CheckCircle2' : 'Clock'} size={16}
+                        style={{ color: g.status === 'confirmed' ? 'var(--emerald-500)' : 'var(--blue-500)' }} />
+                    </div>
+                    <div className="gift-row-info">
+                      <div className="gift-row-name">{g.name}</div>
+                      <div className="gift-row-group">{g.group_name || 'כללי'} · {g.confirmed_guests || 0} נפשות</div>
+                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      className="gift-amount-input"
+                      placeholder="₪0"
+                      value={localGifts[g.id] !== undefined ? localGifts[g.id] : (gifts.find(gi => gi.guest_id === g.id)?.amount || '')}
+                      onChange={e => setLocalGifts(prev => ({ ...prev, [g.id]: e.target.value }))}
+                      onBlur={e => saveGift(g, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       );
     }
 
@@ -9333,6 +10278,8 @@
             case '3': if (selectedEvent) setCurrentRoute(ROUTES.GUESTS); break;
             case '4': if (selectedEvent) setCurrentRoute(ROUTES.MESSAGES); break;
             case '5': if (selectedEvent) setCurrentRoute(ROUTES.SEATING); break;
+            case '6': if (selectedEvent) setCurrentRoute(ROUTES.EXPENSES); break;
+            case '7': if (selectedEvent) setCurrentRoute(ROUTES.GIFTS); break;
             case 's': case 'S':
               if (e.ctrlKey || e.metaKey) {
                 e.preventDefault();
@@ -9380,6 +10327,8 @@
         { id: ROUTES.GUESTS,    icon: 'Users',           label: 'מוזמנים' },
         { id: ROUTES.MESSAGES,  icon: 'Send',            label: 'הודעות' },
         { id: ROUTES.SEATING,   icon: 'Armchair',        label: 'הושבה' },
+        { id: ROUTES.EXPENSES,  icon: 'Receipt',         label: 'הוצאות' },
+        { id: ROUTES.GIFTS,     icon: 'Gift',            label: 'מתנות' },
         { id: ROUTES.SETTINGS,  icon: 'Settings',        label: 'הגדרות' },
       ];
 
@@ -9395,6 +10344,10 @@
             return <MessagesPage event={selectedEvent} />;
           case ROUTES.SEATING:
             return <SeatingPage event={selectedEvent} />;
+          case ROUTES.EXPENSES:
+            return <ExpensesPage event={selectedEvent} />;
+          case ROUTES.GIFTS:
+            return <GiftsPage event={selectedEvent} />;
           case ROUTES.SETTINGS:
             return <SettingsPage event={selectedEvent} onEventUpdate={handleEventUpdate} />;
           default:
