@@ -329,12 +329,15 @@
             return;
           }
 
-          // Query guest + joined event data
-          const { data: guest, error: guestError } = await sb
-            .from('guests')
-            .select('*, events(*)')
-            .eq('rsvp_token', token)
-            .maybeSingle();
+          // Call secure RPC function
+          const { data: rpcData, error: guestError } = await sb
+            .rpc('get_rsvp_by_token', { p_token: token });
+
+          let guest = null;
+          if (rpcData && rpcData.guest) {
+            guest = rpcData.guest;
+            guest.events = rpcData.event;
+          }
 
           if (guestError) {
             console.error('Supabase query error:', guestError);
@@ -360,7 +363,7 @@
           if (!guest) {
             setState('error');
             setErrorMsg('הקישור אינו תקין או שפג תוקפו.\nאנא פנו למארגן האירוע לקבלת קישור חדש.');
-            setDebugInfo('Token used: ' + token.substring(0, 8) + '...\nNo matching guest found in database.\n\nPossible causes:\n1. RLS blocking anon access - need policy for guests SELECT by rsvp_token\n2. Token does not exist in DB\n3. events table also needs anon SELECT policy for the join');
+            setDebugInfo('Token used: ' + token.substring(0, 8) + '...\nNo matching guest found via RPC.\n\nPossible causes:\n1. Token does not exist in DB\n2. RPC function `get_rsvp_by_token` is missing or has error');
             return;
           }
 
@@ -413,17 +416,15 @@
           const cleanDietary = sanitize(dietary);
           const safeCount = Math.max(0, Math.min(20, parseInt(count) || 0));
 
-          const { error } = await client
-            .from('guests')
-            .update({
-              status: status,
-              confirmed_guests: status === 'declined' ? 0 : safeCount,
-              dietary_notes: cleanDietary,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('rsvp_token', token);
+          const { data: success, error } = await client
+            .rpc('update_rsvp_by_token', {
+              p_token: token,
+              p_status: status,
+              p_confirmed_guests: status === 'declined' ? 0 : safeCount,
+              p_dietary_notes: cleanDietary
+            });
 
-          if (error) {
+          if (error || !success) {
             console.error('RSVP update error:', error);
             setSubmitting(false);
             alert(error.code === '42501' || (error.message && error.message.includes('permission'))
