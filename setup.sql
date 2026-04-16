@@ -287,7 +287,7 @@ CREATE POLICY "Service role manages rate limits"
 -- Go to Supabase Dashboard → Database → Replication
 -- and enable replication for the 'guests' table.
 -- Or run:
-ALTER PUBLICATION supabase_realtime ADD TABLE guests;
+-- ALTER PUBLICATION supabase_realtime ADD TABLE guests;
 
 -- =====================================================
 -- 7. SECURE RPC FUNCTIONS FOR PUBLIC RSVP
