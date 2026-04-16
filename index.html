@@ -8350,6 +8350,35 @@
       { category: 'wedding_planner',name: 'מנהל אירוע',       icon: 'ClipboardList',   color: '#14B8A6', bg: 'rgba(20,184,166,0.1)', is_per_person: false },
     ];
 
+    const EXPENSES_MIGRATION_SQL = `CREATE TABLE IF NOT EXISTS expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  category TEXT NOT NULL DEFAULT 'custom',
+  name TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  is_per_person BOOLEAN DEFAULT false,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_expenses_event ON expenses(event_id);
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage expenses of own events" ON expenses;
+CREATE POLICY "Users can manage expenses of own events"
+  ON expenses FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
+NOTIFY pgrst, 'reload schema';`;
+
+    const isMissingTableError = (err) => {
+      if (!err) return false;
+      if (err.code === 'PGRST205' || err.code === '42P01') return true;
+      const msg = (err.message || '').toLowerCase();
+      return msg.includes('schema cache') || msg.includes("could not find the table");
+    };
+
     function ExpensesPage({ event }) {
       const { client } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
@@ -8357,6 +8386,8 @@
       const [guests, setGuests] = useState([]);
       const [loading, setLoading] = useState(true);
       const [saving, setSaving] = useState(false);
+      const [tableMissing, setTableMissing] = useState(false);
+      const [sqlCopied, setSqlCopied] = useState(false);
       const [localAmounts, setLocalAmounts] = useState({});
       const [showAddCustom, setShowAddCustom] = useState(false);
       const [customName, setCustomName] = useState('');
@@ -8375,7 +8406,12 @@
           client.from('expenses').select('*').eq('event_id', event.id).order('created_at'),
           client.from('guests').select('id,confirmed_guests,status').eq('event_id', event.id),
         ]);
-        if (expError) addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
+        if (isMissingTableError(expError)) {
+          setTableMissing(true);
+        } else {
+          setTableMissing(false);
+          if (expError) addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
+        }
         if (gError) addToast('שגיאה בטעינת אורחים: ' + gError.message, 'error');
         setExpenses(exp || []);
         setGuests(g || []);
@@ -8385,42 +8421,64 @@
         setLoading(false);
       };
 
+      const copyMigrationSql = async () => {
+        try {
+          await navigator.clipboard.writeText(EXPENSES_MIGRATION_SQL);
+          setSqlCopied(true);
+          addToast('ה־SQL הועתק ✓', 'success');
+          setTimeout(() => setSqlCopied(false), 2000);
+        } catch {
+          addToast('לא ניתן להעתיק אוטומטית — סמנו והעתיקו ידנית', 'error');
+        }
+      };
+
       const totalGuests = useMemo(() =>
         guests.filter(g => g.status === 'confirmed').reduce((s, g) => s + (g.confirmed_guests || 0), 0),
       [guests]);
 
       const saveExpense = async (category, name, amount, isPerPerson) => {
-        if (!client || !event?.id) return;
+        if (!client || !event?.id) return false;
+        if (tableMissing) return false;
         setSaving(true);
         const existing = expenses.find(e => e.category === category);
         const val = parseFloat(amount) || 0;
+        let ok = false;
         if (existing) {
           const { error } = await client.from('expenses').update({ amount: val }).eq('id', existing.id);
           if (error) {
-            addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
+            if (isMissingTableError(error)) setTableMissing(true);
+            else addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
           } else {
             setExpenses(prev => prev.map(e => e.category === category ? { ...e, amount: val } : e));
+            ok = true;
           }
         } else if (val > 0) {
           const { data, error } = await client.from('expenses').insert({
             event_id: event.id, category, name, amount: val, is_per_person: isPerPerson
           }).select().single();
           if (error) {
-            addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
+            if (isMissingTableError(error)) setTableMissing(true);
+            else addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
           } else if (data) {
             setExpenses(prev => [...prev, data]);
+            ok = true;
           }
+        } else {
+          ok = true;
         }
         setSaving(false);
+        return ok;
       };
 
       const deleteExpense = async (category) => {
         if (!client || !event?.id) return;
+        if (tableMissing) return;
         const existing = expenses.find(e => e.category === category);
         if (!existing) return;
         const { error } = await client.from('expenses').delete().eq('id', existing.id);
         if (error) {
-          addToast('שגיאה במחיקת הוצאה: ' + error.message, 'error');
+          if (isMissingTableError(error)) setTableMissing(true);
+          else addToast('שגיאה במחיקת הוצאה: ' + error.message, 'error');
           return;
         }
         setExpenses(prev => prev.filter(e => e.category !== category));
@@ -8435,8 +8493,10 @@
 
       const addCustomExpense = async () => {
         if (!customName.trim()) { addToast('הזינו שם להוצאה', 'error'); return; }
+        if (tableMissing) return;
         const cat = 'custom_' + Date.now();
-        await saveExpense(cat, customName.trim(), customAmount || '0', customPerPerson);
+        const ok = await saveExpense(cat, customName.trim(), customAmount || '0', customPerPerson);
+        if (!ok) return;
         await fetchData();
         setCustomName(''); setCustomAmount(''); setCustomPerPerson(false); setShowAddCustom(false);
         addToast('הוצאה נוספה ✓', 'success');
@@ -8597,14 +8657,39 @@
               <div className="page-subtitle">הזינו את עלויות האירוע וקבלו חישוב מלא לנפש</div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesExcel}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesExcel} disabled={tableMissing}>
                 <Icon name="FileSpreadsheet" size={18} /><span className="hide-mobile">אקסל</span>
               </button>
-              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesPDF}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportExpensesPDF} disabled={tableMissing}>
                 <Icon name="FileText" size={18} /><span className="hide-mobile">PDF</span>
               </button>
             </div>
           </div>
+
+          {tableMissing && (
+            <div className="card animate-scale-in" style={{ marginBottom: 16, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Icon name="AlertTriangle" size={22} style={{ color: 'var(--red-500, #ef4444)' }} />
+                <div style={{ fontSize: 16, fontWeight: 800 }}>טבלת ההוצאות חסרה במסד הנתונים</div>
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 12 }}>
+                שמירת ההוצאות נכשלה כי הטבלה <code>public.expenses</code> עדיין לא נוצרה ב־Supabase.
+                כדי לתקן, העתיקו את קטע ה־SQL שלמטה והריצו אותו ב־<b>Supabase → SQL Editor</b>, ואז לחצו "נסה שוב".
+              </div>
+              <pre style={{
+                background: 'rgba(0,0,0,0.35)', color: '#e5e7eb', padding: 12, borderRadius: 8,
+                fontSize: 12, direction: 'ltr', textAlign: 'left', overflowX: 'auto', maxHeight: 220, margin: 0
+              }}>{EXPENSES_MIGRATION_SQL}</pre>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" style={{ padding: '8px 14px' }} onClick={copyMigrationSql}>
+                  <Icon name={sqlCopied ? 'Check' : 'Copy'} size={16} />{sqlCopied ? 'הועתק' : 'העתק SQL'}
+                </button>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px' }} onClick={fetchData}>
+                  <Icon name="RefreshCw" size={16} />נסה שוב
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Summary banner */}
           <div className="expense-summary-card animate-scale-in stagger-1">
