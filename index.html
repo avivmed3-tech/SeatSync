@@ -6337,6 +6337,12 @@
         const newScale = Math.max(0.5, Math.min(2.0, parseFloat((currentScale + delta).toFixed(2))));
         setTables(prev => prev.map(t => t.id === tableId ? { ...t, scale: newScale } : t));
         if (selectedFloorTable?.id === tableId) setSelectedFloorTable(prev => ({ ...prev, scale: newScale }));
+        try {
+          const scaleKey = 'seatsync_table_scales_' + event.id;
+          const stored = JSON.parse(localStorage.getItem(scaleKey) || '{}');
+          stored[tableId] = newScale;
+          localStorage.setItem(scaleKey, JSON.stringify(stored));
+        } catch {}
         await client.from('tables').update({ scale: newScale }).eq('id', tableId);
       };
 
@@ -6512,7 +6518,9 @@
           client.from('tables').select('*').eq('event_id', event.id).order('sort_order'),
           client.from('guests').select('id,name,group_name,status,confirmed_guests,table_id,seat_index').eq('event_id', event.id),
         ]);
-        setTables(t || []);
+        const scaleKey = 'seatsync_table_scales_' + event.id;
+        const storedScales = JSON.parse(localStorage.getItem(scaleKey) || '{}');
+        setTables((t || []).map(tbl => ({ ...tbl, scale: tbl.scale ?? storedScales[tbl.id] ?? 1 })));
         setGuests(g || []);
         setLoading(false);
       };
