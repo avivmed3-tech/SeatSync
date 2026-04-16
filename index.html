@@ -8371,10 +8371,12 @@
       const fetchData = async () => {
         if (!client || !event?.id) return;
         setLoading(true);
-        const [{ data: exp }, { data: g }] = await Promise.all([
+        const [{ data: exp, error: expError }, { data: g, error: gError }] = await Promise.all([
           client.from('expenses').select('*').eq('event_id', event.id).order('created_at'),
           client.from('guests').select('id,confirmed_guests,status').eq('event_id', event.id),
         ]);
+        if (expError) addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
+        if (gError) addToast('שגיאה בטעינת אורחים: ' + gError.message, 'error');
         setExpenses(exp || []);
         setGuests(g || []);
         const amounts = {};
@@ -8394,12 +8396,20 @@
         const val = parseFloat(amount) || 0;
         if (existing) {
           const { error } = await client.from('expenses').update({ amount: val }).eq('id', existing.id);
-          if (!error) setExpenses(prev => prev.map(e => e.category === category ? { ...e, amount: val } : e));
-        } else {
+          if (error) {
+            addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
+          } else {
+            setExpenses(prev => prev.map(e => e.category === category ? { ...e, amount: val } : e));
+          }
+        } else if (val > 0) {
           const { data, error } = await client.from('expenses').insert({
             event_id: event.id, category, name, amount: val, is_per_person: isPerPerson
           }).select().single();
-          if (!error && data) setExpenses(prev => [...prev, data]);
+          if (error) {
+            addToast('שגיאה בשמירת הוצאה: ' + error.message, 'error');
+          } else if (data) {
+            setExpenses(prev => [...prev, data]);
+          }
         }
         setSaving(false);
       };
@@ -8408,7 +8418,11 @@
         if (!client || !event?.id) return;
         const existing = expenses.find(e => e.category === category);
         if (!existing) return;
-        await client.from('expenses').delete().eq('id', existing.id);
+        const { error } = await client.from('expenses').delete().eq('id', existing.id);
+        if (error) {
+          addToast('שגיאה במחיקת הוצאה: ' + error.message, 'error');
+          return;
+        }
         setExpenses(prev => prev.filter(e => e.category !== category));
         setLocalAmounts(prev => { const n = { ...prev }; delete n[category]; return n; });
         addToast('ההוצאה נמחקה', 'success');
@@ -8752,11 +8766,14 @@
       const fetchData = async () => {
         if (!client || !event?.id) return;
         setLoading(true);
-        const [{ data: g }, { data: gi }, { data: exp }] = await Promise.all([
+        const [{ data: g, error: gError }, { data: gi, error: giError }, { data: exp, error: expError }] = await Promise.all([
           client.from('guests').select('*').eq('event_id', event.id).neq('status', 'declined').order('name'),
           client.from('gifts').select('*').eq('event_id', event.id),
           client.from('expenses').select('amount,is_per_person').eq('event_id', event.id),
         ]);
+        if (gError) addToast('שגיאה בטעינת אורחים: ' + gError.message, 'error');
+        if (giError) addToast('שגיאה בטעינת מתנות: ' + giError.message, 'error');
+        if (expError) addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
         setGuests(g || []);
         setGifts(gi || []);
         setExpenses(exp || []);
@@ -8785,12 +8802,20 @@
         const existing = gifts.find(gi => gi.guest_id === guest.id);
         if (existing) {
           const { error } = await client.from('gifts').update({ amount: val }).eq('id', existing.id);
-          if (!error) setGifts(prev => prev.map(gi => gi.guest_id === guest.id ? { ...gi, amount: val } : gi));
+          if (error) {
+            addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
+          } else {
+            setGifts(prev => prev.map(gi => gi.guest_id === guest.id ? { ...gi, amount: val } : gi));
+          }
         } else {
           const { data, error } = await client.from('gifts').insert({
             event_id: event.id, guest_id: guest.id, guest_name: guest.name, amount: val
           }).select().single();
-          if (!error && data) setGifts(prev => [...prev, data]);
+          if (error) {
+            addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
+          } else if (data) {
+            setGifts(prev => [...prev, data]);
+          }
         }
       };
 
