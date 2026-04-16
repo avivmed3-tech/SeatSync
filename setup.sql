@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS tables (
   position_x FLOAT DEFAULT 0,
   position_y FLOAT DEFAULT 0,
   rotation FLOAT DEFAULT 0,
+  scale FLOAT DEFAULT 1,
   group_label TEXT,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
@@ -364,6 +365,12 @@ CREATE POLICY "Users can manage gifts of own events"
   ON gifts FOR ALL USING (
     event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
   );
+
+-- =====================================================
+-- MIGRATIONS (run these if upgrading an existing database)
+-- =====================================================
+
+ALTER TABLE tables ADD COLUMN IF NOT EXISTS scale FLOAT DEFAULT 1;
 
 -- =====================================================
 -- DONE! Now create a user via the app's registration form.
