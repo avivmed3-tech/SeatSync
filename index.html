@@ -1,14 +1,21 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" style="background:#0d0d0d">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0A0E1A" />
+  <meta name="theme-color" content="#0d0d0d" />
   <meta name="description" content="SeatSync — ניהול אישורי הגעה וסידורי הושבה לאירועים" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="manifest" href="manifest.json" />
   <title>SeatSync — ניהול אירועים</title>
+
+  <!-- Inline critical splash styles so the branded loader paints immediately,
+       before external scripts/CSS finish downloading (prevents white flash). -->
+  <style>
+    html, body { background: radial-gradient(ellipse at 50% 40%,#1a1708 0%,#0d0d0d 50%,#000 100%); }
+    html:not(.app-ready) body { background: radial-gradient(ellipse at 50% 40%,#1a1708 0%,#0d0d0d 50%,#000 100%) !important; }
+  </style>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -6343,7 +6350,10 @@
           stored[tableId] = newScale;
           localStorage.setItem(scaleKey, JSON.stringify(stored));
         } catch {}
-        await client.from('tables').update({ scale: newScale }).eq('id', tableId);
+        const { error } = await client.from('tables').update({ scale: newScale }).eq('id', tableId);
+        if (error) {
+          console.warn('Failed to persist table scale to DB, relying on localStorage:', error.message);
+        }
       };
 
       // Floor plan sketch opacity & visibility — persist to localStorage
@@ -6519,8 +6529,17 @@
           client.from('guests').select('id,name,group_name,status,confirmed_guests,table_id,seat_index').eq('event_id', event.id),
         ]);
         const scaleKey = 'seatsync_table_scales_' + event.id;
-        const storedScales = JSON.parse(localStorage.getItem(scaleKey) || '{}');
-        setTables((t || []).map(tbl => ({ ...tbl, scale: tbl.scale ?? storedScales[tbl.id] ?? 1 })));
+        let storedScales = {};
+        try { storedScales = JSON.parse(localStorage.getItem(scaleKey) || '{}'); } catch {}
+        setTables((t || []).map(tbl => {
+          // Prefer localStorage scale when present — covers DB update failures and offline edits.
+          const local = storedScales[tbl.id];
+          const dbScale = tbl.scale;
+          const scale = (typeof local === 'number' && local > 0) ? local
+                      : (typeof dbScale === 'number' && dbScale > 0) ? dbScale
+                      : 1;
+          return { ...tbl, scale };
+        }));
         setGuests(g || []);
         setLoading(false);
       };
@@ -10404,6 +10423,7 @@
 
     // Hide static splash screen
     window.__dismissSplash = function() {
+      document.documentElement.classList.add('app-ready');
       var el = document.getElementById('static-splash');
       if (el) {
         el.style.transition = 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease-out';
