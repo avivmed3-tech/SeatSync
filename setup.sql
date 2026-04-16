@@ -231,15 +231,8 @@ DROP POLICY IF EXISTS "Users can delete own events" ON events;
 CREATE POLICY "Users can delete own events"
   ON events FOR DELETE USING (user_id = auth.uid());
 
--- RSVP: public can read event info if they have a guest with a valid rsvp_token
-DROP POLICY IF EXISTS "Public can read events via RSVP" ON events;
-CREATE POLICY "Public can read events via RSVP"
-  ON events FOR SELECT
-  USING (
-    id IN (
-      SELECT event_id FROM guests WHERE rsvp_token IS NOT NULL
-    )
-  );
+-- RSVP ACCESS HAS BEEN SECURED
+-- Policies have been removed to prevent data leaks. Use RPC functions instead.
 
 -- ── Guests ──
 DROP POLICY IF EXISTS "Users can manage guests of own events" ON guests;
@@ -248,17 +241,8 @@ CREATE POLICY "Users can manage guests of own events"
     event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
   );
 
--- RSVP: public can read their own guest record by rsvp_token
-DROP POLICY IF EXISTS "Public can read own guest via RSVP token" ON guests;
-CREATE POLICY "Public can read own guest via RSVP token"
-  ON guests FOR SELECT
-  USING (rsvp_token IS NOT NULL);
-
--- RSVP: public can update their own guest record by rsvp_token
-DROP POLICY IF EXISTS "Public can update own guest via RSVP token" ON guests;
-CREATE POLICY "Public can update own guest via RSVP token"
-  ON guests FOR UPDATE
-  USING (rsvp_token IS NOT NULL);
+-- GUEST RSVP POLICIES MOVED TO SECURE RPC
+-- Unauthenticated users should access and update their RSVP via RPC functions only.
 
 -- ── Tables ──
 DROP POLICY IF EXISTS "Users can manage tables of own events" ON tables;
@@ -304,6 +288,65 @@ CREATE POLICY "Service role manages rate limits"
 -- and enable replication for the 'guests' table.
 -- Or run:
 ALTER PUBLICATION supabase_realtime ADD TABLE guests;
+
+-- =====================================================
+-- 7. SECURE RPC FUNCTIONS FOR PUBLIC RSVP
+-- =====================================================
+
+-- Securely get a specific guest and event by token
+CREATE OR REPLACE FUNCTION get_rsvp_by_token(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_guest record;
+  v_event record;
+BEGIN
+  SELECT * INTO v_guest FROM guests WHERE rsvp_token = p_token;
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT * INTO v_event FROM events WHERE id = v_guest.event_id;
+
+  RETURN jsonb_build_object(
+    'guest', row_to_json(v_guest),
+    'event', row_to_json(v_event)
+  );
+END;
+$$;
+
+-- Securely update a specific guest by token
+CREATE OR REPLACE FUNCTION update_rsvp_by_token(
+  p_token text,
+  p_status text,
+  p_confirmed_guests int,
+  p_dietary_notes text
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_guest record;
+BEGIN
+  SELECT * INTO v_guest FROM guests WHERE rsvp_token = p_token;
+  IF NOT FOUND THEN
+    RETURN false;
+  END IF;
+
+  UPDATE guests 
+  SET 
+    status = p_status,
+    confirmed_guests = p_confirmed_guests,
+    dietary_notes = p_dietary_notes,
+    updated_at = now()
+  WHERE rsvp_token = p_token;
+
+  RETURN true;
+END;
+$$;
 
 -- =====================================================
 -- DONE! Now create a user via the app's registration form.
