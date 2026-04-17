@@ -8372,6 +8372,28 @@ CREATE POLICY "Users can manage expenses of own events"
   );
 NOTIFY pgrst, 'reload schema';`;
 
+    const GIFTS_MIGRATION_SQL = `CREATE TABLE IF NOT EXISTS gifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  guest_id UUID REFERENCES guests(id) ON DELETE SET NULL,
+  guest_name TEXT NOT NULL DEFAULT '',
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_gifts_event ON gifts(event_id);
+CREATE INDEX IF NOT EXISTS idx_gifts_guest ON gifts(guest_id);
+ALTER TABLE gifts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can manage gifts of own events" ON gifts;
+CREATE POLICY "Users can manage gifts of own events"
+  ON gifts FOR ALL USING (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  ) WITH CHECK (
+    event_id IN (SELECT id FROM events WHERE user_id = auth.uid())
+  );
+NOTIFY pgrst, 'reload schema';`;
+
     const isMissingTableError = (err) => {
       if (!err) return false;
       if (err.code === 'PGRST205' || err.code === '42P01') return true;
@@ -8839,6 +8861,8 @@ NOTIFY pgrst, 'reload schema';`;
       const [gifts, setGifts] = useState([]);
       const [expenses, setExpenses] = useState([]);
       const [loading, setLoading] = useState(true);
+      const [tableMissing, setTableMissing] = useState(false);
+      const [sqlCopied, setSqlCopied] = useState(false);
       const [localGifts, setLocalGifts] = useState({});
       const [search, setSearch] = useState('');
       const [filterGroup, setFilterGroup] = useState('all');
@@ -8857,8 +8881,15 @@ NOTIFY pgrst, 'reload schema';`;
           client.from('expenses').select('amount,is_per_person').eq('event_id', event.id),
         ]);
         if (gError) addToast('שגיאה בטעינת אורחים: ' + gError.message, 'error');
-        if (giError) addToast('שגיאה בטעינת מתנות: ' + giError.message, 'error');
-        if (expError) addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
+        if (isMissingTableError(giError)) {
+          setTableMissing(true);
+        } else {
+          setTableMissing(false);
+          if (giError) addToast('שגיאה בטעינת מתנות: ' + giError.message, 'error');
+        }
+        if (expError && !isMissingTableError(expError)) {
+          addToast('שגיאה בטעינת הוצאות: ' + expError.message, 'error');
+        }
         setGuests(g || []);
         setGifts(gi || []);
         setExpenses(exp || []);
@@ -8866,6 +8897,17 @@ NOTIFY pgrst, 'reload schema';`;
         (gi || []).forEach(gift => { if (gift.guest_id) amounts[gift.guest_id] = gift.amount; });
         setLocalGifts(amounts);
         setLoading(false);
+      };
+
+      const copyMigrationSql = async () => {
+        try {
+          await navigator.clipboard.writeText(GIFTS_MIGRATION_SQL);
+          setSqlCopied(true);
+          addToast('ה־SQL הועתק ✓', 'success');
+          setTimeout(() => setSqlCopied(false), 2000);
+        } catch {
+          addToast('לא ניתן להעתיק אוטומטית — סמנו והעתיקו ידנית', 'error');
+        }
       };
 
       const totalGuests = useMemo(() =>
@@ -8883,12 +8925,14 @@ NOTIFY pgrst, 'reload schema';`;
 
       const saveGift = async (guest, amount) => {
         if (!client || !event?.id) return;
+        if (tableMissing) return;
         const val = parseFloat(amount) || 0;
         const existing = gifts.find(gi => gi.guest_id === guest.id);
         if (existing) {
           const { error } = await client.from('gifts').update({ amount: val }).eq('id', existing.id);
           if (error) {
-            addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
+            if (isMissingTableError(error)) setTableMissing(true);
+            else addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
           } else {
             setGifts(prev => prev.map(gi => gi.guest_id === guest.id ? { ...gi, amount: val } : gi));
           }
@@ -8897,7 +8941,8 @@ NOTIFY pgrst, 'reload schema';`;
             event_id: event.id, guest_id: guest.id, guest_name: guest.name, amount: val
           }).select().single();
           if (error) {
-            addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
+            if (isMissingTableError(error)) setTableMissing(true);
+            else addToast('שגיאה בשמירת מתנה: ' + error.message, 'error');
           } else if (data) {
             setGifts(prev => [...prev, data]);
           }
@@ -9057,14 +9102,39 @@ NOTIFY pgrst, 'reload schema';`;
               <div className="page-subtitle">הזינו כמה כל אורח נתן ובדקו אם האירוע היה רווחי</div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsExcel}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsExcel} disabled={tableMissing}>
                 <Icon name="FileSpreadsheet" size={18} /><span className="hide-mobile">אקסל</span>
               </button>
-              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsPDF}>
+              <button className="btn btn-secondary" style={{ padding: '10px 14px' }} onClick={exportGiftsPDF} disabled={tableMissing}>
                 <Icon name="FileText" size={18} /><span className="hide-mobile">PDF</span>
               </button>
             </div>
           </div>
+
+          {tableMissing && (
+            <div className="card animate-scale-in" style={{ marginBottom: 16, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Icon name="AlertTriangle" size={22} style={{ color: 'var(--red-500, #ef4444)' }} />
+                <div style={{ fontSize: 16, fontWeight: 800 }}>טבלת המתנות חסרה במסד הנתונים</div>
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 12 }}>
+                שמירת המתנות נכשלה כי הטבלה <code>public.gifts</code> עדיין לא נוצרה ב־Supabase.
+                כדי לתקן, העתיקו את קטע ה־SQL שלמטה והריצו אותו ב־<b>Supabase → SQL Editor</b>, ואז לחצו "נסה שוב".
+              </div>
+              <pre style={{
+                background: 'rgba(0,0,0,0.35)', color: '#e5e7eb', padding: 12, borderRadius: 8,
+                fontSize: 12, direction: 'ltr', textAlign: 'left', overflowX: 'auto', maxHeight: 220, margin: 0
+              }}>{GIFTS_MIGRATION_SQL}</pre>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                <button className="btn btn-primary" style={{ padding: '8px 14px' }} onClick={copyMigrationSql}>
+                  <Icon name={sqlCopied ? 'Check' : 'Copy'} size={16} />{sqlCopied ? 'הועתק' : 'העתק SQL'}
+                </button>
+                <button className="btn btn-secondary" style={{ padding: '8px 14px' }} onClick={fetchData}>
+                  <Icon name="RefreshCw" size={16} />נסה שוב
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Profit/Loss banner */}
           <div className={`profit-banner ${totalGifts === 0 && totalExpenses === 0 ? 'neutral' : isProfitable ? 'positive' : 'negative'} animate-scale-in stagger-1`}>
