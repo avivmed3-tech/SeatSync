@@ -1132,6 +1132,21 @@
       .hero { padding: 80px 16px 40px; }
     }
 
+    @media (max-width: 768px) {
+      /* Hide heavy elements that cause flickering on mobile */
+      .bg-orb, .aurora, .noise-overlay, .sparkle {
+        display: none !important;
+      }
+      /* Disable heavy CSS animations on mobile */
+      .hero-image-wrapper {
+        animation: none !important;
+        transform: none !important;
+      }
+      .feature-split-image {
+        transform: none !important;
+      }
+    }
+
     /* ── HERO IMAGE CAPTION ── */
     .hero-img-caption {
       max-width: 1000px;
@@ -1290,7 +1305,8 @@
     .lightbox-close {
       position: absolute;
       top: -14px;
-      left: -14px;
+      right: -14px;
+      left: auto;
       width: 40px;
       height: 40px;
       border-radius: 50%;
@@ -1304,12 +1320,30 @@
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s;
+      z-index: 2;
     }
 
     .lightbox-close:hover {
       background: rgba(212,168,8,0.15);
       border-color: var(--gold);
       transform: scale(1.1) rotate(90deg);
+    }
+
+    @media (max-width: 768px) {
+      .lightbox-container {
+        width: 100%;
+        max-height: 100vh;
+        transform: scale(0.95);
+      }
+      .lightbox-container img {
+        max-height: 75vh;
+        width: 100%;
+        border-radius: 8px;
+      }
+      .lightbox-close {
+        top: -45px;
+        right: 0;
+      }
     }
 
     /* ── FEATURE BULLETS ── */
@@ -1942,9 +1976,11 @@
     ══════════════════════════════════════════ */
     document.querySelectorAll('.step-card, .price-card').forEach(card => {
       card.addEventListener('mouseenter', () => {
+        if (window.innerWidth <= 768) return;
         card.style.transition = 'box-shadow 0.3s ease';
       });
       card.addEventListener('mousemove', e => {
+        if (window.innerWidth <= 768) return;
         const r = card.getBoundingClientRect();
         const x = (e.clientX - r.left) / r.width  - 0.5;
         const y = (e.clientY - r.top)  / r.height - 0.5;
@@ -1952,6 +1988,7 @@
         card.style.boxShadow = `${-x * 20}px ${-y * 20}px 40px rgba(0,0,0,0.35), 0 0 35px rgba(212,168,8,0.10)`;
       });
       card.addEventListener('mouseleave', () => {
+        if (window.innerWidth <= 768) return;
         card.style.transition = 'transform 0.55s cubic-bezier(0.25,1,0.5,1), box-shadow 0.55s ease';
         card.style.transform  = '';
         card.style.boxShadow  = '';
@@ -2037,6 +2074,7 @@
     const orb4 = document.querySelector('.bg-orb-4');
 
     window.addEventListener('scroll', () => {
+      if (window.innerWidth <= 768) return;
       const s = window.scrollY;
       if (orb1) orb1.style.transform = `translate(${s * 0.05}px, ${s * 0.12}px) scale(1)`;
       if (orb2) orb2.style.transform = `translate(${-s * 0.04}px, ${-s * 0.08}px) scale(1)`;
@@ -2050,6 +2088,7 @@
     const aurora = document.querySelector('.aurora');
     let aurMouseX = 50, aurMouseY = 30;
     document.addEventListener('mousemove', e => {
+      if (window.innerWidth <= 768) return;
       aurMouseX += ((e.clientX / window.innerWidth)  * 100 - aurMouseX) * 0.03;
       aurMouseY += ((e.clientY / window.innerHeight) * 100 - aurMouseY) * 0.03;
       if (aurora) {
