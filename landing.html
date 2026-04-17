@@ -1,37 +1,53 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="SeatSync — ניהול אישורי הגעה וסידורי הושבה חכם לאירועים. חתונות, בר מצוות, אירועים עסקיים." />
-  <meta property="og:title" content="SeatSync — ניהול אירועים חכם" />
-  <meta property="og:description" content="שלחו הזמנות, עקבו אחרי אישורים בזמן אמת, וסדרו הושבה בגרירה. הכל במקום אחד." />
-  <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#D4A808" />
+  <meta name="description"
+    content="SeatSync — ניהול אישורי הגעה וסידורי הושבה חכם לאירועים. חתונות, בר מצוות, אירועים עסקיים." />
   <title>SeatSync — ניהול אירועים חכם</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap"
+    rel="stylesheet" />
 
   <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
     :root {
       --gold: #D4A808;
-      --gold-dark: #B38D06;
-      --gold-light: #FFF9E6;
-      --bg: #FAFAF8;
-      --card: #FFFFFF;
-      --text: #1A1A1A;
-      --text2: #5C5C5C;
-      --text3: #8C8C8C;
-      --border: #E5E2DC;
+      --gold-dark: #C9A006;
+      --gold-vivid: #F5C518;
+      --gold-light: rgba(212, 168, 8, 0.12);
+      --bg: #080808;
+      --card: #101010;
+      --card-raised: #181818;
+      --text: #EDE8D8;
+      --text2: #8A7A60;
+      --text3: #504840;
+      --border: rgba(212, 168, 8, 0.22);
+      --border-subtle: rgba(255, 255, 255, 0.06);
       --emerald: #10B981;
       --radius: 16px;
+      --shadow-lg: 0 10px 40px -10px rgba(0, 0, 0, 0.8);
+      --shadow-gold: 0 0 40px rgba(212, 168, 8, 0.12);
+      --gradient-dark: linear-gradient(135deg, #080808 0%, #141414 100%);
+      --gradient-gold: linear-gradient(135deg, #F5C518 0%, #B38D06 100%);
     }
 
-    html { scroll-behavior: smooth; }
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
 
     body {
       font-family: 'Heebo', sans-serif;
@@ -39,527 +55,2013 @@
       color: var(--text);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    a { color: inherit; text-decoration: none; }
-    button { cursor: pointer; border: none; font-family: inherit; }
+    /* ── CANVAS PARTICLE LAYER ── */
+    #particleCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ── NOISE OVERLAY (grain texture) ── */
+    .noise-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      background-size: 200px 200px;
+    }
+
+    /* ── VIGNETTE (edge darkening) ── */
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: radial-gradient(ellipse at center, transparent 38%, rgba(0, 0, 0, 0.55) 100%);
+    }
+
+    /* ── AURORA GLOW ── */
+    .aurora {
+      position: fixed;
+      top: -30%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 140%;
+      height: 70%;
+      background:
+        radial-gradient(ellipse at 25% 50%, rgba(212, 168, 8, 0.09) 0%, transparent 55%),
+        radial-gradient(ellipse at 75% 50%, rgba(180, 130, 0, 0.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 50% 90%, rgba(245, 197, 24, 0.05) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(50px);
+      animation: auroraShift 18s ease-in-out infinite alternate;
+    }
+
+    @keyframes auroraShift {
+      0%   { opacity: 0.5; transform: translateX(-50%) scaleX(1.0) scaleY(1.0); }
+      33%  { opacity: 0.9; transform: translateX(-47%) scaleX(1.15) scaleY(0.88); }
+      66%  { opacity: 0.6; transform: translateX(-53%) scaleX(0.9) scaleY(1.12); }
+      100% { opacity: 0.8; transform: translateX(-50%) scaleX(1.08) scaleY(1.04); }
+    }
+
+    /* ── ANIMATED BACKGROUND ── */
+    .bg-canvas {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: -1;
+      pointer-events: none;
+      overflow: hidden;
+      background: #080808;
+    }
+
+    .bg-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(130px);
+      will-change: transform;
+    }
+
+    .bg-orb-1 {
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(212, 168, 8, 0.6) 0%, transparent 70%);
+      top: -280px; left: -180px;
+      opacity: 0.18;
+      animation: orbDrift1 28s ease-in-out infinite alternate;
+    }
+
+    .bg-orb-2 {
+      width: 580px; height: 580px;
+      background: radial-gradient(circle, rgba(245, 197, 24, 0.65) 0%, transparent 70%);
+      bottom: -160px; right: -120px;
+      opacity: 0.15;
+      animation: orbDrift2 34s ease-in-out infinite alternate;
+    }
+
+    .bg-orb-3 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(201, 160, 6, 0.55) 0%, transparent 70%);
+      top: 40%; left: 45%;
+      transform: translate(-50%, -50%);
+      opacity: 0.09;
+      animation: orbDrift3 22s ease-in-out infinite alternate;
+    }
+
+    .bg-orb-4 {
+      width: 340px; height: 340px;
+      background: radial-gradient(circle, rgba(245, 197, 24, 0.55) 0%, transparent 70%);
+      top: 25%; right: 8%;
+      opacity: 0.11;
+      animation: orbDrift4 38s ease-in-out infinite alternate;
+    }
+
+    .bg-grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image:
+        linear-gradient(rgba(212, 168, 8, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(212, 168, 8, 0.04) 1px, transparent 1px);
+      background-size: 65px 65px;
+      animation: gridShift 80s linear infinite;
+    }
+
+    @keyframes orbDrift1 {
+      0%   { transform: translate(0, 0) scale(1); }
+      33%  { transform: translate(90px, 70px) scale(1.12); }
+      66%  { transform: translate(-50px, 110px) scale(0.94); }
+      100% { transform: translate(70px, -40px) scale(1.06); }
+    }
+
+    @keyframes orbDrift2 {
+      0%   { transform: translate(0, 0) scale(1); }
+      40%  { transform: translate(-110px, -90px) scale(1.18); }
+      80%  { transform: translate(60px, -130px) scale(0.88); }
+      100% { transform: translate(-70px, 50px) scale(1.08); }
+    }
+
+    @keyframes orbDrift3 {
+      0%   { opacity: 0.09; transform: translate(-50%, -50%) scale(1); }
+      50%  { opacity: 0.14; transform: translate(-50%, -50%) scale(1.35); }
+      100% { opacity: 0.07; transform: translate(-50%, -50%) scale(0.75); }
+    }
+
+    @keyframes orbDrift4 {
+      0%   { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(-90px, 90px) scale(1.2); }
+    }
+
+    @keyframes gridShift {
+      0%   { transform: translate(0, 0); }
+      100% { transform: translate(65px, 65px); }
+    }
+
+    /* ── FLOATING SPARKLES ── */
+    .sparkle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .sparkle::before {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: var(--gold-vivid);
+      animation: sparklePulse 2.5s ease-in-out infinite alternate;
+    }
+
+    .s1  { width: 5px; height: 5px; top: 18%; left: 7%;   animation: sparkleFloat1 9s  ease-in-out infinite; }
+    .s2  { width: 3px; height: 3px; top: 32%; right: 11%; animation: sparkleFloat2 12s ease-in-out infinite; animation-delay: 1.5s; }
+    .s3  { width: 6px; height: 6px; top: 62%; left: 4%;   animation: sparkleFloat3 10s ease-in-out infinite; animation-delay: 3s; }
+    .s4  { width: 4px; height: 4px; top: 22%; right: 24%; animation: sparkleFloat1 14s ease-in-out infinite reverse; animation-delay: 0.8s; }
+    .s5  { width: 3px; height: 3px; top: 78%; right: 7%;  animation: sparkleFloat2 11s ease-in-out infinite; animation-delay: 2.2s; }
+    .s6  { width: 5px; height: 5px; top: 48%; left: 14%;  animation: sparkleFloat3 8s  ease-in-out infinite reverse; animation-delay: 4s; }
+    .s7  { width: 2px; height: 2px; top: 10%; right: 35%; animation: sparkleFloat1 16s ease-in-out infinite; animation-delay: 5s; }
+    .s8  { width: 4px; height: 4px; top: 55%; right: 20%; animation: sparkleFloat2 13s ease-in-out infinite; animation-delay: 1s; }
+
+    @keyframes sparkleFloat1 {
+      0%   { transform: translate(0, 0) scale(1);    opacity: 0; }
+      15%  { opacity: 0.85; }
+      50%  { transform: translate(15px, -45px) scale(1.4); opacity: 0.6; }
+      85%  { opacity: 0.85; }
+      100% { transform: translate(0, 0) scale(1);    opacity: 0; }
+    }
+
+    @keyframes sparkleFloat2 {
+      0%   { transform: translate(0, 0) scale(1);      opacity: 0; }
+      20%  { opacity: 1; }
+      50%  { transform: translate(-20px, -35px) scale(0.8); opacity: 0.45; }
+      80%  { opacity: 0.9; }
+      100% { transform: translate(0, 0) scale(1);      opacity: 0; }
+    }
+
+    @keyframes sparkleFloat3 {
+      0%   { transform: translate(0, 0) rotate(0deg);       opacity: 0; }
+      25%  { opacity: 0.75; }
+      50%  { transform: translate(25px, -55px) rotate(180deg); opacity: 0.5; }
+      75%  { opacity: 0.8; }
+      100% { transform: translate(0, 0) rotate(360deg);      opacity: 0; }
+    }
+
+    @keyframes sparklePulse {
+      0%   { box-shadow: 0 0 4px 1px rgba(212, 168, 8, 0.6); transform: scale(1); }
+      100% { box-shadow: 0 0 12px 4px rgba(245, 197, 24, 0.95); transform: scale(1.5); }
+    }
+
+    /* ── SCROLL INDICATOR ── */
+    .scroll-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 36px;
+      color: var(--text3);
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 44px;
+      background: linear-gradient(to bottom, var(--gold), transparent);
+      animation: scrollLineDrop 2.2s ease-in-out infinite;
+      transform-origin: top;
+    }
+
+    @keyframes scrollLineDrop {
+      0%        { transform: scaleY(0); transform-origin: top; opacity: 1; }
+      50%       { transform: scaleY(1); transform-origin: top; opacity: 1; }
+      50.001%   { transform-origin: bottom; }
+      100%      { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+    }
+
+    /* ── SECTION DIVIDER ── */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(212, 168, 8, 0.1) 10%,
+        var(--gold-vivid) 50%,
+        rgba(212, 168, 8, 0.1) 90%,
+        transparent 100%);
+      background-size: 200% 100%;
+      animation: dividerFlow 5s linear infinite;
+      opacity: 0.35;
+      margin: 0;
+    }
+
+    @keyframes dividerFlow {
+      0%   { background-position: 200% 0%; }
+      100% { background-position: -200% 0%; }
+    }
+
+    /* Block scroll before accept */
+    body.no-scroll {
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+
+    /* ── SCROLL ANIMATIONS ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(50px) scale(0.97);
+      transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .reveal.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .delay-100 { transition-delay: 100ms; }
+    .delay-200 { transition-delay: 200ms; }
+    .delay-300 { transition-delay: 300ms; }
+    .delay-400 { transition-delay: 400ms; }
+
+    /* ── LOGO ── */
+    @keyframes logoPulse {
+      0%   { transform: scale(1);    filter: drop-shadow(0 0 5px rgba(212, 168, 8, 0.2)); }
+      50%  { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(212, 168, 8, 0.6)); }
+      100% { transform: scale(1);    filter: drop-shadow(0 0 5px rgba(212, 168, 8, 0.2)); }
+    }
 
     /* ── NAV ── */
     nav {
-      position: sticky; top: 0; z-index: 100;
-      background: rgba(250,250,248,0.92);
-      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(8, 8, 8, 0.82);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       border-bottom: 1px solid var(--border);
-      padding: 0 24px; height: 64px;
-      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.3s ease;
     }
 
-    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    nav.scrolled {
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.6), 0 1px 0 var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-logo img {
+      animation: logoPulse 4s infinite ease-in-out;
+      transition: transform 0.3s;
+    }
+
+    .nav-logo:hover img {
+      animation: none;
+      transform: rotate(15deg) scale(1.1);
+    }
+
     .nav-logo-text {
       font-family: 'Playfair Display', serif;
-      font-size: 20px; font-weight: 700;
-    }
-    .nav-actions { display: flex; align-items: center; gap: 10px; }
-
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 10px 22px; border-radius: 10px;
-      font-size: 14px; font-weight: 600; transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .btn:active { transform: scale(0.97); }
-    .btn-primary {
-      background: linear-gradient(135deg, #F5C518, #B38D06);
-      color: #1A1A1A;
-      box-shadow: 0 2px 10px rgba(212,168,8,0.3);
-    }
-    .btn-primary:hover { box-shadow: 0 4px 20px rgba(212,168,8,0.4); transform: translateY(-1px); }
-    .btn-ghost { color: var(--text2); background: transparent; }
-    .btn-ghost:hover { background: rgba(0,0,0,0.05); color: var(--text); }
-    .btn-lg { padding: 14px 32px; font-size: 16px; border-radius: 12px; }
-    .btn-outline {
-      background: transparent; color: var(--text);
-      border: 1.5px solid var(--border);
-    }
-    .btn-outline:hover { border-color: var(--gold); background: var(--gold-light); }
-
-    /* ── HERO ── */
-    .hero {
-      text-align: center;
-      padding: 80px 24px 60px;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: var(--gold-light); border: 1px solid rgba(212,168,8,0.3);
-      border-radius: 100px; padding: 5px 14px;
-      font-size: 13px; font-weight: 600; color: var(--gold-dark);
-      margin-bottom: 28px;
-    }
-
-    .hero h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(36px, 6vw, 64px);
-      font-weight: 800; line-height: 1.15;
-      letter-spacing: -1.5px;
-      margin-bottom: 20px;
-    }
-
-    .hero h1 span {
-      background: linear-gradient(135deg, #D4A808, #8A6D05);
+      font-size: 22px;
+      font-weight: 800;
+      background: var(--gradient-gold);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
 
-    .hero p {
-      font-size: clamp(16px, 2.5vw, 20px);
-      color: var(--text2); max-width: 560px;
-      margin: 0 auto 36px; line-height: 1.7;
-    }
-
-    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-
-    .hero-social-proof {
-      margin-top: 40px;
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-      font-size: 13px; color: var(--text3);
-    }
-
-    .avatar-stack {
+    .nav-actions {
       display: flex;
-    }
-    .avatar-stack span {
-      width: 30px; height: 30px; border-radius: 50%;
-      border: 2px solid white; margin-left: -8px;
-      font-size: 14px; display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+      align-items: center;
+      gap: 12px;
     }
 
-    /* ── FEATURES ── */
-    section { padding: 80px 24px; }
-    .section-label {
-      text-align: center; margin-bottom: 12px;
-      font-size: 13px; font-weight: 700; letter-spacing: 1px;
-      text-transform: uppercase; color: var(--gold-dark);
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.25s;
+      white-space: nowrap;
+      position: relative;
+      overflow: hidden;
     }
+
+    .btn:active { transform: scale(0.97); }
+
+    /* Shimmer sweep effect */
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 60%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+      transform: skewX(-20deg);
+    }
+
+    .btn-primary:hover::before {
+      animation: btnShimmer 0.7s ease forwards;
+    }
+
+    @keyframes btnShimmer {
+      to { left: 160%; }
+    }
+
+    .btn-primary {
+      background: var(--gradient-gold);
+      color: #060606;
+      box-shadow: 0 4px 20px rgba(212, 168, 8, 0.4);
+      font-weight: 700;
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 30px rgba(212, 168, 8, 0.6), 0 0 70px rgba(212, 168, 8, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      color: var(--text2);
+      background: transparent;
+      padding: 12px 16px;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(212, 168, 8, 0.08);
+      color: var(--text);
+    }
+
+    .btn-lg {
+      padding: 16px 40px;
+      font-size: 17px;
+      border-radius: 14px;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--gold);
+      background: var(--gold-light);
+      box-shadow: 0 0 20px rgba(212, 168, 8, 0.1);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      padding: 110px 24px 70px;
+      text-align: center;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      z-index: 2;
+    }
+
+    .hero-bg {
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 50% 50%, rgba(212, 168, 8, 0.05) 0%, transparent 60%);
+      z-index: -1;
+      animation: rotateBg 40s linear infinite;
+    }
+
+    @keyframes rotateBg {
+      100% { transform: rotate(360deg); }
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(212, 168, 8, 0.1);
+      border: 1px solid rgba(212, 168, 8, 0.38);
+      border-radius: 100px;
+      padding: 6px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold-vivid);
+      margin-bottom: 32px;
+      box-shadow: 0 0 24px rgba(212, 168, 8, 0.18), inset 0 1px 0 rgba(212, 168, 8, 0.2);
+      animation: logoPulse 3s infinite ease-in-out;
+      overflow: hidden;
+    }
+
+    /* Badge shimmer */
+    .hero-badge::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 50%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: badgeShimmer 3.5s ease infinite;
+    }
+
+    @keyframes badgeShimmer {
+      0%   { left: -100%; }
+      40%  { left: 150%; }
+      100% { left: 150%; }
+    }
+
+    .hero h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(42px, 7vw, 76px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 24px;
+      max-width: 900px;
+    }
+
+    .hero h1 span {
+      background: var(--gradient-gold);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+      animation: textGlow 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes textGlow {
+      0%   { filter: drop-shadow(0 0 0px transparent); }
+      60%  { filter: drop-shadow(0 0 20px rgba(212, 168, 8, 0.5)); }
+      100% { filter: drop-shadow(0 0 10px rgba(212, 168, 8, 0.3)); }
+    }
+
+    .hero p {
+      font-size: clamp(18px, 2.5vw, 22px);
+      color: var(--text2);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+
+    /* Hero image float animation */
+    .hero-image-wrapper {
+      position: relative;
+      max-width: 1000px;
+      margin: 0 auto;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--border), 0 0 80px rgba(212, 168, 8, 0.07);
+      border: 1px solid var(--border);
+      background: var(--card);
+      transform: perspective(1000px) rotateX(4deg) translateY(0px);
+      transition: all 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+      animation: heroFloat 6s ease-in-out infinite;
+    }
+
+    @keyframes heroFloat {
+      0%, 100% { transform: perspective(1000px) rotateX(4deg) translateY(0px); }
+      50%       { transform: perspective(1000px) rotateX(4deg) translateY(-10px); }
+    }
+
+    .hero-image-wrapper:hover {
+      animation: none;
+      transform: perspective(1000px) rotateX(0deg) translateY(-4px);
+      box-shadow: 0 40px 110px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(212, 168, 8, 0.4), 0 0 100px rgba(212, 168, 8, 0.12);
+    }
+
+    /* Magic crop trick to hide Windows taskbar and Browser tabs */
+    .hero-image-wrapper img, .feature-split-image img {
+      width: 100%;
+      height: auto;
+      display: block;
+      transform: scale(1.12) translateY(2%);
+      border-radius: 4px;
+    }
+
+    /* ── STORY/FEATURES ── */
+    section {
+      padding: 100px 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .section-label {
+      text-align: center;
+      margin-bottom: 16px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold-dark);
+    }
+
     .section-title {
       text-align: center;
       font-family: 'Playfair Display', serif;
-      font-size: clamp(28px, 4vw, 42px);
-      font-weight: 800; letter-spacing: -0.5px;
-      margin-bottom: 14px;
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 20px;
     }
+
     .section-sub {
-      text-align: center; color: var(--text2);
-      font-size: 16px; max-width: 500px;
-      margin: 0 auto 56px; line-height: 1.7;
+      text-align: center;
+      color: var(--text2);
+      font-size: 18px;
+      max-width: 580px;
+      margin: 0 auto 60px;
+      line-height: 1.7;
     }
 
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 20px; max-width: 1100px; margin: 0 auto;
+    .feature-split {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      max-width: 1100px;
+      margin: 0 auto 100px;
     }
 
-    .feature-card {
-      background: var(--card);
+    .feature-split.reverse { flex-direction: row-reverse; }
+
+    .feature-split-text {
+      flex: 1;
+      max-width: 480px;
+    }
+
+    .feature-split-image {
+      flex: 1;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--border);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px 24px;
-      transition: all 0.25s;
+      transition: all 0.45s cubic-bezier(0.25, 1, 0.5, 1);
     }
-    .feature-card:hover {
-      border-color: rgba(212,168,8,0.4);
-      box-shadow: 0 8px 30px rgba(0,0,0,0.07);
-      transform: translateY(-2px);
+
+    .feature-split-image:hover {
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(212, 168, 8, 0.4), 0 0 60px rgba(212, 168, 8, 0.1);
+      transform: translateY(-6px);
     }
-    .feature-icon {
-      width: 48px; height: 48px; border-radius: 12px;
-      background: var(--gold-light);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px; margin-bottom: 16px;
+
+    .feature-split-image img {
+      width: 100%;
+      display: block;
+      object-fit: cover;
     }
-    .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .feature-text { font-size: 14px; color: var(--text2); line-height: 1.7; }
+
+    .feature-split-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      background: rgba(212, 168, 8, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      margin-bottom: 24px;
+      border: 1px solid rgba(212, 168, 8, 0.25);
+      box-shadow: 0 0 20px rgba(212, 168, 8, 0.1);
+      animation: iconFloat 4.5s ease-in-out infinite;
+      transition: all 0.3s;
+    }
+
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-7px); }
+    }
+
+    .feature-split:hover .feature-split-icon {
+      background: rgba(212, 168, 8, 0.22);
+      box-shadow: 0 0 30px rgba(212, 168, 8, 0.35), inset 0 0 20px rgba(212, 168, 8, 0.1);
+    }
+
+    .feature-split-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .feature-split-p {
+      font-size: 16px;
+      color: var(--text2);
+      line-height: 1.8;
+    }
+
+    @media (max-width: 800px) {
+      .feature-split,
+      .feature-split.reverse {
+        flex-direction: column;
+        text-align: center;
+        gap: 40px;
+      }
+
+      .feature-split-icon {
+        margin: 0 auto 24px;
+      }
+
+      .nav-logo-text {
+        display: none;
+      }
+    }
 
     /* ── HOW IT WORKS ── */
-    .how-section { background: linear-gradient(180deg, #FAFAF8 0%, #FFF9E6 100%); }
-
-    .steps { display: flex; flex-direction: column; gap: 0; max-width: 680px; margin: 0 auto; }
-
-    .step {
-      display: flex; gap: 20px; align-items: flex-start;
-      padding: 24px 0; border-bottom: 1px solid var(--border);
+    .how-section {
+      background: rgba(255, 255, 255, 0.02);
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
       position: relative;
     }
-    .step:last-child { border-bottom: none; }
 
-    .step-num {
-      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-      background: linear-gradient(135deg, #F5C518, #B38D06);
-      color: #1A1A1A; font-weight: 800; font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 8px rgba(212,168,8,0.3);
+    .how-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at center, rgba(212, 168, 8, 0.04) 0%, transparent 70%);
+      pointer-events: none;
     }
 
-    .step-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
-    .step-text { font-size: 14px; color: var(--text2); line-height: 1.7; }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 30px;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    .step-card {
+      padding: 32px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease, border-color 0.3s;
+      backdrop-filter: blur(12px);
+      transform-style: preserve-3d;
+      will-change: transform;
+      cursor: default;
+    }
+
+    .step-card:hover {
+      border-color: rgba(212, 168, 8, 0.4);
+      background: rgba(212, 168, 8, 0.05);
+    }
+
+    .step-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--gradient-gold);
+      color: #1A1A1A;
+      font-size: 22px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(212, 168, 8, 0.3);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .step-card:hover .step-num {
+      box-shadow: 0 0 24px rgba(212, 168, 8, 0.7), 0 4px 12px rgba(212, 168, 8, 0.3);
+      transform: scale(1.12) rotate(5deg);
+    }
+
+    .step-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .step-text {
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.6;
+    }
 
     /* ── PRICING ── */
     .pricing-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 20px; max-width: 900px; margin: 0 auto;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      max-width: 960px;
+      margin: 0 auto;
     }
 
     .price-card {
-      background: var(--card); border: 1.5px solid var(--border);
-      border-radius: var(--radius); padding: 32px 28px;
-      position: relative; transition: all 0.25s;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 40px 32px;
+      position: relative;
+      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease;
+      backdrop-filter: blur(12px);
+      transform-style: preserve-3d;
+      will-change: transform;
+      cursor: default;
     }
-    .price-card:hover { box-shadow: 0 8px 30px rgba(0,0,0,0.08); }
+
+    .price-card:hover {
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Featured card: animated gradient border */
     .price-card.featured {
-      border-color: var(--gold);
-      background: linear-gradient(160deg, #FFFDF0 0%, #FFFFFF 100%);
+      border: none;
+      background: rgba(212, 168, 8, 0.06);
+    }
+
+    .price-card.featured::before {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      border-radius: 25.5px;
+      background: linear-gradient(
+        135deg,
+        rgba(245, 197, 24, 0.9) 0%,
+        rgba(212, 168, 8, 0.4) 35%,
+        rgba(180, 130, 0, 0.8) 65%,
+        rgba(245, 197, 24, 0.9) 100%
+      );
+      background-size: 300% 300%;
+      animation: borderRotate 5s linear infinite;
+      z-index: -1;
+    }
+
+    @keyframes borderRotate {
+      0%   { background-position: 0%   50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0%   50%; }
+    }
+
+    /* Inner fill to cover the border bg for the featured card */
+    .price-card.featured::after {
+      content: '';
+      position: absolute;
+      inset: 1.5px;
+      border-radius: 23px;
+      background: rgba(14, 12, 4, 0.93);
+      z-index: -1;
+    }
+
+    .price-card.featured:hover {
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 90px rgba(212, 168, 8, 0.18);
     }
 
     .price-badge {
-      position: absolute; top: -12px; right: 24px;
-      background: linear-gradient(135deg, #F5C518, #B38D06);
-      color: #1A1A1A; font-size: 11px; font-weight: 800;
-      padding: 3px 12px; border-radius: 100px; letter-spacing: 0.5px;
-      text-transform: uppercase;
+      position: absolute;
+      top: -14px;
+      right: 32px;
+      background: var(--gradient-gold);
+      color: #060606;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 16px;
+      border-radius: 100px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 14px rgba(212, 168, 8, 0.5);
+      overflow: hidden;
     }
 
-    .price-plan { font-size: 14px; font-weight: 600; color: var(--text3); margin-bottom: 8px; }
+    .price-badge::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 60%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      animation: badgeShimmer 2.5s ease infinite;
+    }
+
+    .price-plan {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text3);
+      margin-bottom: 8px;
+    }
+
     .price-amount {
-      font-size: 40px; font-weight: 800; letter-spacing: -1px;
-      margin-bottom: 4px; line-height: 1;
+      font-size: 48px;
+      font-weight: 900;
+      letter-spacing: -1.5px;
+      margin-bottom: 4px;
+      line-height: 1;
+      color: var(--text);
     }
-    .price-period { font-size: 13px; color: var(--text3); margin-bottom: 24px; }
-    .price-divider { border: none; border-top: 1px solid var(--border); margin-bottom: 20px; }
-    .price-features { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+
+    .price-period {
+      font-size: 14px;
+      color: var(--text3);
+      margin-bottom: 32px;
+    }
+
+    .price-divider {
+      border: none;
+      border-top: 1px solid var(--border-subtle);
+      margin-bottom: 24px;
+    }
+
+    .price-features {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
     .price-feature {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 14px; color: var(--text2);
-    }
-    .price-feature .check { color: var(--emerald); font-size: 16px; }
-    .price-feature .cross { color: #D1D5DB; font-size: 16px; }
-
-    /* ── FAQ ── */
-    .faq-list { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-
-    .faq-item {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 12px; overflow: hidden;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 15px;
+      color: var(--text2);
     }
 
-    .faq-q {
-      padding: 18px 20px; font-weight: 700; font-size: 15px;
-      display: flex; justify-content: space-between; align-items: center;
-      cursor: pointer; user-select: none;
-    }
-    .faq-q:hover { background: rgba(0,0,0,0.02); }
-    .faq-a {
-      padding: 0 20px 18px;
-      font-size: 14px; color: var(--text2); line-height: 1.7;
-      display: none;
-    }
-    .faq-item.open .faq-a { display: block; }
-    .faq-item.open .faq-arrow { transform: rotate(180deg); }
-    .faq-arrow { transition: transform 0.2s; font-size: 12px; color: var(--text3); }
+    .price-feature .check { color: var(--emerald); font-weight: bold; }
+    .price-feature .cross { color: #2A2A2A; }
 
     /* ── CTA ── */
     .cta-section {
-      text-align: center; padding: 80px 24px;
-      background: linear-gradient(135deg, #1A1A1A 0%, #2D2D2D 100%);
-      color: white;
+      text-align: center;
+      padding: 130px 24px;
+      background: rgba(255, 255, 255, 0.015);
+      color: var(--text);
+      position: relative;
+      overflow: hidden;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      z-index: 2;
     }
+
+    /* Morphing blob background */
+    .cta-blob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 800px;
+      height: 450px;
+      background: radial-gradient(ellipse, rgba(212, 168, 8, 0.13) 0%, transparent 70%);
+      pointer-events: none;
+      filter: blur(60px);
+      animation: blobMorph 14s ease-in-out infinite alternate;
+    }
+
+    @keyframes blobMorph {
+      0%   { transform: translate(-50%, -50%) scale(1.0, 1.0) rotate(0deg);   opacity: 0.8; }
+      25%  { transform: translate(-50%, -50%) scale(1.2, 0.85) rotate(6deg);  opacity: 1.0; }
+      50%  { transform: translate(-50%, -50%) scale(0.9, 1.15) rotate(-4deg); opacity: 0.7; }
+      75%  { transform: translate(-50%, -50%) scale(1.1, 0.92) rotate(8deg);  opacity: 0.9; }
+      100% { transform: translate(-50%, -50%) scale(1.0, 1.0) rotate(0deg);   opacity: 0.8; }
+    }
+
     .cta-section h2 {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(28px, 4vw, 44px);
-      font-weight: 800; margin-bottom: 16px; letter-spacing: -0.5px;
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 800;
+      margin-bottom: 20px;
+      color: var(--text);
+      position: relative;
     }
-    .cta-section p { color: rgba(255,255,255,0.7); font-size: 16px; margin-bottom: 36px; }
+
+    .cta-section p {
+      color: var(--text2);
+      font-size: 18px;
+      margin-bottom: 40px;
+      max-width: 500px;
+      margin-inline: auto;
+      position: relative;
+    }
+
+    /* CTA button glow pulse */
+    .cta-btn-wrap {
+      position: relative;
+    }
+
+    .cta-btn-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -8px;
+      border-radius: 22px;
+      background: rgba(212, 168, 8, 0.25);
+      filter: blur(20px);
+      animation: ctaBtnGlow 2.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes ctaBtnGlow {
+      0%   { opacity: 0.4; transform: scale(0.95); }
+      100% { opacity: 1;   transform: scale(1.05); }
+    }
 
     /* ── FOOTER ── */
     footer {
-      background: var(--card); border-top: 1px solid var(--border);
-      padding: 32px 24px; text-align: center;
-      font-size: 13px; color: var(--text3);
+      background: rgba(0, 0, 0, 0.4);
+      border-top: 1px solid var(--border-subtle);
+      padding: 40px 24px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text3);
+      position: relative;
+      z-index: 2;
     }
-    footer a { color: var(--text2); margin: 0 8px; }
-    footer a:hover { color: var(--text); }
 
-    @media (max-width: 640px) {
-      nav .btn-outline { display: none; }
-      .hero { padding: 50px 20px 40px; }
-      section { padding: 56px 20px; }
+    footer a {
+      color: var(--text2);
+      margin: 0 12px;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--gold); }
+
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 800;
+      background: var(--gradient-gold);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 16px;
+    }
+
+    /* ── COOKIE / TERMS BANNER ── */
+    .cookie-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 99998;
+      opacity: 1;
+      transition: opacity 0.5s;
+    }
+
+    .cookie-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .cookie-banner {
+      position: fixed;
+      bottom: 32px;
+      left: 32px;
+      width: 380px;
+      max-width: calc(100vw - 64px);
+      background: rgba(14, 14, 14, 0.95);
+      border: 1px solid rgba(212, 168, 8, 0.45);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(212, 168, 8, 0.08);
+      z-index: 99999;
+      transform: translateY(0);
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      backdrop-filter: blur(20px);
+    }
+
+    .cookie-banner.hidden {
+      transform: translateY(150px) scale(0.9);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .cookie-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+    }
+
+    .cookie-text {
+      font-size: 14px;
+      color: var(--text2);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .cookie-text a { color: var(--gold); text-decoration: underline; }
+
+    .cookie-btn {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    @media (max-width: 600px) {
+      .cookie-banner {
+        bottom: 16px; left: 16px; right: 16px;
+        width: auto; max-width: none;
+      }
+      nav { padding: 0 16px; }
+      .hero { padding: 80px 16px 40px; }
+    }
+
+    /* ── HERO IMAGE CAPTION ── */
+    .hero-img-caption {
+      max-width: 1000px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 4px;
+    }
+
+    .hero-img-caption-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid var(--border-subtle);
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      padding: 24px 32px;
+      backdrop-filter: blur(12px);
+    }
+
+    .hero-caption-stat {
+      flex: 1;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 0 24px;
+    }
+
+    .hero-caption-stat:first-child { padding-right: 0; }
+    .hero-caption-stat:last-child  { padding-left: 0; }
+
+    .hero-caption-icon {
+      font-size: 28px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .hero-caption-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .hero-caption-desc {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.5;
+    }
+
+    .hero-caption-divider {
+      width: 1px;
+      align-self: stretch;
+      background: var(--border-subtle);
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      .hero-img-caption-inner {
+        flex-direction: column;
+        gap: 20px;
+        padding: 20px;
+      }
+      .hero-caption-stat { padding: 0; }
+      .hero-caption-divider { width: 100%; height: 1px; align-self: auto; }
+    }
+
+    /* ── IMAGE ZOOM HINT OVERLAY ── */
+    .img-zoomable {
+      position: relative;
+      cursor: zoom-in;
+    }
+
+    .img-zoom-hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(8px);
+      color: rgba(255,255,255,0.85);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 100px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+      border: 1px solid rgba(212,168,8,0.3);
+      z-index: 10;
+    }
+
+    .img-zoomable:hover .img-zoom-hint {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── LIGHTBOX ── */
+    .lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99990;
+      background: rgba(0,0,0,0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      cursor: zoom-out;
+      transition: background 0.4s cubic-bezier(0.25,1,0.5,1);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .lightbox-overlay.active {
+      background: rgba(0,0,0,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      pointer-events: all;
+      opacity: 1;
+    }
+
+    .lightbox-container {
+      position: relative;
+      max-width: min(1200px, 95vw);
+      max-height: 90vh;
+      transform: scale(0.65) translateY(40px);
+      opacity: 0;
+      transition: transform 0.5s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.4s ease;
+      will-change: transform;
+    }
+
+    .lightbox-overlay.active .lightbox-container {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+
+    .lightbox-container img {
+      display: block;
+      max-width: 100%;
+      max-height: 85vh;
+      border-radius: 14px;
+      box-shadow: 0 40px 120px rgba(0,0,0,0.9), 0 0 0 1px rgba(212,168,8,0.3);
+      object-fit: contain;
+    }
+
+    .lightbox-caption {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--text2);
+      letter-spacing: 0.5px;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: -14px;
+      left: -14px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(20,20,20,0.95);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 20px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lightbox-close:hover {
+      background: rgba(212,168,8,0.15);
+      border-color: var(--gold);
+      transform: scale(1.1) rotate(90deg);
+    }
+
+    /* ── FEATURE BULLETS ── */
+    .feature-bullets {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .feature-bullet {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      color: var(--text2);
+    }
+
+    .bullet-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    /* ── FAQ ── */
+    .faq-list {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.025);
+      overflow: hidden;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .faq-item.open {
+      border-color: rgba(212,168,8,0.38);
+      box-shadow: 0 0 30px rgba(212,168,8,0.07);
+    }
+
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 28px;
+      background: transparent;
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      text-align: right;
+      gap: 12px;
+      transition: background 0.2s;
+    }
+
+    .faq-question:hover {
+      background: rgba(212,168,8,0.04);
+    }
+
+    .faq-chevron {
+      font-size: 24px;
+      color: var(--gold);
+      flex-shrink: 0;
+      transition: transform 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+      display: inline-block;
+    }
+
+    .faq-item.open .faq-chevron {
+      transform: rotate(90deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .faq-answer p {
+      padding: 0 28px 22px;
+      font-size: 15px;
+      color: var(--text2);
+      line-height: 1.8;
     }
   </style>
 </head>
-<body>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-logo">
-    <img src="Icon-192.png" alt="SeatSync" width="32" height="32" style="border-radius:9px;" />
-    <span class="nav-logo-text">SeatSync</span>
+<body class="no-scroll" id="body">
+
+  <!-- CANVAS PARTICLE SYSTEM -->
+  <canvas id="particleCanvas" aria-hidden="true"></canvas>
+
+  <!-- NOISE GRAIN OVERLAY -->
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- VIGNETTE EDGE DARKENING -->
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- AURORA GLOW -->
+  <div class="aurora" aria-hidden="true"></div>
+
+  <!-- ANIMATED DARK BACKGROUND -->
+  <div class="bg-canvas" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-orb bg-orb-4"></div>
+    <div class="bg-grid"></div>
   </div>
-  <div class="nav-actions">
-    <a href="#pricing" class="btn btn-ghost btn-outline" style="padding:8px 18px;font-size:14px;">מחירים</a>
-    <a href="index.html" class="btn btn-primary" style="padding:9px 20px;font-size:14px;">כניסה למערכת</a>
-  </div>
-</nav>
 
-<!-- HERO -->
-<div class="hero">
-  <div class="hero-badge">✦ ניהול אירועים חכם</div>
-  <h1>
-    ניהול <span>מוזמנים והושבה</span><br/>
-    שלא ראיתם כמוהו
-  </h1>
-  <p>
-    שלחו הזמנות, עקבו אחרי אישורי הגעה בזמן אמת,
-    וסדרו הושבה ויזואלית עם גרירה ושחרור. הכל בעברית, הכל ממקום אחד.
-  </p>
-  <div class="hero-actions">
-    <a href="index.html" class="btn btn-primary btn-lg">התחילו בחינם — ללא כרטיס אשראי</a>
-    <a href="#features" class="btn btn-outline btn-lg">גלו את הפיצ'רים</a>
-  </div>
-  <div class="hero-social-proof">
-    <span>✦ ממשק עברי מלא · RTL מושלם · ללא צורך באפליקציה</span>
-  </div>
-</div>
+  <!-- OVERLAY FOR COOKIE CONSENT -->
+  <div class="cookie-overlay" id="cookieOverlay"></div>
 
-<!-- FEATURES -->
-<section id="features" style="background:white;">
-  <div class="section-label">פיצ'רים</div>
-  <h2 class="section-title">כל מה שצריך לניהול אירוע מושלם</h2>
-  <p class="section-sub">מרשימת מוזמנים ועד מפת הושבה — הכל מסונכרן בזמן אמת.</p>
+  <!-- NAV -->
+  <nav id="navbar">
+    <div class="nav-logo">
+      <img src="Icon-192.png" alt="SeatSync" width="36" height="36" style="border-radius:10px;" />
+      <span class="nav-logo-text">SeatSync</span>
+    </div>
+    <div class="nav-actions">
+      <a href="#features" class="btn btn-ghost">פיצ'רים</a>
+      <a href="#faq" class="btn btn-ghost">שאלות נפוצות</a>
+      <a href="index.html" class="btn btn-primary">כניסה למערכת</a>
+    </div>
+  </nav>
 
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">👥</div>
-      <div class="feature-title">ניהול מוזמנים</div>
-      <div class="feature-text">הוסיפו מוזמנים ידנית או ייבאו מאקסל. חפשו, סננו ומיינו בלחיצה. ייצוא מלא לאקסל בכל שלב.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">💬</div>
-      <div class="feature-title">שליחת הזמנות WhatsApp</div>
-      <div class="feature-text">צרו תבנית הודעה עם משתנים ושלחו לכל האורחים בלחיצה. עקבו אחרי מי שלא הגיב וסדרו סבבים.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔗</div>
-      <div class="feature-title">קישור RSVP אישי</div>
-      <div class="feature-text">כל אורח מקבל קישור אישי. לחיצה → אישור הגעה + מספר אורחים + הערות תזונה. ללא אפליקציה.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🪑</div>
-      <div class="feature-title">סידורי הושבה ויזואליים</div>
-      <div class="feature-text">גררו אורחים לשולחנות. צרו מפת אולם אינטראקטיבית. ייצאו PDF לצוות האירוע.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">📊</div>
-      <div class="feature-title">דשבורד בזמן אמת</div>
-      <div class="feature-text">ראו כמה אישרו, כמה ממתינים, ופילוח לפי קבוצה — הכל מתעדכן בזמן אמת.</div>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔔</div>
-      <div class="feature-title">הודעות אוטומטיות</div>
-      <div class="feature-text">תזכורת אוטומטית ימים לפני האירוע + הודעת תודה ליום אחרי. ללא עבודה ידנית.</div>
-    </div>
-  </div>
-</section>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-bg"></div>
 
-<!-- HOW IT WORKS -->
-<section class="how-section">
-  <div class="section-label">איך זה עובד</div>
-  <h2 class="section-title">מוכנים בפחות מ-10 דקות</h2>
-  <p class="section-sub">ללא התקנה, ללא הגדרות מורכבות. רק נרשמים ומתחילים.</p>
+    <!-- Floating sparkles -->
+    <div class="sparkle s1"></div>
+    <div class="sparkle s2"></div>
+    <div class="sparkle s3"></div>
+    <div class="sparkle s4"></div>
+    <div class="sparkle s5"></div>
+    <div class="sparkle s6"></div>
+    <div class="sparkle s7"></div>
+    <div class="sparkle s8"></div>
 
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <div>
-        <div class="step-title">צרו אירוע</div>
-        <div class="step-text">הזינו שם, תאריך ומיקום. האירוע נוצר תוך שניות.</div>
+    <div class="hero-badge reveal" style="position:relative;">✦ ניהול אירועים ברמה אחרת</div>
+    <h1 class="reveal delay-100">
+      תכנון וניהול מוזמנים<br />
+      <span>שמרגיש פשוט נכון.</span>
+    </h1>
+    <p class="reveal delay-200">
+      SeatSync מביאה את עוצמת הטכנולוגיה לאירוע שלכם. שליחת הודעות אישיות,
+      אישורי הגעה אוטומטיים והושבה חכמה בממשק עברי מדהים.
+    </p>
+    <div class="hero-actions reveal delay-300">
+      <a href="index.html" class="btn btn-primary btn-lg">התחילו בחינם כעת</a>
+    </div>
+    <div class="hero-image-wrapper reveal delay-300 img-zoomable" style="transition-delay: 500ms;" data-img="images/Screenshot 2026-04-17 205725.png" data-caption="דשבורד SeatSync — סטטיסטיקות בזמן אמת">
+      <img src="images/Screenshot 2026-04-17 205725.png" alt="SeatSync Dashboard" />
+      <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+    </div>
+
+    <!-- Hero image caption -->
+    <div class="hero-img-caption reveal" style="transition-delay: 650ms;">
+      <div class="hero-img-caption-inner">
+        <div class="hero-caption-stat">
+          <span class="hero-caption-icon">📊</span>
+          <div>
+            <div class="hero-caption-label">דשבורד חכם</div>
+            <div class="hero-caption-desc">סטטיסטיקות אישורים, מפות הושבה ופעילות בזמן אמת — הכל במבט אחד</div>
+          </div>
+        </div>
+        <div class="hero-caption-divider"></div>
+        <div class="hero-caption-stat">
+          <span class="hero-caption-icon">⚡</span>
+          <div>
+            <div class="hero-caption-label">עדכון בזמן אמת</div>
+            <div class="hero-caption-desc">כשאורח מאשר הגעה, הדשבורד מתעדכן אוטומטית ללא רענון</div>
+          </div>
+        </div>
+        <div class="hero-caption-divider"></div>
+        <div class="hero-caption-stat">
+          <span class="hero-caption-icon">🎯</span>
+          <div>
+            <div class="hero-caption-label">פילוח מתקדם</div>
+            <div class="hero-caption-desc">גרפים, סינון לפי קבוצה וסטטוס, ותובנות על מהלך האירוע</div>
+          </div>
+        </div>
       </div>
     </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <div>
-        <div class="step-title">הוסיפו מוזמנים</div>
-        <div class="step-text">הוסיפו ידנית, ייבאו מאקסל, או שתפו לינק RSVP כללי. המערכת מזהה כפילויות אוטומטית.</div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <div>
-        <div class="step-title">שלחו הזמנות</div>
-        <div class="step-text">כתבו תבנית הודעה עם {שם}, {תאריך} ו-{לינק_rsvp}. שלחו ל-WhatsApp בלחיצה אחת.</div>
-      </div>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <div>
-        <div class="step-title">עקבו ועדכנו בזמן אמת</div>
-        <div class="step-text">כל תשובה מתעדכנת אוטומטית. ראו פילוחים, שלחו תזכורות, וסדרו הושבה.</div>
-      </div>
+
+    <!-- Scroll indicator -->
+    <div class="scroll-indicator reveal" style="transition-delay: 900ms;">
+      <div class="scroll-line"></div>
+      <span>גלול</span>
     </div>
   </div>
-</section>
 
-<!-- PRICING -->
-<section id="pricing" style="background:white;">
-  <div class="section-label">מחירים</div>
-  <h2 class="section-title">תוכנית לכל סוג אירוע</h2>
-  <p class="section-sub">התחילו בחינם. שדרגו רק כשאתם צריכים.</p>
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
 
-  <div class="pricing-grid">
-    <!-- Free -->
-    <div class="price-card">
-      <div class="price-plan">Free</div>
-      <div class="price-amount">חינם</div>
-      <div class="price-period">ללא כרטיס אשראי</div>
-      <hr class="price-divider"/>
-      <div class="price-features">
-        <div class="price-feature"><span class="check">✓</span> עד 50 מוזמנים</div>
-        <div class="price-feature"><span class="check">✓</span> עד 5 שולחנות</div>
-        <div class="price-feature"><span class="check">✓</span> סבב הודעות אחד</div>
-        <div class="price-feature"><span class="check">✓</span> דשבורד בזמן אמת</div>
-        <div class="price-feature"><span class="cross">✗</span> קישורי RSVP אישיים</div>
-        <div class="price-feature"><span class="cross">✗</span> הודעות אוטומטיות</div>
-        <div class="price-feature"><span class="cross">✗</span> ייצוא PDF</div>
+  <!-- STORY 1: RSVP -->
+  <section id="features">
+    <div class="feature-split reveal">
+      <div class="feature-split-text">
+        <div class="feature-split-icon">💌</div>
+        <h2 class="feature-split-title">הזמנות מרשימות לאורחים שלכם</h2>
+        <p class="feature-split-p">
+          שלחו לכל אורח הודעת WhatsApp אישית בלחיצת כפתור, עם קישור יחיד במיוחד עבורו.
+          האורחים יגיעו למסך RSVP יפהפה ומותאם למובייל, שם יוכלו לאשר הגעה, לציין כמות אורחים
+          ואפילו לעדכן על רגישויות למזון. הכל זורם ישירות לדשבורד שלכם בזמן אמת.
+        </p>
       </div>
-      <a href="index.html" class="btn btn-outline" style="width:100%;justify-content:center;">התחילו בחינם</a>
-    </div>
-
-    <!-- Pro -->
-    <div class="price-card featured">
-      <div class="price-badge">הכי פופולרי</div>
-      <div class="price-plan">Pro</div>
-      <div class="price-amount">99<span style="font-size:22px;letter-spacing:0">₪</span></div>
-      <div class="price-period">לאירוע</div>
-      <hr class="price-divider"/>
-      <div class="price-features">
-        <div class="price-feature"><span class="check">✓</span> אירוע אחד</div>
-        <div class="price-feature"><span class="check">✓</span> עד 200 מוזמנים</div>
-        <div class="price-feature"><span class="check">✓</span> עד 25 שולחנות</div>
-        <div class="price-feature"><span class="check">✓</span> סבבי הודעות ללא הגבלה</div>
-        <div class="price-feature"><span class="check">✓</span> קישורי RSVP אישיים</div>
-        <div class="price-feature"><span class="check">✓</span> הודעות אוטומטיות</div>
-        <div class="price-feature"><span class="check">✓</span> ייצוא PDF + אקסל</div>
-        <div class="price-feature"><span class="check">✓</span> מפת הושבה ויזואלית</div>
+      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/Screenshot 2026-04-17 205823.png" data-caption="מסך RSVP מותאם למובייל">
+        <img src="images/Screenshot 2026-04-17 205823.png" alt="RSVP UI" />
+        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
       </div>
-      <a href="index.html" class="btn btn-primary" style="width:100%;justify-content:center;">התחילו והשדרגו ל-Pro</a>
     </div>
 
-    <!-- Enterprise -->
-    <div class="price-card">
-      <div class="price-plan">Enterprise</div>
-      <div class="price-amount">249<span style="font-size:22px;letter-spacing:0">₪</span></div>
-      <div class="price-period">לאירוע</div>
-      <hr class="price-divider"/>
-      <div class="price-features">
-        <div class="price-feature"><span class="check">✓</span> עד 5 אירועים</div>
-        <div class="price-feature"><span class="check">✓</span> עד 600 מוזמנים לאירוע</div>
-        <div class="price-feature"><span class="check">✓</span> עד 60 שולחנות</div>
-        <div class="price-feature"><span class="check">✓</span> כל פיצ'רי Pro</div>
-        <div class="price-feature"><span class="check">✓</span> מפת הושבה ויזואלית</div>
-        <div class="price-feature"><span class="check">✓</span> תמיכה עדיפותית</div>
+    <div class="feature-split reverse reveal">
+      <div class="feature-split-text">
+        <div class="feature-split-icon">🪑</div>
+        <h2 class="feature-split-title">סידור הושבה חכם ופשוט</h2>
+        <p class="feature-split-p">
+          קחו את מפת האולם בידיים שלכם. הממשק החדשני שלנו מאפשר סידור שולחנות וירטואלי אלגנטי.
+          פשוט גררו אורחים מהרשימה אל השולחנות, ראו היכן חסר מקום, ומבטחים שלא שכחתם אף אחד.
+          האפקטיביות שבגרפיקה מבטיחה ניהול חלק לקראת יום האירוע.
+        </p>
       </div>
-      <a href="index.html" class="btn btn-outline" style="width:100%;justify-content:center;">התחילו והשדרגו ל-Enterprise</a>
+      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/Screenshot 2026-04-17 205833.png" data-caption="ממשק הושבה אינטראקטיבי">
+        <img src="images/Screenshot 2026-04-17 205833.png" alt="Seating Chart UI" />
+        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- GIFTS & EXPENSES SECTION -->
+  <section id="gifts-expenses">
+    <div class="section-label reveal">פיצ'ר חדש</div>
+    <h2 class="section-title reveal delay-100">ניהול מתנות והוצאות — הכל במקום אחד</h2>
+    <p class="section-sub reveal delay-200">עקבו אחר מתנות מכל אורח, נהלו את תקציב האירוע לפי קטגוריה, ודעו בדיוק כמה עלה לכם האירוע — וכמה קיבלתם בחזרה.</p>
+
+    <div class="feature-split reveal">
+      <div class="feature-split-text">
+        <div class="feature-split-icon">💰</div>
+        <h2 class="feature-split-title">ניהול הוצאות האירוע</h2>
+        <p class="feature-split-p">
+          הכניסו את כל הוצאות האירוע לפי קטגוריה — צלם, מוזיקה, אולם, קייטרינג ועוד.
+          המערכת מחשבת אוטומטית את עלות לנפש בהתאם למספר האורחים המאושרים,
+          ומציגה סיכום פיננסי מלא שיעזור לכם לשמור על התקציב.
+        </p>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><span class="bullet-icon">📋</span> קטגוריות הוצאה מובנות מראש</div>
+          <div class="feature-bullet"><span class="bullet-icon">📊</span> חישוב עלות לנפש אוטומטי</div>
+          <div class="feature-bullet"><span class="bullet-icon">📄</span> ייצוא PDF ואקסל מלא</div>
+        </div>
+      </div>
+      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/Screenshot 2026-04-17 205846.png" data-caption="מסך ניהול הוצאות האירוע">
+        <img src="images/Screenshot 2026-04-17 205846.png" alt="Expense Management" />
+        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+      </div>
+    </div>
+
+    <div class="feature-split reverse reveal">
+      <div class="feature-split-text">
+        <div class="feature-split-icon">🎁</div>
+        <h2 class="feature-split-title">מעקב מתנות לפי אורח</h2>
+        <p class="feature-split-p">
+          עקבו בקלות אחרי כל מתנה שהתקבלה — מי נתן, כמה נתן, ומה הסכום הכולל.
+          המערכת מציגה סרגל רווח/הפסד ביחס להוצאות האירוע, ומאפשרת לחפש ולנהל
+          את המתנות לפי אורח או קבוצה בממשק נוח ומהיר.
+        </p>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><span class="bullet-icon">🔍</span> חיפוש מהיר לפי שם אורח</div>
+          <div class="feature-bullet"><span class="bullet-icon">💹</span> סרגל רווח/הפסד ביחס להוצאות</div>
+          <div class="feature-bullet"><span class="bullet-icon">📥</span> ייצוא לאקסל בלחיצה</div>
+        </div>
+      </div>
+      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/Screenshot 2026-04-17 205855.png" data-caption="מעקב מתנות לפי אורח">
+        <img src="images/Screenshot 2026-04-17 205855.png" alt="Gift Tracking" />
+        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="section-label reveal">תהליך עבודה</div>
+    <h2 class="section-title reveal delay-100">מארגנים אירוע ב-4 צעדים</h2>
+    <p class="section-sub reveal delay-200">בלי אקסלים מסובכים, בלי ניירות שאובדים. רק התהליך הנקי ביותר לדאוג שהאירוע
+      יהיה מושלם.</p>
+
+    <div class="steps-grid">
+      <div class="step-card reveal delay-100">
+        <div class="step-num">1</div>
+        <div class="step-title">מקימים אירוע</div>
+        <div class="step-text">הגדירו את השם, התאריך והמיקום בשניות, והתחילו לייבא אורחים.</div>
+      </div>
+      <div class="step-card reveal delay-200">
+        <div class="step-num">2</div>
+        <div class="step-title">שולחים לאורחים</div>
+        <div class="step-text">משתמשים בתבניות אוטומטיות לווטסאפ ושולחים הזמנות לכולם בלחיצה.</div>
+      </div>
+      <div class="step-card reveal delay-300">
+        <div class="step-num">3</div>
+        <div class="step-title">אישורים אונליין</div>
+        <div class="step-text">צופים בדשבורד מתעדכן בזמן אמת ברגע שהאורחים לוחצים ומאשרים בטלפון.</div>
+      </div>
+      <div class="step-card reveal delay-400">
+        <div class="step-num">4</div>
+        <div class="step-title">הושבה וייצוא</div>
+        <div class="step-text">משבצים את כולם במפת שולחנות פיזית ומייצאים PDF נקי לכללי האולם.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- PRICING -->
+  <section id="pricing">
+    <div class="section-label reveal">תוכניות נוחות</div>
+    <h2 class="section-title reveal delay-100">תמחור שקוף ופשוט</h2>
+    <p class="section-sub reveal delay-200">שלמו רק על מה שאתם צריכים. ניתן להתחיל בחינם כדי ללמוד את המערכת.</p>
+
+    <div class="pricing-grid">
+      <!-- Free -->
+      <div class="price-card reveal delay-100">
+        <div class="price-plan">Trial</div>
+        <div class="price-amount">חינם</div>
+        <div class="price-period">ללא אשראי</div>
+        <hr class="price-divider" />
+        <div class="price-features">
+          <div class="price-feature"><span class="check">✓</span> עד 50 מוזמנים</div>
+          <div class="price-feature"><span class="check">✓</span> בניית מפה וסבב אישורים אחד</div>
+          <div class="price-feature"><span class="check">✓</span> דשבורד מלא</div>
+          <div class="price-feature"><span class="cross">✗</span> לא כולל הודעות התראות אוטומטיות</div>
+        </div>
+      </div>
+
+      <!-- Pro -->
+      <div class="price-card featured reveal delay-200">
+        <div class="price-badge">הבחירה המובילה</div>
+        <div class="price-plan">Pro Event</div>
+        <div class="price-amount">99₪</div>
+        <div class="price-period">לאירוע בודד</div>
+        <hr class="price-divider" />
+        <div class="price-features">
+          <div class="price-feature"><span class="check">✓</span> עד 300 מוזמנים</div>
+          <div class="price-feature"><span class="check">✓</span> תזכורות אוטומטיות והודעות</div>
+          <div class="price-feature"><span class="check">✓</span> ייצוא מלא ל-PDF ואקסל</div>
+          <div class="price-feature"><span class="check">✓</span> מפות הושבה ללא הגבלה</div>
+        </div>
+      </div>
+
+      <!-- Enterprise -->
+      <div class="price-card reveal delay-300">
+        <div class="price-plan">Enterprise</div>
+        <div class="price-amount">249₪</div>
+        <div class="price-period">עד 5 אירועים</div>
+        <hr class="price-divider" />
+        <div class="price-features">
+          <div class="price-feature"><span class="check">✓</span> עד 600 מוזמנים לאירוע</div>
+          <div class="price-feature"><span class="check">✓</span> כל פיצ'רי Pro</div>
+          <div class="price-feature"><span class="check">✓</span> עד 60 שולחנות אינטראקטיביים</div>
+          <div class="price-feature"><span class="check">✓</span> תמיכה עדיפותית (Priority Support)</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- FAQ SECTION -->
+  <section id="faq">
+    <div class="section-label reveal">שאלות ותשובות</div>
+    <h2 class="section-title reveal delay-100">שאלות נפוצות</h2>
+    <p class="section-sub reveal delay-200">כל מה שרציתם לדעת על SeatSync לפני שמתחילים</p>
+
+    <div class="faq-list reveal delay-300">
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>האם המערכת מתאימה גם לאירועים קטנים?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>כן! התוכנית החינמית (Trial) מתאימה לאירועים של עד 50 מוזמנים — מושלם לאירועים קטנים, ימי הולדת, ומסיבות. לאירועים גדולים יותר עד 300 אורחים יש את תוכנית Pro, ועד 600 אורחים תוכנית Enterprise.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>האם נדרש ידע טכני כדי להשתמש ב-SeatSync?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>בכלל לא. SeatSync תוכנן מהיסוד לאנשים שאינם טכנולוגיים. הממשק בעברית מלאה, הפעולות אינטואיטיביות, ואפשר להתחיל לשלוח הזמנות תוך דקות מההרשמה.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>כיצד שולחים הזמנות לאורחים?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>SeatSync מייצרת תבנית הודעה אישית לכל אורח, כולל קישור ייחודי לדף RSVP שלו. פשוט לוחצים "שלח" — וההודעה נשלחת ישירות דרך WhatsApp Web. האורח מקבל חוויה יפהפייה ומותאמת למובייל ללא צורך בהורדת אפליקציה.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>האם ניתן לייבא רשימת אורחים מאקסל?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>כן! ניתן לייבא אורחים ישירות מקובץ אקסל או CSV. כמו כן, ניתן לייצא את כל נתוני האורחים, סידורי ההושבה, ורשימת המתנות לאקסל ול-PDF בכל עת.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>מה קורה אחרי שהאורח מאשר הגעה?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>כשאורח מאשר הגעה דרך דף ה-RSVP, המידע מגיע מיידית לדשבורד שלכם — כולל מספר הנפשות, רגישויות למזון ופרטים נוספים. הדשבורד מתעדכן בזמן אמת ללא רענון.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>כיצד עובד ניהול ההוצאות והמתנות?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>בלשונית "הוצאות" תוכלו להכניס את כל עלויות האירוע לפי קטגוריה (צלם, DJ, אולם וכו'). בלשונית "מתנות" תוכלו לרשום כמה קיבלתם מכל אורח. המערכת מציגה סיכום פיננסי מלא וסרגל רווח/הפסד ביחס לסך ההוצאות.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>האם הנתונים שלי מאובטחים?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>בהחלט. SeatSync בנוי על תשתית Supabase עם הצפנה מלאה. כל נתוני האורחים מוגנים, ורק אתם יכולים לגשת לאירועים שלכם. אנחנו לא עוברים, מוכרים או משתפים את המידע שלכם עם גורם שלישי כלשהו.</p>
+        </div>
+      </div>
+
+      <div class="faq-item">
+        <button class="faq-question" aria-expanded="false">
+          <span>האם ניתן לנסות לפני הרכישה?</span>
+          <span class="faq-chevron">›</span>
+        </button>
+        <div class="faq-answer">
+          <p>כן! תוכנית ה-Trial חינמית לחלוטין וללא כרטיס אשראי. תוכלו להקים אירוע, לייבא אורחים, לשלוח הזמנות ולנסות את כל הפיצ'רים — עד 50 אורחים ללא עלות.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- CTA -->
+  <div class="cta-section">
+    <div class="cta-blob" aria-hidden="true"></div>
+    <h2 class="reveal">האירוע המושלם מתחיל כאן</h2>
+    <p class="reveal delay-100">אל תשאירו את הניהול ליד המקרה. הירשמו למערכת והביאו את האירוע שלכם למאה ה-21.</p>
+    <div class="cta-btn-wrap reveal delay-200" style="display:inline-block; position:relative;">
+      <a href="index.html" class="btn btn-primary btn-lg" style="position:relative; z-index:1;">הצטרפו לחוויה עכשיו</a>
     </div>
   </div>
-</section>
 
-<!-- FAQ -->
-<section>
-  <div class="section-label">שאלות נפוצות</div>
-  <h2 class="section-title">יש לכם שאלות?</h2>
-  <p class="section-sub">הנה התשובות לשאלות הנפוצות ביותר.</p>
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">SeatSync</div>
+    <div style="margin-bottom:20px;">
+      <a href="index.html">כניסה למערכת</a>
+      <a href="terms.html">תנאי שימוש</a>
+      <a href="privacy.html">מדיניות פרטיות</a>
+    </div>
+    <div>© 2026 SeatSync. בנייה וניהול חכם. חוויית אירוע מושלמת.</div>
+  </footer>
 
-  <div class="faq-list">
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">האם SeatSync עובד עם WhatsApp רגיל (לא Business)? <span class="faq-arrow">▾</span></div>
-      <div class="faq-a">כן! בתוכנית Free ו-Pro, SeatSync יוצר קישורי wa.me שפותחים את WhatsApp הרגיל עם הודעה מוכנה. אין צורך ב-WhatsApp Business.</div>
+  <!-- COOKIE / TERMS BANNER MODAL -->
+  <div class="cookie-banner" id="cookieBanner">
+    <div class="cookie-title">🍪 פרטיות ותנאי שימוש</div>
+    <div class="cookie-text">
+      כדי לאפשר לך את חוויית הגלישה הטובה והמאובטחת ביותר, אנו משתמשים בעוגיות (Cookies). על ידי המשך השימוש, הנך מסכים
+      ל<a href="terms.html" target="_blank">תנאי השימוש</a> ול<a href="privacy.html" target="_blank">מדיניות הפרטיות</a>
+      שלנו.
     </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">מה קורה לנתונים שלי? <span class="faq-arrow">▾</span></div>
-      <div class="faq-a">הנתונים שמורים ב-Supabase — שירות ענן מאובטח. ניתן לייצא את כל הנתונים לאקסל בכל עת. הנתונים שייכים לכם.</div>
-    </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">האם הדף RSVP עובד גם בלי אפליקציה? <span class="faq-arrow">▾</span></div>
-      <div class="faq-a">כן! האורח מקבל קישור אישי — לוחץ, מאשר הגעה, מציין כמה אנשים, ומוסיף הערות תזונה. ללא הורדת אפליקציה, ללא הרשמה.</div>
-    </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">כמה עולה Pro לחתונה ממוצעת? <span class="faq-arrow">▾</span></div>
-      <div class="faq-a">99₪ לאירוע — פחות מהעלות של הדפסת מקומונים. תוכנית Pro כוללת 200 מוזמנים, קישורי RSVP, הודעות אוטומטיות וייצוא PDF.</div>
-    </div>
-    <div class="faq-item" onclick="this.classList.toggle('open')">
-      <div class="faq-q">האם אפשר לנהל כמה אירועים במקביל? <span class="faq-arrow">▾</span></div>
-      <div class="faq-a">בתוכנית Free ו-Pro כל חשבון מנהל אירוע אחד. בתוכנית Enterprise — עד 5 אירועים תחת חשבון אחד.</div>
+    <div class="cookie-btn">
+      <button class="btn btn-primary" style="width:100%" onclick="acceptCookies()">אני מאשר/ת</button>
     </div>
   </div>
-</section>
 
-<!-- CTA -->
-<div class="cta-section">
-  <h2>מוכנים לאירוע שיזכרו?</h2>
-  <p>הצטרפו והתחילו לנהל את האירוע שלכם עוד היום — בחינם.</p>
-  <a href="index.html" class="btn btn-primary btn-lg">התחילו עכשיו — בחינם</a>
-</div>
+  <script>
+    /* ══════════════════════════════════════════
+       1. CANVAS PARTICLE SYSTEM (gold floating dots)
+    ══════════════════════════════════════════ */
+    const canvas = document.getElementById('particleCanvas');
+    const ctx    = canvas.getContext('2d');
+    let particles = [];
 
-<!-- TERMS MODAL -->
-<div id="terms-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:1000;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;" onclick="if(event.target===this)this.style.display='none'">
-  <div style="background:white;border-radius:16px;max-width:640px;width:90%;max-height:80vh;overflow-y:auto;padding:32px;margin:auto;position:relative;top:50%;transform:translateY(-50%);">
-    <button onclick="document.getElementById('terms-modal').style.display='none'" style="position:absolute;top:16px;left:16px;background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
-    <h2 style="font-family:'Playfair Display',serif;font-size:24px;margin-bottom:20px;">תנאי שימוש</h2>
-    <div style="font-size:14px;line-height:1.8;color:#444;">
-      <p><strong>1. כללי</strong><br/>
-      ברוכים הבאים ל-SeatSync (להלן: "השירות"). השימוש בשירות מהווה הסכמה לתנאים אלו. השירות מופעל על ידי אביב ("המפעיל"). ליצירת קשר: <a href="mailto:avivmed3@gmail.com" style="color:var(--gold-dark);">avivmed3@gmail.com</a>.</p>
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas, { passive: true });
 
-      <p><strong>2. השירות</strong><br/>
-      SeatSync מספק כלי ניהול אישורי הגעה וסידורי הושבה לאירועים. השירות כולל ניהול מוזמנים, שליחת הודעות, מעקב אישורים וסידורי הושבה ויזואליים.</p>
+    function createParticle() {
+      return {
+        x:          Math.random() * canvas.width,
+        y:          Math.random() * canvas.height,
+        size:       Math.random() * 1.8 + 0.4,
+        speedX:     (Math.random() - 0.5) * 0.35,
+        speedY:     -(Math.random() * 0.28 + 0.08),
+        opacity:    0,
+        maxOpacity: Math.random() * 0.45 + 0.08,
+        life:       0,
+        maxLife:    Math.random() * 320 + 140,
+        color:      Math.random() > 0.5 ? '212,168,8' : '245,197,24',
+      };
+    }
 
-      <p><strong>3. הרשמה וחשבון</strong><br/>
-      השימוש בשירות מותנה ביצירת חשבון עם כתובת אימייל תקינה. המשתמש אחראי לשמירת פרטי הגישה שלו ולכל פעולה שמתבצעת תחת חשבונו.</p>
+    for (let i = 0; i < 90; i++) {
+      const p = createParticle();
+      p.life = Math.random() * p.maxLife;
+      particles.push(p);
+    }
 
-      <p><strong>4. פרטיות ומידע אישי</strong><br/>
-      המידע שנאסף כולל: שם, אימייל, מספרי טלפון של מוזמנים, ונתוני אירוע. המידע מאוחסן בשרתי Supabase מאובטחים. איננו מוכרים או משתפים מידע אישי עם צדדים שלישיים. המשתמש רשאי לייצא את כל הנתונים שלו בכל עת ולמחוק את חשבונו.</p>
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p, i) => {
+        p.life++;
+        if (p.life >= p.maxLife) { particles[i] = createParticle(); return; }
 
-      <p><strong>5. שימוש הוגן</strong><br/>
-      אין להשתמש בשירות למטרות בלתי חוקיות, שליחת ספאם, או באופן שפוגע בשירות או במשתמשים אחרים. המפעיל רשאי להשעות חשבונות המפרים תנאים אלו.</p>
+        const fade = p.maxLife * 0.18;
+        if      (p.life < fade)              p.opacity = (p.life / fade) * p.maxOpacity;
+        else if (p.life > p.maxLife - fade)  p.opacity = ((p.maxLife - p.life) / fade) * p.maxOpacity;
+        else                                 p.opacity = p.maxOpacity;
 
-      <p><strong>6. תוכניות ומחירים</strong><br/>
-      השירות מציע תוכניות Free, Pro ו-Enterprise. המחירים עשויים להשתנות בהתראה מוקדמת. תוכנית Free ניתנת ללא הגבלת זמן.</p>
+        p.x += p.speedX;
+        p.y += p.speedY;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
 
-      <p><strong>7. הגבלת אחריות</strong><br/>
-      השירות ניתן "כפי שהוא" (AS IS). המפעיל אינו אחראי לנזקים ישירים או עקיפים הנובעים מהשימוש בשירות, לרבות אובדן נתונים.</p>
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.shadowBlur  = 8;
+        ctx.shadowColor = `rgba(212,168,8,0.55)`;
+        ctx.fillStyle   = `rgba(${p.color},${p.opacity})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      });
+      requestAnimationFrame(animateParticles);
+    }
+    animateParticles();
 
-      <p><strong>8. שינויים בתנאים</strong><br/>
-      המפעיל רשאי לעדכן תנאים אלו מעת לעת. המשך השימוש לאחר עדכון מהווה הסכמה לתנאים המעודכנים.</p>
+    /* ══════════════════════════════════════════
+       2. SCROLL REVEAL (Intersection Observer)
+    ══════════════════════════════════════════ */
+    document.addEventListener('DOMContentLoaded', () => {
+      const reveals = document.querySelectorAll('.reveal');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      reveals.forEach(el => observer.observe(el));
 
-      <p style="color:#888;margin-top:16px;">עדכון אחרון: אפריל 2026</p>
-    </div>
-  </div>
-</div>
+      /* ── Nav shadow on scroll ── */
+      const navbar = document.getElementById('navbar');
+      window.addEventListener('scroll', () => {
+        navbar.classList.toggle('scrolled', window.scrollY > 20);
+      }, { passive: true });
 
-<!-- FOOTER -->
-<footer>
-  <div style="margin-bottom:12px;">
-    <a href="index.html">כניסה למערכת</a>
-    <a href="#" onclick="document.getElementById('terms-modal').style.display='flex';return false;">תנאי שימוש</a>
-    <a href="mailto:avivmed3@gmail.com">צרו קשר</a>
-  </div>
-  <div style="margin-bottom:8px;font-size:12px;">
-    ✉️ <a href="mailto:avivmed3@gmail.com" style="color:var(--text2);">avivmed3@gmail.com</a>
-  </div>
-  <div>© 2026 SeatSync — כל הזכויות שמורות</div>
-</footer>
+      /* ── Cookie Consent ── */
+      const cookieBanner  = document.getElementById('cookieBanner');
+      const cookieOverlay = document.getElementById('cookieOverlay');
+      const body          = document.getElementById('body');
+
+      if (!localStorage.getItem('seatsync_cookies_accepted')) {
+        body.classList.add('no-scroll');
+        setTimeout(() => {
+          cookieBanner.classList.remove('hidden');
+          cookieOverlay.classList.remove('hidden');
+        }, 100);
+      } else {
+        cookieBanner.style.display  = 'none';
+        cookieOverlay.style.display = 'none';
+        body.classList.remove('no-scroll');
+      }
+    });
+
+    window.acceptCookies = function () {
+      localStorage.setItem('seatsync_cookies_accepted', 'true');
+      const cookieBanner  = document.getElementById('cookieBanner');
+      const cookieOverlay = document.getElementById('cookieOverlay');
+      const body          = document.getElementById('body');
+      cookieBanner.classList.add('hidden');
+      cookieOverlay.classList.add('hidden');
+      body.classList.remove('no-scroll');
+      setTimeout(() => {
+        cookieBanner.style.display  = 'none';
+        cookieOverlay.style.display = 'none';
+      }, 500);
+    };
+
+    /* ══════════════════════════════════════════
+       3. 3D MAGNETIC TILT on Cards
+    ══════════════════════════════════════════ */
+    document.querySelectorAll('.step-card, .price-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.transition = 'box-shadow 0.3s ease';
+      });
+      card.addEventListener('mousemove', e => {
+        const r = card.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width  - 0.5;
+        const y = (e.clientY - r.top)  / r.height - 0.5;
+        card.style.transform = `perspective(700px) rotateX(${-y * 9}deg) rotateY(${x * 9}deg) translateY(-6px) scale(1.022)`;
+        card.style.boxShadow = `${-x * 20}px ${-y * 20}px 40px rgba(0,0,0,0.35), 0 0 35px rgba(212,168,8,0.10)`;
+      });
+      card.addEventListener('mouseleave', () => {
+        card.style.transition = 'transform 0.55s cubic-bezier(0.25,1,0.5,1), box-shadow 0.55s ease';
+        card.style.transform  = '';
+        card.style.boxShadow  = '';
+      });
+    });
+
+    /* ══════════════════════════════════════════
+       6. IMAGE LIGHTBOX
+    ══════════════════════════════════════════ */
+    // Create lightbox DOM
+    const lbOverlay = document.createElement('div');
+    lbOverlay.className = 'lightbox-overlay';
+    lbOverlay.id = 'lightboxOverlay';
+    lbOverlay.innerHTML = `
+      <div class="lightbox-container" id="lightboxContainer">
+        <button class="lightbox-close" id="lightboxClose" aria-label="סגור">✕</button>
+        <img id="lightboxImg" src="" alt="" />
+        <div class="lightbox-caption" id="lightboxCaption"></div>
+      </div>
+    `;
+    document.body.appendChild(lbOverlay);
+
+    function openLightbox(src, caption) {
+      const img = document.getElementById('lightboxImg');
+      const cap = document.getElementById('lightboxCaption');
+      img.src = src;
+      cap.textContent = caption || '';
+      lbOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lbOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(() => { document.getElementById('lightboxImg').src = ''; }, 500);
+    }
+
+    // Attach to all zoomable images
+    document.querySelectorAll('.img-zoomable').forEach(el => {
+      el.addEventListener('click', () => {
+        const src     = el.dataset.img || el.querySelector('img')?.src;
+        const caption = el.dataset.caption || '';
+        if (src) openLightbox(src, caption);
+      });
+    });
+
+    // Close on overlay click or close button
+    lbOverlay.addEventListener('click', e => { if (e.target === lbOverlay) closeLightbox(); });
+    document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    /* ══════════════════════════════════════════
+       7. FAQ ACCORDION
+    ══════════════════════════════════════════ */
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item   = btn.closest('.faq-item');
+        const answer = item.querySelector('.faq-answer');
+        const isOpen = item.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.faq-item').forEach(i => {
+          i.classList.remove('open');
+          i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+          i.querySelector('.faq-answer').style.maxHeight = '0px';
+        });
+
+        // Open clicked if it was closed
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+          answer.style.maxHeight = answer.scrollHeight + 'px';
+        }
+      });
+    });
+
+    /* ══════════════════════════════════════════
+       4. PARALLAX on Background Orbs
+    ══════════════════════════════════════════ */
+    const orb1 = document.querySelector('.bg-orb-1');
+    const orb2 = document.querySelector('.bg-orb-2');
+    const orb3 = document.querySelector('.bg-orb-3');
+    const orb4 = document.querySelector('.bg-orb-4');
+
+    window.addEventListener('scroll', () => {
+      const s = window.scrollY;
+      if (orb1) orb1.style.transform = `translate(${s * 0.05}px, ${s * 0.12}px) scale(1)`;
+      if (orb2) orb2.style.transform = `translate(${-s * 0.04}px, ${-s * 0.08}px) scale(1)`;
+      if (orb3) orb3.style.transform = `translate(-50%, calc(-50% + ${s * 0.06}px)) scale(1)`;
+      if (orb4) orb4.style.transform = `translate(0, ${s * 0.03}px) scale(1)`;
+    }, { passive: true });
+
+    /* ══════════════════════════════════════════
+       5. MOUSE AURORA TRACKING
+    ══════════════════════════════════════════ */
+    const aurora = document.querySelector('.aurora');
+    let aurMouseX = 50, aurMouseY = 30;
+    document.addEventListener('mousemove', e => {
+      aurMouseX += ((e.clientX / window.innerWidth)  * 100 - aurMouseX) * 0.03;
+      aurMouseY += ((e.clientY / window.innerHeight) * 100 - aurMouseY) * 0.03;
+      if (aurora) {
+        aurora.style.background = `
+          radial-gradient(ellipse at ${aurMouseX}% ${aurMouseY}%, rgba(212,168,8,0.10) 0%, transparent 55%),
+          radial-gradient(ellipse at ${100 - aurMouseX}% ${100 - aurMouseY}%, rgba(180,130,0,0.07) 0%, transparent 55%),
+          radial-gradient(ellipse at 50% 90%, rgba(245,197,24,0.05) 0%, transparent 50%)
+        `;
+      }
+    }, { passive: true });
+  </script>
 
 </body>
+
 </html>
