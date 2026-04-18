@@ -9545,26 +9545,26 @@ NOTIFY pgrst, 'reload schema';`;
     // Invitation Designer Component
     // ============================================
     const INVITATION_TEMPLATES = [
-      { id: '1', name: 'קלאסי זהב', bg: '#FFF9E6', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
-      { id: '2', name: 'חצות מנצנץ', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true },
-      { id: '3', name: 'מינימליזם נקי', bg: '#FFFFFF', color: '#000000', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false },
-      { id: '4', name: 'רומנטיקה פרחונית', bg: '#FCF8F7', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '5px double #E0CACA', textShadow: 'none', isDark: false, deco: '🌸' },
-      { id: '5', name: 'קטיפה מלכותית', bg: '#1B263B', color: '#E0A96D', font: 'Playfair Display, serif', padding: '45px', borderOuter: 'none', borderInner: '3px solid #E0A96D', textShadow: 'none', isDark: true },
-      { id: '6', name: 'גאומטרי מודרני', bg: '#FAFAFA', color: '#2C3E50', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '4px solid #2C3E50', borderInner: '1px solid #2C3E50', textShadow: 'none', isDark: false },
-      { id: '7', name: 'כפרי בוהו', bg: '#F4ECE4', color: '#5C4033', font: 'Playfair Display, serif', padding: '40px', borderOuter: '1px solid #A47D5C', borderInner: '1px dashed #A47D5C', textShadow: 'none', isDark: false },
-      { id: '8', name: 'צבעי מים', bg: 'linear-gradient(135deg, #EBF4FA 0%, #FDECF0 100%)', color: '#334E68', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false },
-      { id: '9', name: 'מסיבת נאון', bg: '#0A0A0A', color: '#00FFFF', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '3px solid #FF00FF', borderInner: '1px dotted #00FFFF', textShadow: '0 0 10px #FF00FF', isDark: true },
-      { id: '10', name: 'קלף מסורתי', bg: '#FDF6E3', color: '#4A3B2C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px dashed #A68A64', textShadow: 'none', isDark: false }
+      { id: '1', name: 'קלאסי נקי (כמו דוגמה)', bg: '#FDFCF8', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, decoTop: '', lines: true, letterSpacing: '2px' },
+      { id: '2', name: 'עלי מים בוטניים', bg: 'url("https://images.unsplash.com/photo-1497250681960-ef046c08a56e?auto=format&fit=crop&w=600&q=80") center/cover', color: '#2B3A28', font: 'Playfair Display, serif', padding: '60px 40px', borderOuter: 'none', borderInner: '1px solid #7C9070', textShadow: '0 0 10px rgba(255,255,255,0.9)', isDark: false, decoTop: '🌿', noGradientBg: true },
+      { id: '3', name: 'מסגרת בצבעי מים', bg: '#F8F9FA', color: '#28465C', font: 'Heebo, sans-serif', padding: '50px', borderOuter: '8px solid rgba(40,70,92,0.1)', borderInner: '1px solid #28465C', textShadow: 'none', isDark: false, circleWrap: true },
+      { id: '4', name: 'מודרני אלגנטי', bg: '#EAE6E1', color: '#3A332B', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, blocky: true },
+      { id: '5', name: 'קלאסי זהב', bg: 'var(--gold-50)', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
+      { id: '6', name: 'שחור יוקרתי', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true },
+      { id: '7', name: 'רומנטיקה ורדים', bg: 'linear-gradient(to bottom, #FFF4F6, #FCE3E8)', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '5px double #E0CACA', textShadow: 'none', isDark: false, decoTop: '🌸' },
+      { id: '8', name: 'כפרי בוהו', bg: '#F4ECE4', color: '#5C4033', font: 'Playfair Display, serif', padding: '40px', borderOuter: '1px solid #A47D5C', borderInner: '1px dashed #A47D5C', textShadow: 'none', isDark: false, decoTop: '🌾' }
     ];
 
     function InvitationDesigner({ event, onClose, onSave }) {
       const [templateId, setTemplateId] = useState('1');
-      const [subtitle, setSubtitle] = useState('נשמח לראותכם ביום שמחתנו!');
-      const [parents, setParents] = useState('');
+      const [subtitle, setSubtitle] = useState('נרגשים להזמינכם לשמוח איתנו');
+      const [groomParents, setGroomParents] = useState('');
+      const [brideParents, setBrideParents] = useState('');
       const [receptionTime, setReceptionTime] = useState('19:30');
       const [chuppahTime, setChuppahTime] = useState('20:30');
       const [aliyaTorah, setAliyaTorah] = useState('');
       const [sandak, setSandak] = useState('');
+      const [showRsvpText, setShowRsvpText] = useState(true);
       const [generating, setGenerating] = useState(false);
       const previewRef = useRef(null);
 
@@ -9574,7 +9574,7 @@ NOTIFY pgrst, 'reload schema';`;
       const handleGenerate = async () => {
         setGenerating(true);
         try {
-          const canvas = await html2canvas(previewRef.current, { scale: 3, useCORS: true, backgroundColor: tpl.bg.includes('gradient') ? null : tpl.bg });
+          const canvas = await html2canvas(previewRef.current, { scale: 3, useCORS: true, backgroundColor: tpl.bg.includes('url') || tpl.bg.includes('gradient') ? null : tpl.bg });
           canvas.toBlob(blob => {
             if (!blob) throw new Error("Canvas to blob failed");
             const file = new File([blob], `invitation-${Date.now()}.png`, { type: 'image/png' });
@@ -9588,8 +9588,14 @@ NOTIFY pgrst, 'reload schema';`;
         }
       };
 
-      const dateStr = event?.event_date ? new Date(event.event_date).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'תאריך האירוע';
+      const dateStr = event?.event_date ? new Date(event.event_date).toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '.') : 'תאריך האירוע';
       const timeStr = event?.event_time ? event.event_time.slice(0,5) : 'שעה';
+      
+      let displayTitle = event?.name || 'שם האירוע';
+      if (tpl.letterSpacing) {
+         const m = displayTitle.match(/של (.*)/);
+         if (m) displayTitle = m[1];
+      }
 
       return (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
@@ -9633,9 +9639,15 @@ NOTIFY pgrst, 'reload schema';`;
 
                 {/* Dynamic fields based on event type */}
                 {(evType === 'wedding' || evType === 'bar_mitzvah' || evType === 'bat_mitzvah') && (
-                  <div className="input-group">
-                    <label className="input-label">שמות ההורים המזמינים</label>
-                    <input className="input-field" value={parents} onChange={e => setParents(e.target.value)} placeholder="משפחת כהן ומשפחת לוי" />
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
+                    <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label className="input-label">הורי החתן</label>
+                      <input className="input-field" value={groomParents} onChange={e => setGroomParents(e.target.value)} placeholder="ישראל וישראלה לוי" />
+                    </div>
+                    <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
+                      <label className="input-label">הורי הכלה</label>
+                      <input className="input-field" value={brideParents} onChange={e => setBrideParents(e.target.value)} placeholder="משה ושרית כהן" />
+                    </div>
                   </div>
                 )}
                 
@@ -9666,6 +9678,11 @@ NOTIFY pgrst, 'reload schema';`;
                   </div>
                 )}
 
+                <div className="input-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -5 }}>
+                  <input type="checkbox" checked={showRsvpText} onChange={e => setShowRsvpText(e.target.checked)} id="rsvpCb" style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                  <label htmlFor="rsvpCb" style={{ fontSize: 13, cursor: 'pointer', userSelect: 'none' }}>הצג משפט "נא לאשר הגעה..." בתחתית</label>
+                </div>
+
               </div>
 
               {/* Live Preview Area */}
@@ -9690,46 +9707,69 @@ NOTIFY pgrst, 'reload schema';`;
                     boxSizing: 'border-box'
                   }}
                 >
-                  <div style={{ position: 'absolute', inset: 16, border: tpl.borderInner, pointerEvents: 'none' }} />
+                  <div style={{ position: 'absolute', inset: 16, border: tpl.borderInner, borderRadius: tpl.circleWrap ? '50%' : '0', pointerEvents: 'none' }} />
+                  {tpl.bg.includes('unsplash') && <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.7)', pointerEvents: 'none' }} />}
                   
-                  {tpl.deco && <div style={{ fontSize: 32, marginBottom: 16 }}>{tpl.deco}</div>}
-                  
-                  <div style={{ fontSize: 16, marginBottom: 24, zIndex: 1, fontWeight: 500 }}>{subtitle}</div>
-                  
-                  <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 24, zIndex: 1, letterSpacing: '-0.5px' }}>
-                    {event?.name || 'שם האירוע'}
-                  </div>
-
-                  {parents && (
-                    <div style={{ fontSize: 14, marginBottom: 24, zIndex: 1 }}>{parents}</div>
-                  )}
-
-                  <div style={{ width: '40px', height: '1px', background: tpl.color, opacity: 0.5, marginBottom: 24, zIndex: 1 }} />
-
-                  <div style={{ fontSize: 16, marginBottom: 8, zIndex: 1 }}>{dateStr}</div>
-                  <div style={{ fontSize: 16, marginBottom: 24, zIndex: 1 }}>
-                    {event?.venue_name || 'אולם אירועים'} {event?.venue_address && `- ${event.venue_address}`}
-                  </div>
-
-                  {evType === 'wedding' ? (
-                    <div style={{ display: 'flex', gap: 20, fontSize: 14, zIndex: 1, marginBottom: 24 }}>
-                      {receptionTime && <div>קבלת פנים:<br/><strong>{receptionTime}</strong></div>}
-                      {chuppahTime && <div>חופה וקידושין:<br/><strong>{chuppahTime}</strong></div>}
+                  <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                    {tpl.decoTop && <div style={{ fontSize: 32, marginBottom: 16, opacity: 0.9 }}>{tpl.decoTop}</div>}
+                    
+                    <div style={{ fontSize: tpl.blocky ? 15 : 17, marginBottom: 20, fontWeight: 500, letterSpacing: tpl.blocky ? '1px' : '0' }}>{subtitle}</div>
+                    
+                    <div style={{ fontSize: tpl.blocky ? 32 : 42, fontWeight: tpl.lines ? 400 : 700, marginBottom: 20, letterSpacing: tpl.letterSpacing || '0', textTransform: 'uppercase' }}>
+                      {displayTitle}
                     </div>
-                  ) : (
-                    <div style={{ fontSize: 16, zIndex: 1, marginBottom: 24 }}>בשעה <strong>{timeStr}</strong></div>
-                  )}
 
-                  {sandak && (
-                    <div style={{ fontSize: 14, zIndex: 1, marginBottom: 24 }}>סנדק: <strong>{sandak}</strong></div>
-                  )}
+                    {tpl.lines && <div style={{ width: '80%', height: '1px', background: tpl.color, opacity: 0.3, marginBottom: 20 }} />}
 
-                  {aliyaTorah && (
-                    <div style={{ fontSize: 13, zIndex: 1, marginBottom: 24, whiteSpace: 'pre-line' }}>{aliyaTorah}</div>
-                  )}
+                    <div style={{ fontSize: tpl.blocky ? 18 : 20, marginBottom: 8, letterSpacing: tpl.blocky ? '2px' : '0', fontWeight: tpl.blocky ? 600 : 400 }}>{dateStr}</div>
+                    
+                    <div style={{ fontSize: 16, marginBottom: 24, fontWeight: 500 }}>
+                      {event?.venue_name || 'אולם מרהיב'} {event?.venue_address && `| ${event.venue_address}`}
+                    </div>
 
-                  <div style={{ fontSize: 13, zIndex: 1, opacity: 0.8, marginTop: 10 }}>
-                    נא לאשר הגעה בקישור המצורף
+                    {evType === 'wedding' ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 15, marginBottom: 30, width: '100%' }}>
+                        {receptionTime && <div>קבלת פנים<br/><strong>{receptionTime}</strong></div>}
+                        {(receptionTime && chuppahTime) && <div style={{ width: '1px', height: '30px', background: tpl.color, opacity: 0.4 }} />}
+                        {chuppahTime && <div>חופה וקידושין<br/><strong>{chuppahTime}</strong></div>}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 16, marginBottom: 30 }}>בשעה <strong>{timeStr}</strong></div>
+                    )}
+
+                    {sandak && (
+                      <div style={{ fontSize: 14, marginBottom: 30 }}>סנדק: <strong>{sandak}</strong></div>
+                    )}
+
+                    {aliyaTorah && (
+                      <div style={{ fontSize: 13, marginBottom: 30, whiteSpace: 'pre-line' }}>{aliyaTorah}</div>
+                    )}
+
+                    {/* Parents side by side */}
+                    {(groomParents || brideParents) && (
+                      <div style={{ display: 'flex', width: '100%', justifyContent: 'center', gap: 60, fontSize: 14, marginBottom: 20 }}>
+                        {groomParents && (
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי החתן</div>
+                            <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{groomParents}</div>
+                          </div>
+                        )}
+                        {brideParents && (
+                          <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי הכלה</div>
+                            <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{brideParents}</div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div style={{ fontSize: 18, marginTop: 10, fontWeight: 600 }}>נשמח לראותכם</div>
+
+                    {showRsvpText && (
+                      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 16, letterSpacing: '0.5px' }}>
+                        נא לאשר הגעה בקישור המצורף
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
