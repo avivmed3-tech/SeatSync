@@ -9563,7 +9563,20 @@ NOTIFY pgrst, 'reload schema';`;
 
     function InvitationDesigner({ event, onClose, onSave }) {
       const [templateId, setTemplateId] = useState('1');
-      const [subtitle, setSubtitle] = useState('נרגשים להזמינכם לשמוח איתנו');
+      const [mainTitle, setMainTitle] = useState(() => {
+        const evType = event?.event_type;
+        if (evType === 'brit_mila') return "It's a BOY";
+        if (evType === 'bat_mitzvah') return "It's a GIRL";
+        if (evType === 'bar_mitzvah') return "13";
+        return event?.name ? event.name.replace(/חתונה של /,'') : 'האירוע שלנו';
+      });
+      const [subtitle, setSubtitle] = useState(() => {
+        const evType = event?.event_type;
+        if (evType === 'bar_mitzvah') return 'שמחים להזמינכם לשמחת בר המצווה של בננו';
+        if (evType === 'bat_mitzvah') return 'שמחים להזמינכם לשמחת בת המצווה של בתנו';
+        if (evType === 'brit_mila') return 'בשעה טובה אנו נרגשים להזמינכם לחגוג את הולדת בננו';
+        return 'נרגשים להזמינכם לשמוח איתנו';
+      });
       const [groomParents, setGroomParents] = useState('');
       const [brideParents, setBrideParents] = useState('');
       const [receptionTime, setReceptionTime] = useState('19:30');
@@ -9606,12 +9619,6 @@ NOTIFY pgrst, 'reload schema';`;
 
       const dateStr = event?.event_date ? new Date(event.event_date).toLocaleDateString('he-IL', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\./g, '.') : 'תאריך האירוע';
       const timeStr = event?.event_time ? event.event_time.slice(0,5) : 'שעה';
-      
-      let displayTitle = event?.name || 'שם האירוע';
-      if (tpl.letterSpacing) {
-         const m = displayTitle.match(/של (.*)/);
-         if (m) displayTitle = m[1];
-      }
 
       const previewScale = isMobile ? Math.min(1, (window.innerWidth - 60) / 380) : 1;
 
@@ -9651,12 +9658,17 @@ NOTIFY pgrst, 'reload schema';`;
                 </div>
 
                 <div className="input-group">
+                  <label className="input-label">כותרת ראשית (שם / גיל)</label>
+                  <input className="input-field" value={mainTitle} onChange={e => setMainTitle(e.target.value)} />
+                </div>
+
+                <div className="input-group">
                   <label className="input-label">כיתוב אישי (פתיח)</label>
                   <input className="input-field" value={subtitle} onChange={e => setSubtitle(e.target.value)} />
                 </div>
 
                 {/* Dynamic fields based on event type */}
-                {(evType === 'wedding' || evType === 'bar_mitzvah' || evType === 'bat_mitzvah') && (
+                {evType === 'wedding' ? (
                   <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
                     <div className="input-group" style={{ flex: 1, marginBottom: 0 }}>
                       <label className="input-label">הורי החתן</label>
@@ -9666,6 +9678,11 @@ NOTIFY pgrst, 'reload schema';`;
                       <label className="input-label">הורי הכלה</label>
                       <input className="input-field" value={brideParents} onChange={e => setBrideParents(e.target.value)} placeholder="משה ושרית כהן" />
                     </div>
+                  </div>
+                ) : (
+                  <div className="input-group" style={{ marginBottom: 15 }}>
+                    <label className="input-label">שמות המארחים / ההורים (מוצג למטה)</label>
+                    <input className="input-field" value={groomParents} onChange={e => setGroomParents(e.target.value)} placeholder="ישראל וישראלה לוי" />
                   </div>
                 )}
                 
@@ -9742,7 +9759,7 @@ NOTIFY pgrst, 'reload schema';`;
                     <div style={{ fontSize: tpl.blocky ? 15 : 17, marginBottom: 20, fontWeight: 500, letterSpacing: tpl.blocky ? '1px' : '0' }}>{subtitle}</div>
                     
                     <div style={{ fontSize: tpl.blocky ? 32 : 42, fontWeight: tpl.lines ? 400 : 700, marginBottom: 20, letterSpacing: tpl.letterSpacing || '0', textTransform: 'uppercase' }}>
-                      {displayTitle}
+                      {mainTitle}
                     </div>
 
                     {tpl.lines && <div style={{ width: '80%', height: '1px', background: tpl.color, opacity: 0.3, marginBottom: 20 }} />}
@@ -9774,14 +9791,14 @@ NOTIFY pgrst, 'reload schema';`;
 
                       {/* Parents side by side */}
                       {(groomParents || brideParents) && (
-                        <div style={{ display: 'flex', width: '100%', justifyContent: 'center', gap: 60, fontSize: 14, marginBottom: 20 }}>
+                        <div style={{ display: 'flex', width: '100%', justifyContent: 'center', gap: evType === 'wedding' ? 60 : 20, fontSize: 14, marginBottom: 20 }}>
                           {groomParents && (
                             <div style={{ textAlign: 'center' }}>
-                              <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי החתן</div>
+                              {evType === 'wedding' && <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי החתן</div>}
                               <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{groomParents}</div>
                             </div>
                           )}
-                          {brideParents && (
+                          {brideParents && evType === 'wedding' && (
                             <div style={{ textAlign: 'center' }}>
                               <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי הכלה</div>
                               <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{brideParents}</div>
