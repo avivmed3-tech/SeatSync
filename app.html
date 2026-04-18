@@ -9572,7 +9572,14 @@ NOTIFY pgrst, 'reload schema';`;
       const [sandak, setSandak] = useState('');
       const [showRsvpText, setShowRsvpText] = useState(true);
       const [generating, setGenerating] = useState(false);
+      const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
       const previewRef = useRef(null);
+
+      useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+      }, []);
 
       const tpl = INVITATION_TEMPLATES.find(t => t.id === templateId);
       const evType = event?.event_type || 'wedding';
@@ -9580,7 +9587,10 @@ NOTIFY pgrst, 'reload schema';`;
       const handleGenerate = async () => {
         setGenerating(true);
         try {
+          const originalScale = previewRef.current.style.transform;
+          previewRef.current.style.transform = 'none'; // reset scale for perfect generation
           const canvas = await html2canvas(previewRef.current, { scale: 3, useCORS: true, backgroundColor: tpl.bg.includes('url') || tpl.bg.includes('gradient') ? null : tpl.bg });
+          previewRef.current.style.transform = originalScale; // restore scale
           canvas.toBlob(blob => {
             if (!blob) throw new Error("Canvas to blob failed");
             const file = new File([blob], `invitation-${Date.now()}.png`, { type: 'image/png' });
@@ -9603,17 +9613,19 @@ NOTIFY pgrst, 'reload schema';`;
          if (m) displayTitle = m[1];
       }
 
+      const previewScale = isMobile ? Math.min(1, (window.innerWidth - 60) / 380) : 1;
+
       return (
-        <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal-content animate-scale-in" style={{ maxWidth: 900, width: '95%', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)' }}>
+        <div className="modal-overlay" style={{ zIndex: 1000, overflowY: 'auto' }}>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 900, width: '95%', display: 'flex', flexDirection: 'column', minHeight: isMobile ? '100%' : 'auto', maxHeight: '95vh', padding: 0, overflow: 'hidden', marginTop: isMobile ? '20px' : '0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
               <div className="modal-title" style={{ fontSize: 18 }}>עיצוב הזמנה באפליקציה</div>
               <button className="icon-btn" onClick={onClose}><Icon name="X" size={20} /></button>
             </div>
             
-            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
               {/* Controls Sidebar */}
-              <div style={{ flex: 1, padding: 24, overflowY: 'auto', borderLeft: window.innerWidth < 768 ? 'none' : '1px solid var(--border-default)' }}>
+              <div style={{ flex: 1, padding: '16px 24px', overflowY: 'auto', borderLeft: isMobile ? 'none' : '1px solid var(--border-default)' }}>
                 <label className="input-label">בחר עיצוב</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
                   {INVITATION_TEMPLATES.map(t => (
@@ -9692,12 +9704,20 @@ NOTIFY pgrst, 'reload schema';`;
               </div>
 
               {/* Live Preview Area */}
-              <div style={{ flex: '1.2', background: 'var(--bg-tertiary)', padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', overflowY: 'auto' }}>
+              <div style={{ flex: '1.2', background: 'var(--bg-tertiary)', padding: isMobile ? '20px 0' : 24, display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'flex-start' : 'center', overflowY: 'auto' }}>
                 <div 
-                  ref={previewRef}
                   style={{
+                    transform: `scale(${previewScale})`,
+                    transformOrigin: 'top center',
                     width: '380px',
-                    minHeight: '530px',
+                    height: '530px'
+                  }}
+                >
+                  <div 
+                    ref={previewRef}
+                    style={{
+                      width: '380px',
+                      minHeight: '530px',
                     background: tpl.bg,
                     border: tpl.borderOuter,
                     padding: tpl.padding,
