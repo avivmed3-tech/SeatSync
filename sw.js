@@ -13,7 +13,7 @@ const BASE_PATH = self.location.pathname.replace('/sw.js', '');
 
 const STATIC_ASSETS = [
   BASE_PATH + '/',
-  BASE_PATH + '/index.html',
+  BASE_PATH + '/app.html',
   BASE_PATH + '/rsvp.html',
   BASE_PATH + '/manifest.json',
   'https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap',
@@ -78,7 +78,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
           return response;
         })
-        .catch(() => caches.match(request).then(r => r || caches.match('/index.html')))
+        .catch(() => caches.match(request).then(r => r || caches.match('/app.html')))
     );
     return;
   }

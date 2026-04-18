@@ -2,7 +2,7 @@
   "name": "SeatSync — ניהול אירועים",
   "short_name": "SeatSync",
   "description": "ניהול אישורי הגעה וסידורי הושבה חכם לאירועים",
-  "start_url": "./index.html",
+  "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#000000",
@@ -43,14 +43,14 @@
       "name": "מוזמנים",
       "short_name": "מוזמנים",
       "description": "פתח את רשימת המוזמנים",
-      "url": "./index.html#guests",
+      "url": "./app.html#guests",
       "icons": [{ "src": "Icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "הושבה",
       "short_name": "הושבה",
       "description": "סידורי הושבה",
-      "url": "./index.html#seating",
+      "url": "./app.html#seating",
       "icons": [{ "src": "Icon-192.png", "sizes": "192x192" }]
     }
   ],
