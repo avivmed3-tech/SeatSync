@@ -9544,7 +9544,7 @@ NOTIFY pgrst, 'reload schema';`;
     // ============================================
     // Invitation Designer Component
     // ============================================
-    const DEFAULT_TEMPLATES = [
+    const DESIGNER_DEFAULT_TEMPLATES = [
       { id: '1', name: 'קלאסי מסורתי (תמונה)', bg: 'url("./images/template_classic.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, lines: true, letterSpacing: '2px', noGradientBg: true },
       { id: '2', name: 'עלי מים בוטניים (תמונה)', bg: 'url("./images/template_botanical.png") center/cover', color: '#2B3A28', font: 'Playfair Display, serif', padding: '60px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
       { id: '3', name: 'ציפור בצבעי מים (תמונה)', bg: 'url("./images/template_bluebird.png") center/cover', color: '#28465C', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
@@ -9575,7 +9575,7 @@ NOTIFY pgrst, 'reload schema';`;
       if (['brit_mila', 'brit_bat', 'bar_mitzvah', 'bat_mitzvah'].includes(eventType)) {
         return EVENT_SPECIFIC_TEMPLATES;
       }
-      return DEFAULT_TEMPLATES;
+      return DESIGNER_DEFAULT_TEMPLATES;
     }
 
     function InvitationDesigner({ event, onClose, onSave }) {
