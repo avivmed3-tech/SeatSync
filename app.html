@@ -9546,13 +9546,19 @@ NOTIFY pgrst, 'reload schema';`;
     // ============================================
     const INVITATION_TEMPLATES = [
       { id: '1', name: 'קלאסי מסורתי (תמונה)', bg: 'url("./images/template_classic.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, lines: true, letterSpacing: '2px', noGradientBg: true },
-      { id: '2', name: 'עלי מים בוטניים (תמונה)', bg: 'url("./images/template_botanical.png") center/cover', color: '#2B3A28', font: 'Playfair Display, serif', padding: '60px 40px', borderOuter: 'none', borderInner: 'none', textShadow: '0 0 10px rgba(255,255,255,0.9)', isDark: false, noGradientBg: true },
-      { id: '3', name: 'ציפור בצבעי מים (תמונה)', bg: 'url("./images/template_bluebird.png") center/cover', color: '#28465C', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: '0 0 10px rgba(255,255,255,0.9)', isDark: false, noGradientBg: true },
+      { id: '2', name: 'עלי מים בוטניים (תמונה)', bg: 'url("./images/template_botanical.png") center/cover', color: '#2B3A28', font: 'Playfair Display, serif', padding: '60px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
+      { id: '3', name: 'ציפור בצבעי מים (תמונה)', bg: 'url("./images/template_bluebird.png") center/cover', color: '#28465C', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
       { id: '4', name: 'צלליות אדמה (תמונה)', bg: 'url("./images/template_shadow.png") center/cover', color: '#3A332B', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, blocky: true, noGradientBg: true },
-      { id: '5', name: 'קלאסי זהב', bg: 'var(--gold-50)', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
-      { id: '6', name: 'שחור יוקרתי', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true },
-      { id: '7', name: 'רומנטיקה ורדים', bg: 'linear-gradient(to bottom, #FFF4F6, #FCE3E8)', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '5px double #E0CACA', textShadow: 'none', isDark: false, decoTop: '🌸' },
-      { id: '8', name: 'כפרי בוהו', bg: '#F4ECE4', color: '#5C4033', font: 'Playfair Display, serif', padding: '40px', borderOuter: '1px solid #A47D5C', borderInner: '1px dashed #A47D5C', textShadow: 'none', isDark: false, decoTop: '🌾' }
+      { id: '5', name: 'קשת בוהו חמה (תמונה)', bg: 'url("./images/template_boho_arch.png") center/cover', color: '#5C4033', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
+      { id: '6', name: 'ורוד עתיק (תמונה)', bg: 'url("./images/template_dusty_rose.png") center/cover', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, blocky: true, noGradientBg: true },
+      { id: '7', name: 'פרחים אפלים (תמונה)', bg: 'url("./images/template_dark_floral.png") center/cover', color: '#F4ECE4', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: '0 0 10px rgba(0,0,0,0.8)', isDark: true, noGradientBg: true },
+      { id: '8', name: 'שיש גאומטרי (תמונה)', bg: 'url("./images/template_gold_geo.png") center/cover', color: '#8A6D05', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
+      { id: '9', name: 'קלאסי זהב', bg: 'var(--gold-50)', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
+      { id: '10', name: 'שחור יוקרתי', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true },
+      { id: '11', name: 'רומנטיקה ורדים', bg: 'linear-gradient(to bottom, #FFF4F6, #FCE3E8)', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '5px double #E0CACA', textShadow: 'none', isDark: false, decoTop: '🌸' },
+      { id: '12', name: 'כפרי בוהו', bg: '#F4ECE4', color: '#5C4033', font: 'Playfair Display, serif', padding: '40px', borderOuter: '1px solid #A47D5C', borderInner: '1px dashed #A47D5C', textShadow: 'none', isDark: false, decoTop: '🌾' },
+      { id: '13', name: 'מינימליזם בוטיק', bg: '#FDFCF8', color: '#333333', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, blocky: true, lines: true },
+      { id: '14', name: 'קלאסי מודרני', bg: '#FFFFFF', color: '#111111', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '3px solid #EBEBEB', borderInner: '1px solid #EBEBEB', textShadow: 'none', isDark: false }
     ];
 
     function InvitationDesigner({ event, onClose, onSave }) {
@@ -9727,49 +9733,51 @@ NOTIFY pgrst, 'reload schema';`;
                       {event?.venue_name || 'אולם מרהיב'} {event?.venue_address && `| ${event.venue_address}`}
                     </div>
 
-                    {evType === 'wedding' ? (
-                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 15, marginBottom: 30, width: '100%' }}>
-                        {receptionTime && <div>קבלת פנים<br/><strong>{receptionTime}</strong></div>}
-                        {(receptionTime && chuppahTime) && <div style={{ width: '1px', height: '30px', background: tpl.color, opacity: 0.4 }} />}
-                        {chuppahTime && <div>חופה וקידושין<br/><strong>{chuppahTime}</strong></div>}
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 16, marginBottom: 30 }}>בשעה <strong>{timeStr}</strong></div>
-                    )}
+                    <div style={tpl.frostBottom ? { background: 'rgba(255,255,255,0.7)', padding: '20px', borderRadius: '16px', backdropFilter: 'blur(3px)', width: '110%', marginLeft: '-5%', marginRight: '-5%', display: 'flex', flexDirection: 'column', alignItems: 'center' } : { width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      {evType === 'wedding' ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, fontSize: 15, marginBottom: 30, width: '100%' }}>
+                          {receptionTime && <div>קבלת פנים<br/><strong>{receptionTime}</strong></div>}
+                          {(receptionTime && chuppahTime) && <div style={{ width: '1px', height: '30px', background: tpl.color, opacity: 0.4 }} />}
+                          {chuppahTime && <div>חופה וקידושין<br/><strong>{chuppahTime}</strong></div>}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 16, marginBottom: 30 }}>בשעה <strong>{timeStr}</strong></div>
+                      )}
 
-                    {sandak && (
-                      <div style={{ fontSize: 14, marginBottom: 30 }}>סנדק: <strong>{sandak}</strong></div>
-                    )}
+                      {sandak && (
+                        <div style={{ fontSize: 14, marginBottom: 30 }}>סנדק: <strong>{sandak}</strong></div>
+                      )}
 
-                    {aliyaTorah && (
-                      <div style={{ fontSize: 13, marginBottom: 30, whiteSpace: 'pre-line' }}>{aliyaTorah}</div>
-                    )}
+                      {aliyaTorah && (
+                        <div style={{ fontSize: 13, marginBottom: 30, whiteSpace: 'pre-line' }}>{aliyaTorah}</div>
+                      )}
 
-                    {/* Parents side by side */}
-                    {(groomParents || brideParents) && (
-                      <div style={{ display: 'flex', width: '100%', justifyContent: 'center', gap: 60, fontSize: 14, marginBottom: 20 }}>
-                        {groomParents && (
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי החתן</div>
-                            <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{groomParents}</div>
-                          </div>
-                        )}
-                        {brideParents && (
-                          <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי הכלה</div>
-                            <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{brideParents}</div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                      {/* Parents side by side */}
+                      {(groomParents || brideParents) && (
+                        <div style={{ display: 'flex', width: '100%', justifyContent: 'center', gap: 60, fontSize: 14, marginBottom: 20 }}>
+                          {groomParents && (
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי החתן</div>
+                              <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{groomParents}</div>
+                            </div>
+                          )}
+                          {brideParents && (
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontWeight: 700, marginBottom: 4, opacity: 0.8, fontSize: 12 }}>הורי הכלה</div>
+                              <div style={{ whiteSpace: 'pre-line', lineHeight: 1.4 }}>{brideParents}</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                    <div style={{ fontSize: 18, marginTop: 10, fontWeight: 600 }}>נשמח לראותכם</div>
+                      <div style={{ fontSize: 18, marginTop: 10, fontWeight: 600 }}>נשמח לראותכם</div>
 
-                    {showRsvpText && (
-                      <div style={{ fontSize: 12, opacity: 0.7, marginTop: 16, letterSpacing: '0.5px' }}>
-                        נא לאשר הגעה בקישור המצורף
-                      </div>
-                    )}
+                      {showRsvpText && (
+                        <div style={{ fontSize: 12, opacity: 0.7, marginTop: 16, letterSpacing: '0.5px' }}>
+                          נא לאשר הגעה בקישור המצורף
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
