@@ -9541,6 +9541,211 @@ NOTIFY pgrst, 'reload schema';`;
       );
     }
 
+    // ============================================
+    // Invitation Designer Component
+    // ============================================
+    const INVITATION_TEMPLATES = [
+      { id: '1', name: 'קלאסי זהב', bg: '#FFF9E6', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
+      { id: '2', name: 'חצות מנצנץ', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true },
+      { id: '3', name: 'מינימליזם נקי', bg: '#FFFFFF', color: '#000000', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false },
+      { id: '4', name: 'רומנטיקה פרחונית', bg: '#FCF8F7', color: '#6B4C4C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '5px double #E0CACA', textShadow: 'none', isDark: false, deco: '🌸' },
+      { id: '5', name: 'קטיפה מלכותית', bg: '#1B263B', color: '#E0A96D', font: 'Playfair Display, serif', padding: '45px', borderOuter: 'none', borderInner: '3px solid #E0A96D', textShadow: 'none', isDark: true },
+      { id: '6', name: 'גאומטרי מודרני', bg: '#FAFAFA', color: '#2C3E50', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '4px solid #2C3E50', borderInner: '1px solid #2C3E50', textShadow: 'none', isDark: false },
+      { id: '7', name: 'כפרי בוהו', bg: '#F4ECE4', color: '#5C4033', font: 'Playfair Display, serif', padding: '40px', borderOuter: '1px solid #A47D5C', borderInner: '1px dashed #A47D5C', textShadow: 'none', isDark: false },
+      { id: '8', name: 'צבעי מים', bg: 'linear-gradient(135deg, #EBF4FA 0%, #FDECF0 100%)', color: '#334E68', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false },
+      { id: '9', name: 'מסיבת נאון', bg: '#0A0A0A', color: '#00FFFF', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '3px solid #FF00FF', borderInner: '1px dotted #00FFFF', textShadow: '0 0 10px #FF00FF', isDark: true },
+      { id: '10', name: 'קלף מסורתי', bg: '#FDF6E3', color: '#4A3B2C', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px dashed #A68A64', textShadow: 'none', isDark: false }
+    ];
+
+    function InvitationDesigner({ event, onClose, onSave }) {
+      const [templateId, setTemplateId] = useState('1');
+      const [subtitle, setSubtitle] = useState('נשמח לראותכם ביום שמחתנו!');
+      const [parents, setParents] = useState('');
+      const [receptionTime, setReceptionTime] = useState('19:30');
+      const [chuppahTime, setChuppahTime] = useState('20:30');
+      const [aliyaTorah, setAliyaTorah] = useState('');
+      const [sandak, setSandak] = useState('');
+      const [generating, setGenerating] = useState(false);
+      const previewRef = useRef(null);
+
+      const tpl = INVITATION_TEMPLATES.find(t => t.id === templateId);
+      const evType = event?.event_type || 'wedding';
+
+      const handleGenerate = async () => {
+        setGenerating(true);
+        try {
+          const canvas = await html2canvas(previewRef.current, { scale: 3, useCORS: true, backgroundColor: tpl.bg.includes('gradient') ? null : tpl.bg });
+          canvas.toBlob(blob => {
+            if (!blob) throw new Error("Canvas to blob failed");
+            const file = new File([blob], `invitation-${Date.now()}.png`, { type: 'image/png' });
+            onSave(file);
+            onClose();
+          }, 'image/png', 0.95);
+        } catch(err) {
+          console.error(err);
+          alert('שגיאה ביצירת התמונה');
+          setGenerating(false);
+        }
+      };
+
+      const dateStr = event?.event_date ? new Date(event.event_date).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'תאריך האירוע';
+      const timeStr = event?.event_time ? event.event_time.slice(0,5) : 'שעה';
+
+      return (
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content animate-scale-in" style={{ maxWidth: 900, width: '95%', display: 'flex', flexDirection: 'column', maxHeight: '90vh', padding: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)' }}>
+              <div className="modal-title" style={{ fontSize: 18 }}>עיצוב הזמנה באפליקציה</div>
+              <button className="icon-btn" onClick={onClose}><Icon name="X" size={20} /></button>
+            </div>
+            
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: window.innerWidth < 768 ? 'column' : 'row' }}>
+              {/* Controls Sidebar */}
+              <div style={{ flex: 1, padding: 24, overflowY: 'auto', borderLeft: window.innerWidth < 768 ? 'none' : '1px solid var(--border-default)' }}>
+                <label className="input-label">בחר עיצוב</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                  {INVITATION_TEMPLATES.map(t => (
+                    <div 
+                      key={t.id} 
+                      onClick={() => setTemplateId(t.id)}
+                      style={{ 
+                        padding: '10px', 
+                        borderRadius: '8px', 
+                        border: templateId === t.id ? '2px solid var(--accent)' : '1px solid var(--border-default)',
+                        background: t.bg.includes('gradient') ? t.bg : t.bg,
+                        color: t.color,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        fontSize: 13,
+                        fontWeight: templateId === t.id ? 700 : 400,
+                        fontFamily: t.font
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">כיתוב אישי (פתיח)</label>
+                  <input className="input-field" value={subtitle} onChange={e => setSubtitle(e.target.value)} />
+                </div>
+
+                {/* Dynamic fields based on event type */}
+                {(evType === 'wedding' || evType === 'bar_mitzvah' || evType === 'bat_mitzvah') && (
+                  <div className="input-group">
+                    <label className="input-label">שמות ההורים המזמינים</label>
+                    <input className="input-field" value={parents} onChange={e => setParents(e.target.value)} placeholder="משפחת כהן ומשפחת לוי" />
+                  </div>
+                )}
+                
+                {evType === 'wedding' && (
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <div className="input-group" style={{ flex: 1 }}>
+                      <label className="input-label">קבלת פנים</label>
+                      <input className="input-field" type="time" dir="ltr" value={receptionTime} onChange={e => setReceptionTime(e.target.value)} />
+                    </div>
+                    <div className="input-group" style={{ flex: 1 }}>
+                      <label className="input-label">חופה וקידושין</label>
+                      <input className="input-field" type="time" dir="ltr" value={chuppahTime} onChange={e => setChuppahTime(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+
+                {evType === 'brit_mila' && (
+                  <div className="input-group">
+                    <label className="input-label">סנדק (אופציונלי)</label>
+                    <input className="input-field" value={sandak} onChange={e => setSandak(e.target.value)} />
+                  </div>
+                )}
+
+                {(evType === 'bar_mitzvah' || evType === 'bat_mitzvah') && (
+                  <div className="input-group">
+                    <label className="input-label">פרטי עליה לתורה (אופציונלי)</label>
+                    <textarea className="input-field" value={aliyaTorah} onChange={e => setAliyaTorah(e.target.value)} rows="3" placeholder="יום חמישי, בית כנסת הגדול..." />
+                  </div>
+                )}
+
+              </div>
+
+              {/* Live Preview Area */}
+              <div style={{ flex: '1.2', background: 'var(--bg-tertiary)', padding: 24, display: 'flex', justifyContent: 'center', alignItems: 'center', overflowY: 'auto' }}>
+                <div 
+                  ref={previewRef}
+                  style={{
+                    width: '380px',
+                    minHeight: '530px',
+                    background: tpl.bg,
+                    border: tpl.borderOuter,
+                    padding: tpl.padding,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    textAlign: 'center',
+                    color: tpl.color,
+                    fontFamily: tpl.font,
+                    textShadow: tpl.textShadow,
+                    position: 'relative',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <div style={{ position: 'absolute', inset: 16, border: tpl.borderInner, pointerEvents: 'none' }} />
+                  
+                  {tpl.deco && <div style={{ fontSize: 32, marginBottom: 16 }}>{tpl.deco}</div>}
+                  
+                  <div style={{ fontSize: 16, marginBottom: 24, zIndex: 1, fontWeight: 500 }}>{subtitle}</div>
+                  
+                  <div style={{ fontSize: 36, fontWeight: 800, marginBottom: 24, zIndex: 1, letterSpacing: '-0.5px' }}>
+                    {event?.name || 'שם האירוע'}
+                  </div>
+
+                  {parents && (
+                    <div style={{ fontSize: 14, marginBottom: 24, zIndex: 1 }}>{parents}</div>
+                  )}
+
+                  <div style={{ width: '40px', height: '1px', background: tpl.color, opacity: 0.5, marginBottom: 24, zIndex: 1 }} />
+
+                  <div style={{ fontSize: 16, marginBottom: 8, zIndex: 1 }}>{dateStr}</div>
+                  <div style={{ fontSize: 16, marginBottom: 24, zIndex: 1 }}>
+                    {event?.venue_name || 'אולם אירועים'} {event?.venue_address && `- ${event.venue_address}`}
+                  </div>
+
+                  {evType === 'wedding' ? (
+                    <div style={{ display: 'flex', gap: 20, fontSize: 14, zIndex: 1, marginBottom: 24 }}>
+                      {receptionTime && <div>קבלת פנים:<br/><strong>{receptionTime}</strong></div>}
+                      {chuppahTime && <div>חופה וקידושין:<br/><strong>{chuppahTime}</strong></div>}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 16, zIndex: 1, marginBottom: 24 }}>בשעה <strong>{timeStr}</strong></div>
+                  )}
+
+                  {sandak && (
+                    <div style={{ fontSize: 14, zIndex: 1, marginBottom: 24 }}>סנדק: <strong>{sandak}</strong></div>
+                  )}
+
+                  {aliyaTorah && (
+                    <div style={{ fontSize: 13, zIndex: 1, marginBottom: 24, whiteSpace: 'pre-line' }}>{aliyaTorah}</div>
+                  )}
+
+                  <div style={{ fontSize: 13, zIndex: 1, opacity: 0.8, marginTop: 10 }}>
+                    נא לאשר הגעה בקישור המצורף
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-secondary)', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button className="btn btn-ghost" onClick={onClose} disabled={generating}>ביטול</button>
+              <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
+                {generating ? <><Icon name="Loader" size={18} style={{ animation: 'spin 1s linear infinite' }} />מייצר...</> : <><Icon name="Check" size={18} />שמור והשתמש</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Phase 6 — Settings Page
     // ============================================
     function SettingsPage({ event, onEventUpdate }) {
@@ -9566,6 +9771,7 @@ NOTIFY pgrst, 'reload schema';`;
         reminder_days_before: event?.settings?.reminder_days_before ?? 3,
       });
       const [saving, setSaving] = useState(false);
+      const [showDesigner, setShowDesigner] = useState(false);
 
       // Invitation upload
       const [invitationUrl, setInvitationUrl] = useState(event?.settings?.invitation_url || '');
@@ -9991,6 +10197,30 @@ NOTIFY pgrst, 'reload schema';`;
                     </>
                   )}
                 </div>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
+                <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>או</div>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
+              </div>
+              <button
+                className="btn btn-secondary"
+                style={{ width: '100%', marginTop: 12, padding: '12px', border: '1px dashed var(--border-focus)', background: 'var(--bg-tertiary)' }}
+                onClick={() => setShowDesigner(true)}
+              >
+                <Icon name="Palette" size={18} style={{ color: 'var(--accent)' }} />
+                <span style={{ fontWeight: 600 }}>עיצוב הזמנה באפליקציה</span>
+              </button>
+
+              {showDesigner && (
+                <InvitationDesigner 
+                  event={event} 
+                  onClose={() => setShowDesigner(false)} 
+                  onSave={(file) => {
+                    handleInvitationUpload(file);
+                  }} 
+                />
               )}
             </div>
           </div>

@@ -324,15 +324,37 @@
     }
 
     /* ── SCROLL ANIMATIONS ── */
-    .reveal {
+    .reveal, .reveal-up {
       opacity: 0;
       transform: translateY(50px) scale(0.97);
       transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
-    .reveal.active {
+    .reveal.active, .reveal-up.active {
       opacity: 1;
       transform: translateY(0) scale(1);
+    }
+
+    .reveal-left {
+      opacity: 0;
+      transform: translateX(-50px);
+      transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .reveal-left.active {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .reveal-right {
+      opacity: 0;
+      transform: translateX(50px);
+      transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .reveal-right.active {
+      opacity: 1;
+      transform: translateX(0);
     }
 
     .delay-100 { transition-delay: 100ms; }
@@ -740,7 +762,7 @@
       }
     }
 
-    /* ── HOW IT WORKS ── */
+    /* ── HOW IT WORKS / BENTO GRID ── */
     .how-section {
       background: rgba(255, 255, 255, 0.02);
       border-top: 1px solid var(--border-subtle);
@@ -756,63 +778,257 @@
       pointer-events: none;
     }
 
-    .steps-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 30px;
+    /* ── HOW IT WORKS / TIMELINE ── */
+    .timeline-container {
       max-width: 1100px;
       margin: 0 auto;
       position: relative;
+      padding: 60px 24px;
     }
 
-    .step-card {
-      padding: 32px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border-subtle);
-      border-radius: 20px;
-      transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.5s ease, border-color 0.3s;
-      backdrop-filter: blur(12px);
-      transform-style: preserve-3d;
-      will-change: transform;
-      cursor: default;
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 50%;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, rgba(212,168,8,0.5), transparent);
+      transform: translateX(-50%);
     }
 
-    .step-card:hover {
+    .timeline-step {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 120px;
+      position: relative;
+    }
+
+    .timeline-step:nth-child(even) {
+      flex-direction: row-reverse;
+    }
+
+    .timeline-step:last-child {
+      margin-bottom: 0;
+    }
+
+    .timeline-content {
+      width: 42%;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      position: relative;
+      z-index: 2;
+      transition: border-color 0.4s;
+    }
+    
+    .timeline-content:hover {
       border-color: rgba(212, 168, 8, 0.4);
-      background: rgba(212, 168, 8, 0.05);
     }
 
-    .step-num {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: var(--gradient-gold);
-      color: #1A1A1A;
-      font-size: 22px;
-      font-weight: 800;
+    .timeline-num {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 56px; height: 56px;
+      background: var(--bg);
+      border: 2px solid var(--gold);
+      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 12px rgba(212, 168, 8, 0.3);
-      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-
-    .step-card:hover .step-num {
-      box-shadow: 0 0 24px rgba(212, 168, 8, 0.7), 0 4px 12px rgba(212, 168, 8, 0.3);
-      transform: scale(1.12) rotate(5deg);
-    }
-
-    .step-title {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: 800;
-      margin-bottom: 12px;
+      color: var(--gold);
+      z-index: 3;
+      box-shadow: 0 0 30px rgba(212,168,8,0.2);
     }
 
-    .step-text {
-      font-size: 15px;
+    .timeline-image {
+      width: 48%;
+      height: 320px;
+      border-radius: 24px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      transform: perspective(1000px) rotateY(-8deg);
+      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+    .timeline-step:nth-child(even) .timeline-image {
+      transform: perspective(1000px) rotateY(8deg);
+    }
+    .timeline-step:hover .timeline-image {
+      transform: perspective(1000px) rotateY(0deg) translateY(-8px);
+    }
+
+    .timeline-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.6s ease;
+    }
+    .timeline-step:hover .timeline-image img {
+      transform: scale(1.05);
+    }
+
+    .timeline-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 16px;
+      font-family: 'Playfair Display', serif;
+    }
+
+    .timeline-text {
+      font-size: 17px;
       color: var(--text2);
-      line-height: 1.6;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 900px) {
+      .timeline-container::before {
+        left: auto;
+        right: 48px;
+        transform: translateX(50%);
+      }
+      .timeline-step, .timeline-step:nth-child(even) {
+        flex-direction: column;
+        align-items: stretch;
+        margin-bottom: 80px;
+      }
+      .timeline-content {
+        margin-right: 80px;
+        width: auto;
+        padding: 24px;
+      }
+      .timeline-image {
+        margin-right: 80px;
+        margin-top: 24px;
+        width: auto;
+        height: 240px;
+        transform: none !important;
+      }
+      .timeline-num {
+        left: auto; right: 48px;
+        top: 0;
+        transform: translate(50%, 0);
+      }
+    }
+
+    /* ── INFINITE MARQUEE ── */
+    .marquee-section {
+      padding: 80px 0;
+      position: relative;
+      overflow: hidden;
+      z-index: 2;
+      background: linear-gradient(180deg, rgba(8,8,8,0) 0%, rgba(212,168,8,0.02) 50%, rgba(8,8,8,0) 100%);
+      width: 100vw;
+      margin-left: calc(-50vw + 50%);
+    }
+
+    .marquee-title {
+      text-align: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 40px;
+      color: var(--text);
+    }
+
+    .marquee-container {
+      display: flex;
+      margin-bottom: 24px;
+      width: 100%;
+    }
+
+    .marquee-container:last-child {
+      margin-bottom: 0;
+    }
+
+    .marquee-content {
+      display: flex;
+      flex-shrink: 0;
+      width: max-content;
+    }
+
+    .marquee-item {
+      width: 320px;
+      height: 240px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      transition: border-color 0.4s, box-shadow 0.4s;
+      display: flex;
+      align-items: flex-end;
+      padding: 20px;
+      margin: 0 12px;
+    }
+    
+    .marquee-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.1) 100%);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .marquee-item img {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
+      opacity: 0.85;
+      transition: opacity 0.4s, transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+      z-index: 0;
+    }
+    
+    .marquee-item-text {
+      position: relative;
+      z-index: 2;
+      color: var(--text);
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Playfair Display', serif;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+      direction: rtl; /* Important for hebrew */
+      text-align: right;
+    }
+
+    .marquee-item:hover {
+      border-color: rgba(212, 168, 8, 0.4);
+      box-shadow: 0 15px 45px rgba(212, 168, 8, 0.2);
+    }
+
+    .marquee-item:hover img {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+    
+    @keyframes marqueeScrollLeft {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); } 
+    }
+    
+    @keyframes marqueeScrollRight {
+      from { transform: translateX(-50%); }
+      to { transform: translateX(0); }
+    }
+
+    .marquee-go-left {
+      animation: marqueeScrollLeft 35s linear infinite;
+    }
+    
+    .marquee-go-right {
+      animation: marqueeScrollRight 35s linear infinite;
+    }
+
+    .marquee-container:hover .marquee-content {
+      animation-play-state: paused;
     }
 
     /* ── PRICING ── */
@@ -1634,33 +1850,116 @@
   <!-- SECTION DIVIDER -->
   <div class="section-divider" aria-hidden="true"></div>
 
-  <!-- HOW IT WORKS -->
-  <section class="how-section">
+  <!-- HOW IT WORKS (BENTO GRID) -->
+  <section class="how-section" style="position:relative;">
     <div class="section-label reveal">תהליך עבודה</div>
     <h2 class="section-title reveal delay-100">מארגנים אירוע ב-4 צעדים</h2>
-    <p class="section-sub reveal delay-200">בלי אקסלים מסובכים, בלי ניירות שאובדים. רק התהליך הנקי ביותר לדאוג שהאירוע
-      יהיה מושלם.</p>
+    <p class="section-sub reveal delay-200">בלי אקסלים מסובכים, בלי ניירות שאובדים. רק התהליך הנקי ביותר לדאוג שהאירוע יהיה מושלם.</p>
 
-    <div class="steps-grid">
-      <div class="step-card reveal delay-100">
-        <div class="step-num">1</div>
-        <div class="step-title">מקימים אירוע</div>
-        <div class="step-text">הגדירו את השם, התאריך והמיקום בשניות, והתחילו לייבא אורחים.</div>
+    <div class="timeline-container">
+      
+      <!-- Step 1 -->
+      <div class="timeline-step">
+        <div class="timeline-num reveal delay-100">01</div>
+        <div class="timeline-content reveal-right delay-200">
+          <div class="timeline-title">מקימים אירוע בקליק</div>
+          <p class="timeline-text">
+            הגדירו את השם, התאריך והמיקום בשניות, והתחילו לייבא אורחים ישירות מהוואטסאפ או מקובץ אקסל.
+            המערכת תסדר ותארגן את הרשימות בצורה חכמה ומדויקת.
+          </p>
+        </div>
+        <div class="timeline-image reveal-left delay-300">
+          <img src="images/step1.png" alt="Setup Event" />
+        </div>
       </div>
-      <div class="step-card reveal delay-200">
-        <div class="step-num">2</div>
-        <div class="step-title">שולחים לאורחים</div>
-        <div class="step-text">משתמשים בתבניות אוטומטיות לווטסאפ ושולחים הזמנות לכולם בלחיצה.</div>
+
+      <!-- Step 2 -->
+      <div class="timeline-step">
+        <div class="timeline-num reveal delay-100">02</div>
+        <div class="timeline-content reveal-left delay-200">
+          <div class="timeline-title">הזמנות מרשימות</div>
+          <p class="timeline-text">
+            משתמשים בתבניות אוטומטיות לווטסאפ ושולחים הזמנות אישיות לכולם בלחיצה. 
+            כל אורח מקבל חווית RSVP מותאמת אישית ישירות לנייד שלו עם עיצוב יוקרתי.
+          </p>
+        </div>
+        <div class="timeline-image reveal-right delay-300">
+          <img src="images/step2.png" alt="Send Invites" />
+        </div>
       </div>
-      <div class="step-card reveal delay-300">
-        <div class="step-num">3</div>
-        <div class="step-title">אישורים אונליין</div>
-        <div class="step-text">צופים בדשבורד מתעדכן בזמן אמת ברגע שהאורחים לוחצים ומאשרים בטלפון.</div>
+
+      <!-- Step 3 -->
+      <div class="timeline-step">
+        <div class="timeline-num reveal delay-100">03</div>
+        <div class="timeline-content reveal-right delay-200">
+          <div class="timeline-title">אישורים ועדכונים אונליין</div>
+          <p class="timeline-text">
+            הכל מתעדכן בזמן אמת בדשבורד החכם שלכם. תדעו במדויק מי מגיע, כמה מלווים,
+            ואפילו אם קיימות רגישויות למזון. אין פערים, אין ניחושים.
+          </p>
+        </div>
+        <div class="timeline-image reveal-left delay-300">
+          <img src="images/step3.png" alt="Track RSVPs" />
+        </div>
       </div>
-      <div class="step-card reveal delay-400">
-        <div class="step-num">4</div>
-        <div class="step-title">הושבה וייצוא</div>
-        <div class="step-text">משבצים את כולם במפת שולחנות פיזית ומייצאים PDF נקי לכללי האולם.</div>
+
+      <!-- Step 4 -->
+      <div class="timeline-step">
+        <div class="timeline-num reveal delay-100">04</div>
+        <div class="timeline-content reveal-left delay-200">
+          <div class="timeline-title">הושבה בלחיצת כפתור</div>
+          <p class="timeline-text">
+            שבצו את כל האורחים שאישרו הגעה במפת שולחנות וירטואלית ואינטראקטיבית.
+            בסיום, ייצאו את הרשימה המדויקת ושלחו ישירות לאולם ולמנהל האירוע.
+          </p>
+        </div>
+        <div class="timeline-image reveal-right delay-300">
+          <img src="images/step4.png" alt="Seating Chart" />
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- SECTION DIVIDER -->
+  <div class="section-divider" aria-hidden="true"></div>
+
+  <!-- INFINITE MARQUEE SECTION -->
+  <section class="marquee-section" dir="ltr">
+    <h2 class="marquee-title reveal" dir="rtl">עיצוב עוצר נשימה</h2>
+    <!-- Row 1: Leftward -->
+    <div class="marquee-container reveal delay-200">
+      <div class="marquee-content marquee-go-left">
+        <!-- Original set -->
+        <div class="marquee-item"><img src="images/wedding_table.png" alt="Moment 1"><div class="marquee-item-text">עיצוב יוקרתי</div></div>
+        <div class="marquee-item"><img src="images/party_dancing.png" alt="Moment 2"><div class="marquee-item-text">חגיגה מושלמת</div></div>
+        <div class="marquee-item"><img src="images/invitation.png" alt="Moment 3"><div class="marquee-item-text">RSVP מרשים</div></div>
+        <div class="marquee-item"><img src="images/event_hall.png" alt="Moment 4"><div class="marquee-item-text">חלל מפואר</div></div>
+        <div class="marquee-item"><img src="images/champagne_toast.png" alt="Moment 5"><div class="marquee-item-text">רגעים בלתי נשכחים</div></div>
+        <!-- Duplicated set -->
+        <div class="marquee-item"><img src="images/wedding_table.png" alt="Moment 1"><div class="marquee-item-text">עיצוב יוקרתי</div></div>
+        <div class="marquee-item"><img src="images/party_dancing.png" alt="Moment 2"><div class="marquee-item-text">חגיגה מושלמת</div></div>
+        <div class="marquee-item"><img src="images/invitation.png" alt="Moment 3"><div class="marquee-item-text">RSVP מרשים</div></div>
+        <div class="marquee-item"><img src="images/event_hall.png" alt="Moment 4"><div class="marquee-item-text">חלל מפואר</div></div>
+        <div class="marquee-item"><img src="images/champagne_toast.png" alt="Moment 5"><div class="marquee-item-text">רגעים בלתי נשכחים</div></div>
+      </div>
+    </div>
+    
+    <!-- Row 2: Rightward -->
+    <div class="marquee-container reveal delay-300">
+      <div class="marquee-content marquee-go-right">
+        <!-- Original set -->
+        <div class="marquee-item"><img src="images/champagne_toast.png" alt="Moment 5"><div class="marquee-item-text">בקרה מלאה</div></div>
+        <div class="marquee-item"><img src="images/event_hall.png" alt="Moment 4"><div class="marquee-item-text">אסתטיקה ללא פשרות</div></div>
+        <div class="marquee-item"><img src="images/invitation.png" alt="Moment 3"><div class="marquee-item-text">חווית צ'אט</div></div>
+        <div class="marquee-item"><img src="images/party_dancing.png" alt="Moment 2"><div class="marquee-item-text">שליטה לאורך כל הדרך</div></div>
+        <div class="marquee-item"><img src="images/wedding_table.png" alt="Moment 1"><div class="marquee-item-text">האירוע שלכם</div></div>
+        <!-- Duplicated set -->
+        <div class="marquee-item"><img src="images/champagne_toast.png" alt="Moment 5"><div class="marquee-item-text">בקרה מלאה</div></div>
+        <div class="marquee-item"><img src="images/event_hall.png" alt="Moment 4"><div class="marquee-item-text">אסתטיקה ללא פשרות</div></div>
+        <div class="marquee-item"><img src="images/invitation.png" alt="Moment 3"><div class="marquee-item-text">חווית צ'אט</div></div>
+        <div class="marquee-item"><img src="images/party_dancing.png" alt="Moment 2"><div class="marquee-item-text">שליטה לאורך כל הדרך</div></div>
+        <div class="marquee-item"><img src="images/wedding_table.png" alt="Moment 1"><div class="marquee-item-text">האירוע שלכם</div></div>
       </div>
     </div>
   </section>
@@ -1922,7 +2221,7 @@
        2. SCROLL REVEAL (Intersection Observer)
     ══════════════════════════════════════════ */
     document.addEventListener('DOMContentLoaded', () => {
-      const reveals = document.querySelectorAll('.reveal');
+      const reveals = document.querySelectorAll('.reveal, .reveal-up, .reveal-left, .reveal-right');
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
           if (entry.isIntersecting) {
