@@ -9544,7 +9544,7 @@ NOTIFY pgrst, 'reload schema';`;
     // ============================================
     // Invitation Designer Component
     // ============================================
-    const DESIGNER_DEFAULT_TEMPLATES = [
+    const INVITATION_TEMPLATES = [
       { id: '1', name: 'קלאסי מסורתי (תמונה)', bg: 'url("./images/template_classic.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, lines: true, letterSpacing: '2px', noGradientBg: true },
       { id: '2', name: 'עלי מים בוטניים (תמונה)', bg: 'url("./images/template_botanical.png") center/cover', color: '#2B3A28', font: 'Playfair Display, serif', padding: '60px 40px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
       { id: '3', name: 'ציפור בצבעי מים (תמונה)', bg: 'url("./images/template_bluebird.png") center/cover', color: '#28465C', font: 'Heebo, sans-serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, frostBottom: true, noGradientBg: true },
@@ -9561,27 +9561,8 @@ NOTIFY pgrst, 'reload schema';`;
       { id: '14', name: 'קלאסי מודרני', bg: '#FFFFFF', color: '#111111', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '3px solid #EBEBEB', borderInner: '1px solid #EBEBEB', textShadow: 'none', isDark: false }
     ];
 
-    const EVENT_SPECIFIC_TEMPLATES = [
-      { id: 'e1', name: 'רקע יוקרתי (תמונה 1)', bg: 'url("./images/new_event_1.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
-      { id: 'e2', name: 'רקע יוקרתי (תמונה 2)', bg: 'url("./images/new_event_2.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
-      { id: 'e3', name: 'רקע יוקרתי (תמונה 3)', bg: 'url("./images/new_event_3.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
-      { id: 'e4', name: 'רקע יוקרתי (תמונה 4)', bg: 'url("./images/new_event_4.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
-      { id: 'e5', name: 'רקע יוקרתי (תמונה 5)', bg: 'url("./images/new_event_5.png") center/cover', color: '#1A1A1A', font: 'Playfair Display, serif', padding: '50px', borderOuter: 'none', borderInner: 'none', textShadow: 'none', isDark: false, noGradientBg: true },
-      { id: '9', name: 'קלאסי זהב', bg: 'var(--gold-50)', color: '#8A6D05', font: 'Playfair Display, serif', padding: '40px', borderOuter: 'none', borderInner: '2px solid #D4A808', textShadow: 'none', isDark: false },
-      { id: '10', name: 'שחור יוקרתי', bg: '#131313', color: '#F5C518', font: 'Heebo, sans-serif', padding: '40px', borderOuter: '1px solid #333', borderInner: '1px solid #F5C518', textShadow: '0 0 8px rgba(245,197,24,0.3)', isDark: true }
-    ];
-
-    function getTemplatesForEvent(eventType) {
-      if (['brit_mila', 'brit_bat', 'bar_mitzvah', 'bat_mitzvah'].includes(eventType)) {
-        return EVENT_SPECIFIC_TEMPLATES;
-      }
-      return DESIGNER_DEFAULT_TEMPLATES;
-    }
-
     function InvitationDesigner({ event, onClose, onSave }) {
-      const evType = event?.event_type || 'wedding';
-      const availableTemplates = getTemplatesForEvent(evType);
-      const [templateId, setTemplateId] = useState(availableTemplates[0].id);
+      const [templateId, setTemplateId] = useState('1');
       const [mainTitle, setMainTitle] = useState(() => {
         const evType = event?.event_type;
         if (evType === 'brit_mila') return "It's a BOY";
@@ -9613,7 +9594,8 @@ NOTIFY pgrst, 'reload schema';`;
         return () => window.removeEventListener('resize', handleResize);
       }, []);
 
-      const tpl = availableTemplates.find(t => t.id === templateId) || availableTemplates[0];
+      const tpl = INVITATION_TEMPLATES.find(t => t.id === templateId);
+      const evType = event?.event_type || 'wedding';
 
       const handleGenerate = async () => {
         setGenerating(true);
@@ -9653,7 +9635,7 @@ NOTIFY pgrst, 'reload schema';`;
               <div style={{ flex: 1, padding: '16px 24px', overflowY: 'auto', borderLeft: isMobile ? 'none' : '1px solid var(--border-default)' }}>
                 <label className="input-label">בחר עיצוב</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-                  {availableTemplates.map(t => (
+                  {INVITATION_TEMPLATES.map(t => (
                     <div 
                       key={t.id} 
                       onClick={() => setTemplateId(t.id)}
