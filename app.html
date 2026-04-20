@@ -3242,7 +3242,7 @@
     }
 
     function DashboardPage({ event, onGoToGuests }) {
-      const { client } = useContext(SupabaseContext);
+      const { client, config } = useContext(SupabaseContext);
       const [guests, setGuests] = useState([]);
       const [rounds, setRounds] = useState([]);
       const [loading, setLoading] = useState(true);
@@ -4460,7 +4460,7 @@
           if (!session) throw new Error('Not logged in');
           
           addToast('מאתחל שיחות AI...', 'info');
-          const res = await fetch('https://xryfxjtvqdeijijgiwmb.supabase.co/functions/v1/trigger-communication', {
+          const res = await fetch(`${config.url}/functions/v1/trigger-communication`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
