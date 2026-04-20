@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   phone TEXT,
   plan TEXT DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'enterprise')),
   plan_expires_at TIMESTAMPTZ,
+  call_credits INT DEFAULT 0,
+  sms_credits INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -97,7 +99,7 @@ CREATE TABLE IF NOT EXISTS messages (
   event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   guest_id UUID NOT NULL REFERENCES guests(id) ON DELETE CASCADE,
   round_id UUID REFERENCES message_rounds(id) ON DELETE SET NULL,
-  channel TEXT CHECK (channel IN ('whatsapp', 'sms', 'rsvp_link')),
+  channel TEXT CHECK (channel IN ('whatsapp', 'sms', 'rsvp_link', 'voice')),
   message_text TEXT,
   sent_at TIMESTAMPTZ DEFAULT now(),
   delivered_at TIMESTAMPTZ,
@@ -128,6 +130,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
   entity_id UUID,
   old_value JSONB,
   new_value JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Transactions (Billing & Credits)
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('purchase_call', 'purchase_sms', 'usage_call', 'usage_sms', 'refund_call', 'refund_sms')),
+  amount INT NOT NULL,
+  cost_ils DECIMAL(10,2) DEFAULT 0,
+  notes TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -281,6 +294,11 @@ CREATE POLICY "System can insert audit log"
 DROP POLICY IF EXISTS "Service role manages rate limits" ON rate_limits;
 CREATE POLICY "Service role manages rate limits"
   ON rate_limits FOR ALL USING (true);
+
+-- ── Transactions ──
+DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
+CREATE POLICY "Users can view own transactions"
+  ON transactions FOR SELECT USING (user_id = auth.uid());
 
 -- =====================================================
 -- 6. ENABLE REALTIME on guests table
@@ -466,3 +484,28 @@ CREATE POLICY "Users can manage gifts of own events"
 -- =====================================================
 -- DONE! Now create a user via the app's registration form.
 -- =====================================================
+
+-- =====================================================
+-- COMMUNICATION CREDITS & BILLING (VAPI & TWILIO)
+-- =====================================================
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS call_credits INT DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS sms_credits INT DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  type TEXT CHECK (type IN ('purchase_call', 'purchase_sms', 'usage_call', 'usage_sms', 'refund_call', 'refund_sms')),
+  amount INT NOT NULL,
+  cost_ils DECIMAL(10,2) DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
+CREATE POLICY "Users can view own transactions"
+  ON transactions FOR SELECT USING (user_id = auth.uid());
+
+-- Add 'voice' channel to messages if upgrading
+ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_channel_check;
+ALTER TABLE messages ADD CONSTRAINT messages_channel_check CHECK (channel IN ('whatsapp', 'sms', 'rsvp_link', 'voice'));

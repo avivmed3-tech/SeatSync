@@ -7,6 +7,14 @@
   <meta name="description"
     content="SeatSync — ניהול אישורי הגעה וסידורי הושבה חכם לאירועים. חתונות, בר מצוות, אירועים עסקיים." />
   <title>SeatSync — ניהול אירועים חכם</title>
+  
+  <script>
+    // אם המשתמש הופנה לכאן בטעות אחרי התחברות (עם טוקן של Supabase), נעביר אותו מיד לאפליקציה
+    if (window.location.hash.includes('access_token') || window.location.search.includes('token_hash') || window.location.search.includes('type=recovery')) {
+      window.location.href = 'app.html' + window.location.search + window.location.hash;
+    }
+  </script>
+
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
