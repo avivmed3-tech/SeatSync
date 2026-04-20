@@ -4470,7 +4470,7 @@
           });
           
           const result = await res.json();
-          if(!res.ok) throw new Error(result.error || 'שגיאה בהפעלת הבינה המלאכותית');
+          if(!res.ok) throw new Error(result.error || result.message || JSON.stringify(result));
           
           addToast(`בוצעו פניות ל-${result.dispatched} אורחים. קרדיטים שנותרו: ${result.remainingCredits}`, 'success');
           setSelected(new Set());
