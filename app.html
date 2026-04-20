@@ -4477,7 +4477,16 @@
                   if (p.startsWith('0')) p = '+972' + p.substring(1); 
                   else if (p.startsWith('972')) p = '+' + p; 
                   else if (p && !p.startsWith('+')) p = '+972' + p; 
-                  return { id: g.id, phone: p, event_id: g.event_id || event.id }; 
+                  
+                  const hebrewTypes = { wedding: 'חתונה', brit: 'ברית', brita: 'בריתה', bar_mitzvah: 'בר מצווה', bat_mitzvah: 'בת מצווה', henna: 'חינה' };
+                  return { 
+                    id: g.id, 
+                    phone: p, 
+                    event_id: g.event_id || event.id,
+                    guest_name: g.name,
+                    event_name: event.name,
+                    event_type: hebrewTypes[event.event_type] || 'אירוע'
+                  }; 
                 }) 
               } 
             })

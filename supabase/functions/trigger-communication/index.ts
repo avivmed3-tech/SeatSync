@@ -90,7 +90,7 @@ serve(async (req) => {
             if (!vapiKey) console.error('VAPI_PRIVATE_KEY not set')
             
             // Example vapi payload
-            await fetch('https://api.vapi.ai/call/phone', {
+            const vapiRes = await fetch('https://api.vapi.ai/call/phone', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${vapiKey}`,
@@ -103,11 +103,18 @@ serve(async (req) => {
                     assistantOverrides: {
                         variableValues: {
                             guest_id: guest.id,
-                            eventId: guest.event_id
+                            eventId: guest.event_id,
+                            guestName: guest.guest_name || '',
+                            eventName: guest.event_name || '',
+                            eventType: guest.event_type || ''
                         }
                     }
                 })
-            })
+            });
+            if (!vapiRes.ok) {
+                const errText = await vapiRes.text();
+                throw new Error(`VAPI השלילי: ${errText.substring(0, 100)}`);
+            }
            successfulDispatches++;
         } else if (type === 'sms') {
             // Trigger Twilio
