@@ -4121,7 +4121,7 @@
     // Guests Page — Full Implementation
     // ============================================
     function GuestsPage({ event }) {
-      const { client } = useContext(SupabaseContext);
+      const { client, config } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const { limits, isPro } = useContext(PlanContext);
       const isMobile = useIsMobile();
