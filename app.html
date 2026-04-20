@@ -4466,7 +4466,7 @@
               'Content-Type': 'application/json',
               'Authorization': 'Bearer ' + session.access_token
             },
-            body: JSON.stringify({ guestIds: ids, eventId: event.id, type: 'call' })
+            body: JSON.stringify({ type: 'call', payload: { guests: guests.filter(g => ids.includes(g.id)).map(g => ({ id: g.id, phone: g.phone, event_id: g.event_id || event.id })) } })
           });
           
           const result = await res.json();
