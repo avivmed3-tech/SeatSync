@@ -2647,6 +2647,9 @@
           e.preventDefault();
           setDeferredPrompt(e);
         };
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('service-worker.js').catch(err => console.log('SW Registration failed', err));
+        }
         window.addEventListener('beforeinstallprompt', handler);
         // Listen for successful install
         window.addEventListener('appinstalled', () => {
