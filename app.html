@@ -4472,7 +4472,7 @@
           const result = await res.json();
           if(!res.ok) throw new Error(result.error || result.message || JSON.stringify(result));
           
-          addToast(`בוצעו פניות ל-${result.dispatched} אורחים. קרדיטים שנותרו: ${result.remainingCredits}`, 'success');
+          addToast(result.message || 'השיחות הוזנו למערכת בהצלחה', 'success');
           setSelected(new Set());
         } catch(err) {
           console.error(err);
