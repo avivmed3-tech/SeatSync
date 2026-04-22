@@ -2407,13 +2407,12 @@
           sb.auth.getSession().then(async ({ data: { session } }) => {
             clearTimeout(timeout);
             setUser(session?.user ?? null);
-            // Tentative admin check: email match (edge function re-verifies with DB flag)
-            if (session?.user?.email === 'avivmed3@gmail.com') {
+            if (session?.user) {
               try {
                 const { data, error } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
                 if (error) console.error('[Admin check]', error);
                 setIsAdmin(data?.is_admin === true);
-              } catch (e) { console.error('[Admin check exception]', e); setIsAdmin(false); }
+              } catch (e) { console.error('[Admin check exception]', e); }
             }
             setLoading(false);
 
@@ -2435,7 +2434,7 @@
               setIsAdmin(false);
               return;
             }
-            if (session?.user?.email === 'avivmed3@gmail.com') {
+            if (session?.user) {
               sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
                 .then(({ data, error }) => {
                   if (error) console.error('[Admin check]', error);
