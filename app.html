@@ -2429,18 +2429,19 @@
             setLoading(false);
           });
 
-          const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+          const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
             setUser(session?.user ?? null);
             if (event === 'PASSWORD_RECOVERY') {
               setUser(session?.user ?? null);
             }
             // Re-verify admin flag on every auth state change
             if (session?.user?.email === 'avivmed3@gmail.com') {
-              try {
-                const { data, error } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
-                if (error) console.error('[Admin check onAuthStateChange]', error);
-                setIsAdmin(data?.is_admin === true);
-              } catch (e) { console.error('[Admin check exception]', e); setIsAdmin(false); }
+              sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
+                .then(({ data, error }) => {
+                  if (error) console.error('[Admin check onAuthStateChange]', error);
+                  setIsAdmin(data?.is_admin === true);
+                })
+                .catch((e) => { console.error('[Admin check exception]', e); setIsAdmin(false); });
             } else {
               setIsAdmin(false);
             }
