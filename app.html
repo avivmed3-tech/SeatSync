@@ -10910,18 +10910,35 @@ NOTIFY pgrst, 'reload schema';`;
       const [detailData, setDetailData] = useState(null);
 
       const callAdmin = React.useCallback(async (action, body = {}) => {
-        const { data: { session } } = await client.auth.getSession();
-        const res = await fetch(`${config.url}/functions/v1/admin-operations`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + session.access_token,
-          },
-          body: JSON.stringify({ action, ...body }),
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'שגיאה לא ידועה');
-        return result;
+        const doFetch = async () => {
+          const { data: { session } } = await client.auth.getSession();
+          if (!session) throw new Error('יש להתחבר מחדש');
+          const res = await fetch(`${config.url}/functions/v1/admin-operations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + session.access_token,
+            },
+            body: JSON.stringify({ action, ...body }),
+          });
+          const result = await res.json();
+          if (!res.ok) {
+            const err = new Error(result.error || result.message || 'שגיאה לא ידועה');
+            err.status = res.status;
+            throw err;
+          }
+          return result;
+        };
+        try {
+          return await doFetch();
+        } catch (e) {
+          if (e.status === 401) {
+            // Token may be expired — refresh and retry once
+            await client.auth.refreshSession();
+            return await doFetch();
+          }
+          throw e;
+        }
       }, [client, config]);
 
       const fetchUsers = React.useCallback(async () => {
