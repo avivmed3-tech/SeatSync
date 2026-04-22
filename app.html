@@ -2404,14 +2404,16 @@
           // Supabase v2 puts tokens in the URL hash (#access_token=...) or
           // as query params (?token_hash=...&type=...). getSession() picks
           // these up automatically when the client is created, so just call it.
-          sb.auth.getSession().then(({ data: { session } }) => {
+          sb.auth.getSession().then(async ({ data: { session } }) => {
             clearTimeout(timeout);
             setUser(session?.user ?? null);
             // Tentative admin check: email match (edge function re-verifies with DB flag)
             if (session?.user?.email === 'avivmed3@gmail.com') {
-              sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
-                .then(({ data }) => setIsAdmin(data?.is_admin === true))
-                .catch(() => setIsAdmin(false));
+              try {
+                const { data, error } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
+                if (error) console.error('[Admin check]', error);
+                setIsAdmin(data?.is_admin === true);
+              } catch (e) { console.error('[Admin check exception]', e); setIsAdmin(false); }
             }
             setLoading(false);
 
@@ -2427,16 +2429,18 @@
             setLoading(false);
           });
 
-          const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
+          const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
             setUser(session?.user ?? null);
             if (event === 'PASSWORD_RECOVERY') {
               setUser(session?.user ?? null);
             }
             // Re-verify admin flag on every auth state change
             if (session?.user?.email === 'avivmed3@gmail.com') {
-              sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
-                .then(({ data }) => setIsAdmin(data?.is_admin === true))
-                .catch(() => setIsAdmin(false));
+              try {
+                const { data, error } = await sb.from('profiles').select('is_admin').eq('id', session.user.id).single();
+                if (error) console.error('[Admin check onAuthStateChange]', error);
+                setIsAdmin(data?.is_admin === true);
+              } catch (e) { console.error('[Admin check exception]', e); setIsAdmin(false); }
             } else {
               setIsAdmin(false);
             }
