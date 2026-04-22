@@ -2431,19 +2431,17 @@
 
           const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
             setUser(session?.user ?? null);
-            if (event === 'PASSWORD_RECOVERY') {
-              setUser(session?.user ?? null);
+            if (event === 'SIGNED_OUT') {
+              setIsAdmin(false);
+              return;
             }
-            // Re-verify admin flag on every auth state change
             if (session?.user?.email === 'avivmed3@gmail.com') {
               sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
                 .then(({ data, error }) => {
-                  if (error) console.error('[Admin check onAuthStateChange]', error);
+                  if (error) console.error('[Admin check]', error);
                   setIsAdmin(data?.is_admin === true);
                 })
-                .catch((e) => { console.error('[Admin check exception]', e); setIsAdmin(false); });
-            } else {
-              setIsAdmin(false);
+                .catch((e) => { console.error('[Admin check error]', e); });
             }
           });
 
@@ -8012,7 +8010,7 @@
     // Events List Page
     // ============================================
     function EventsPage({ onSelectEvent, selectedEventId, onClearSelectedEvent }) {
-      const { client } = useContext(SupabaseContext);
+      const { client, user } = useContext(SupabaseContext);
       const { addToast } = useContext(ToastContext);
       const { plan, limits, canAdd, openCheckout, setShowUpgradeModal } = useContext(PlanContext);
       const [events, setEvents] = useState([]);
@@ -8023,11 +8021,11 @@
       const [newEvent, setNewEvent] = useState({ name: '', event_type: 'wedding', event_date: '', venue_name: '' });
 
       useEffect(() => {
-        fetchEvents();
-      }, [client]);
+        if (user) fetchEvents();
+      }, [client, user]);
 
       const fetchEvents = async () => {
-        if (!client) return;
+        if (!client || !user) return;
         setLoading(true);
         const { data, error } = await client.from('events').select('*').order('created_at', { ascending: false });
         if (error) {
