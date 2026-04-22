@@ -36,23 +36,28 @@ serve(async (req) => {
     }
 
     // 1. Check user credits and permissions
-    // Get profiles to check credits
+    // Get profiles to check credits + admin flag
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('call_credits, sms_credits')
+      .select('call_credits, sms_credits, is_admin')
       .eq('id', user.id)
       .single()
-      
+
     if (profileError || !profile) throw new Error('Could not fetch user credits')
 
+    // Admin (avivmed3@gmail.com) bypasses all credit checks and deductions.
+    // Security: is_admin flag is set only via service_role (REVOKE UPDATE prevents self-grant).
+    const isAdmin = user.email === 'avivmed3@gmail.com' && profile.is_admin === true
+
     const requiredCredits = payload.guests.length
-    
-    if (type === 'call' && profile.call_credits < requiredCredits) {
+
+    if (!isAdmin) {
+      if (type === 'call' && profile.call_credits < requiredCredits) {
         throw new Error('Not enough Call Credits.')
-    }
-    
-    if (type === 'sms' && profile.sms_credits < requiredCredits) {
+      }
+      if (type === 'sms' && profile.sms_credits < requiredCredits) {
         throw new Error('Not enough SMS Credits.')
+      }
     }
 
     // 2. We use the service_role key to update credits securely
@@ -61,16 +66,17 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Deduct credits
+    // Deduct credits (skip for admin)
     const updateColumn = type === 'call' ? 'call_credits' : 'sms_credits'
-    const newCreditBalance = profile[updateColumn] - requiredCredits
 
-    const { error: updateError } = await supabaseAdmin
-      .from('profiles')
-      .update({ [updateColumn]: newCreditBalance })
-      .eq('id', user.id)
-
-    if (updateError) throw new Error('Failed to deduct credits')
+    if (!isAdmin) {
+      const newCreditBalance = profile[updateColumn] - requiredCredits
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({ [updateColumn]: newCreditBalance })
+        .eq('id', user.id)
+      if (updateError) throw new Error('Failed to deduct credits')
+    }
     
     // Log transaction
     await supabaseAdmin.from('transactions').insert({
@@ -99,7 +105,12 @@ serve(async (req) => {
                 body: JSON.stringify({
                     assistantId: '32b612b7-a2bb-47b1-bbdc-c30ad7bd6315',
                     customer: { number: guest.phone },
-                    phoneNumberId: '1928d9bd-dec3-4ce6-8ffb-ba617f9d711c',
+                    phoneNumberId: '60a6aa47-877f-45df-937c-c5b245878a18',
+                    metadata: {
+                        guestId: guest.id,
+                        eventId: guest.event_id,
+                        userId: user.id,
+                    },
                     assistantOverrides: {
                         variableValues: {
                             guest_id: guest.id,

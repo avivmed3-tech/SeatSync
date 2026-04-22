@@ -2388,6 +2388,7 @@
       const [client, setClient] = useState(null);
       const [user, setUser] = useState(null);
       const [loading, setLoading] = useState(true);
+      const [isAdmin, setIsAdmin] = useState(false);
 
       useEffect(() => {
         if (config?.url && config?.anonKey) {
@@ -2406,6 +2407,12 @@
           sb.auth.getSession().then(({ data: { session } }) => {
             clearTimeout(timeout);
             setUser(session?.user ?? null);
+            // Tentative admin check: email match (edge function re-verifies with DB flag)
+            if (session?.user?.email === 'avivmed3@gmail.com') {
+              sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
+                .then(({ data }) => setIsAdmin(data?.is_admin === true))
+                .catch(() => setIsAdmin(false));
+            }
             setLoading(false);
 
             // Clean the token from the URL so it isn't bookmarked / shared
@@ -2422,9 +2429,16 @@
 
           const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
             setUser(session?.user ?? null);
-            // After password recovery link is clicked, redirect to settings
             if (event === 'PASSWORD_RECOVERY') {
               setUser(session?.user ?? null);
+            }
+            // Re-verify admin flag on every auth state change
+            if (session?.user?.email === 'avivmed3@gmail.com') {
+              sb.from('profiles').select('is_admin').eq('id', session.user.id).single()
+                .then(({ data }) => setIsAdmin(data?.is_admin === true))
+                .catch(() => setIsAdmin(false));
+            } else {
+              setIsAdmin(false);
             }
           });
 
@@ -2469,7 +2483,8 @@
         <SupabaseContext.Provider value={{
           client, user, loading, config,
           saveConfig, signIn, signUp, signOut,
-          isConfigured: !!config
+          isConfigured: !!config,
+          isAdmin,
         }}>
           {children}
         </SupabaseContext.Provider>
@@ -2544,7 +2559,7 @@
     };
 
     function PlanProvider({ children }) {
-      const { client, user } = useContext(SupabaseContext);
+      const { client, user, isAdmin } = useContext(SupabaseContext);
       const [plan, setPlan] = useState('free');
       const [loadingPlan, setLoadingPlan] = useState(true);
       const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -2600,11 +2615,13 @@
       }, [client, user]);
 
       const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
-      const isPro = plan === 'pro' || plan === 'enterprise';
+      // Admin always has enterprise-level access with no restrictions
+      const isPro = isAdmin || plan === 'pro' || plan === 'enterprise';
 
       const canAdd = useCallback((resource, currentCount) => {
+        if (isAdmin) return true;
         return currentCount < limits[resource];
-      }, [limits]);
+      }, [isAdmin, limits]);
 
       // Open Lemon Squeezy checkout with user info pre-filled
       const openCheckout = useCallback((targetPlan = 'pro') => {
@@ -2623,7 +2640,7 @@
       }, [user]);
 
       return (
-        <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan, openCheckout, showUpgradeModal, setShowUpgradeModal, refreshPlan }}>
+        <PlanContext.Provider value={{ plan, limits, isPro, canAdd, loadingPlan, openCheckout, showUpgradeModal, setShowUpgradeModal, refreshPlan, isAdmin }}>
           {children}
         </PlanContext.Provider>
       );
@@ -8300,9 +8317,9 @@
     // ============================================
     // Top Bar
     // ============================================
-    function TopBar({ event, onSettings, currentRoute, onNavigate }) {
+    function TopBar({ event, onSettings, currentRoute, onNavigate, onOpenAdmin }) {
       const { theme, toggleTheme } = useContext(ThemeContext);
-      const { user } = useContext(SupabaseContext);
+      const { user, isAdmin } = useContext(SupabaseContext);
 
       const ROUTE_LABELS = {
         events: 'אירועים', dashboard: 'דשבורד', guests: 'מוזמנים',
@@ -8345,6 +8362,21 @@
             </div>
           </div>
           <div className="top-bar-actions">
+            {isAdmin && (
+              <button
+                onClick={onOpenAdmin}
+                title="פאנל מפתח"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                  background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))',
+                  color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: 0.5,
+                }}
+              >
+                <Icon name="Wrench" size={13} />
+                מפתח
+              </button>
+            )}
             <button className="icon-btn" onClick={toggleTheme} aria-label="החלפת מצב תצוגה" title={theme === 'dark' ? 'מצב יום' : 'מצב לילה'}>
               <Icon name={theme === 'dark' ? 'Sun' : 'Moon'} size={20} />
             </button>
@@ -10850,14 +10882,441 @@ NOTIFY pgrst, 'reload schema';`;
     }
 
     // ============================================
+    // Admin Panel (Developer Only)
+    // ============================================
+    function AdminPanel({ onClose }) {
+      const { client, config, user } = useContext(SupabaseContext);
+      const { addToast } = useContext(ToastContext);
+      const [tab, setTab] = useState('users');
+      const [users, setUsers] = useState([]);
+      const [globalStats, setGlobalStats] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [search, setSearch] = useState('');
+      const [filterPlan, setFilterPlan] = useState('all');
+      const [filterStatus, setFilterStatus] = useState('all');
+      const [sortBy, setSortBy] = useState('created_at');
+      const [sortDir, setSortDir] = useState('desc');
+      const [selectedUser, setSelectedUser] = useState(null);
+      const [actionModal, setActionModal] = useState(null);
+      // Form state for action modals
+      const [formPlan, setFormPlan] = useState('free');
+      const [formExpiry, setFormExpiry] = useState('');
+      const [formCreditCol, setFormCreditCol] = useState('call_credits');
+      const [formCreditDelta, setFormCreditDelta] = useState('');
+      const [formReason, setFormReason] = useState('');
+      const [actionLoading, setActionLoading] = useState(false);
+      const [detailData, setDetailData] = useState(null);
+
+      const callAdmin = React.useCallback(async (action, body = {}) => {
+        const { data: { session } } = await client.auth.getSession();
+        const res = await fetch(`${config.url}/functions/v1/admin-operations`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+          },
+          body: JSON.stringify({ action, ...body }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'שגיאה לא ידועה');
+        return result;
+      }, [client, config]);
+
+      const fetchUsers = React.useCallback(async () => {
+        try {
+          const data = await callAdmin('get_all_users');
+          setUsers(Array.isArray(data) ? data : []);
+        } catch (e) {
+          addToast('שגיאה בטעינת משתמשים: ' + e.message, 'error');
+        }
+      }, [callAdmin, addToast]);
+
+      const fetchStats = React.useCallback(async () => {
+        try {
+          const data = await callAdmin('get_global_stats');
+          setGlobalStats(data);
+        } catch {}
+      }, [callAdmin]);
+
+      useEffect(() => {
+        setLoading(true);
+        Promise.all([fetchUsers(), fetchStats()]).finally(() => setLoading(false));
+      }, [fetchUsers, fetchStats]);
+
+      // Realtime: subscribe to profile changes
+      useEffect(() => {
+        if (!client) return;
+        const channel = client.channel('admin-profiles-realtime')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
+            if (payload.eventType === 'UPDATE') {
+              setUsers(prev => prev.map(u => u.id === payload.new.id ? { ...u, ...payload.new } : u));
+            } else if (payload.eventType === 'DELETE') {
+              setUsers(prev => prev.filter(u => u.id !== payload.old.id));
+            } else if (payload.eventType === 'INSERT') {
+              fetchUsers();
+            }
+          })
+          .subscribe();
+        return () => { client.removeChannel(channel); };
+      }, [client, fetchUsers]);
+
+      // Filtered + sorted users
+      const displayUsers = React.useMemo(() => {
+        let list = [...users];
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          list = list.filter(u =>
+            (u.full_name || '').toLowerCase().includes(q) ||
+            (u.email || '').toLowerCase().includes(q) ||
+            (u.phone || '').toLowerCase().includes(q)
+          );
+        }
+        if (filterPlan !== 'all') list = list.filter(u => u.plan === filterPlan);
+        if (filterStatus === 'active') list = list.filter(u => !u.is_blocked);
+        if (filterStatus === 'blocked') list = list.filter(u => u.is_blocked);
+        list.sort((a, b) => {
+          let av = a[sortBy] ?? 0;
+          let bv = b[sortBy] ?? 0;
+          if (typeof av === 'string') av = av.toLowerCase();
+          if (typeof bv === 'string') bv = bv.toLowerCase();
+          if (av < bv) return sortDir === 'asc' ? -1 : 1;
+          if (av > bv) return sortDir === 'asc' ? 1 : -1;
+          return 0;
+        });
+        return list;
+      }, [users, search, filterPlan, filterStatus, sortBy, sortDir]);
+
+      const openAction = (u, modal) => { setSelectedUser(u); setActionModal(modal); setFormPlan(u.plan || 'free'); setFormExpiry(''); setFormCreditDelta(''); setFormReason(''); };
+      const closeAction = () => { setSelectedUser(null); setActionModal(null); setDetailData(null); };
+
+      const doAction = async () => {
+        setActionLoading(true);
+        try {
+          if (actionModal === 'plan') {
+            await callAdmin('update_user_plan', { userId: selectedUser.id, plan: formPlan, plan_expires_at: formExpiry || null });
+            addToast('תוכנית עודכנה בהצלחה', 'success');
+            await fetchUsers();
+          } else if (actionModal === 'credits') {
+            const delta = parseInt(formCreditDelta, 10);
+            if (isNaN(delta) || delta === 0) throw new Error('הכנס מספר שונה מ-0');
+            await callAdmin('update_credits', { userId: selectedUser.id, column: formCreditCol, delta, reason: formReason });
+            addToast('קרדיטים עודכנו בהצלחה', 'success');
+            await fetchUsers();
+          } else if (actionModal === 'block') {
+            await callAdmin('toggle_block', { userId: selectedUser.id, blocked: !selectedUser.is_blocked });
+            addToast(selectedUser.is_blocked ? 'חסימה בוטלה' : 'משתמש נחסם', 'success');
+            await fetchUsers();
+          } else if (actionModal === 'delete') {
+            await callAdmin('delete_user', { userId: selectedUser.id });
+            addToast('משתמש נמחק', 'success');
+            await fetchUsers();
+          }
+          closeAction();
+        } catch (e) {
+          addToast(e.message, 'error');
+        } finally {
+          setActionLoading(false);
+        }
+      };
+
+      const openDetail = async (u) => {
+        setSelectedUser(u); setActionModal('stats'); setDetailData(null);
+        try {
+          const data = await callAdmin('get_user_stats', { userId: u.id });
+          setDetailData(data);
+        } catch (e) { addToast('שגיאה: ' + e.message, 'error'); }
+      };
+
+      const PLAN_BADGE = { free: '#64748b', pro: '#D4A808', enterprise: '#059669' };
+      const planLabel = { free: 'Free', pro: 'Pro', enterprise: 'Enterprise' };
+
+      const col = (label, key) => (
+        <th
+          onClick={() => { if (sortBy === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc'); else { setSortBy(key); setSortDir('desc'); } }}
+          style={{ cursor: 'pointer', padding: '10px 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-default)', whiteSpace: 'nowrap', userSelect: 'none', background: 'var(--bg-secondary)' }}
+        >
+          {label} {sortBy === key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+        </th>
+      );
+
+      return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', flexDirection: 'column', background: 'var(--bg-primary)' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, var(--gold-400), var(--gold-600))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="Wrench" size={18} color="#fff" />
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text-primary)' }}>פאנל מפתח</div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>SeatSync Admin · {user?.email}</div>
+              </div>
+            </div>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, marginRight: 'auto', background: 'var(--bg-tertiary)', borderRadius: 8, padding: 3 }}>
+              {[['users','Users','משתמשים'],['stats','BarChart2','סטטיסטיקות']].map(([id, icon, label]) => (
+                <button key={id} onClick={() => setTab(id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13, background: tab === id ? 'var(--bg-elevated)' : 'transparent', color: tab === id ? 'var(--text-primary)' : 'var(--text-tertiary)', boxShadow: tab === id ? 'var(--shadow-sm, 0 1px 3px rgba(0,0,0,.1))' : 'none' }}>
+                  <Icon name={icon} size={15} />{label}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => fetchUsers()} title="רענן" style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <Icon name="RefreshCw" size={16} />
+            </button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 6 }} aria-label="סגור">
+              <Icon name="X" size={22} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+            {loading ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, color: 'var(--text-tertiary)' }}>
+                <Icon name="Loader2" size={32} style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : tab === 'stats' ? (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
+                  {[
+                    { label: 'סה״כ משתמשים', value: globalStats?.total_users ?? '…', icon: 'Users', color: 'var(--blue-500)' },
+                    { label: 'סה״כ אירועים', value: globalStats?.total_events ?? '…', icon: 'CalendarDays', color: 'var(--emerald-500)' },
+                    { label: 'סה״כ הודעות', value: globalStats?.total_messages ?? '…', icon: 'Send', color: 'var(--gold-500)' },
+                    { label: 'הכנסה כוללת (₪)', value: globalStats ? `₪${globalStats.total_revenue_ils}` : '…', icon: 'TrendingUp', color: 'var(--red-500)' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 14, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, background: s.color + '22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Icon name={s.icon} size={18} color={s.color} />
+                        </div>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{s.label}</span>
+                      </div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-primary)' }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: 14, padding: 20 }}>
+                  <div style={{ fontWeight: 700, marginBottom: 14, color: 'var(--text-primary)' }}>התפלגות תוכניות</div>
+                  {['free','pro','enterprise'].map(p => {
+                    const count = users.filter(u => u.plan === p).length;
+                    const pct = users.length ? Math.round(count / users.length * 100) : 0;
+                    return (
+                      <div key={p} style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 600, color: PLAN_BADGE[p] }}>{planLabel[p]}</span>
+                          <span style={{ color: 'var(--text-secondary)' }}>{count} ({pct}%)</span>
+                        </div>
+                        <div style={{ height: 8, borderRadius: 4, background: 'var(--bg-tertiary)', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: pct + '%', background: PLAN_BADGE[p], borderRadius: 4, transition: 'width .4s' }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative', flex: '1 1 200px' }}>
+                    <Icon name="Search" size={15} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-tertiary)', pointerEvents: 'none' }} />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חיפוש שם / אימייל / טלפון..." style={{ width: '100%', paddingRight: 32, paddingLeft: 12, height: 38, borderRadius: 8, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box' }} />
+                  </div>
+                  <select value={filterPlan} onChange={e => setFilterPlan(e.target.value)} style={{ height: 38, borderRadius: 8, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, padding: '0 10px' }}>
+                    <option value="all">כל התוכניות</option>
+                    <option value="free">Free</option>
+                    <option value="pro">Pro</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
+                  <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ height: 38, borderRadius: 8, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, padding: '0 10px' }}>
+                    <option value="all">כל הסטטוסים</option>
+                    <option value="active">פעיל</option>
+                    <option value="blocked">חסום</option>
+                  </select>
+                  <div style={{ fontSize: 13, color: 'var(--text-tertiary)', display: 'flex', alignItems: 'center' }}>{displayUsers.length} משתמשים</div>
+                </div>
+                {/* Table */}
+                <div style={{ overflowX: 'auto', borderRadius: 12, border: '1px solid var(--border-default)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr>
+                        {col('שם', 'full_name')}
+                        {col('אימייל', 'email')}
+                        {col('תוכנית', 'plan')}
+                        {col('קרדיטים שיחה', 'call_credits')}
+                        {col('קרדיטים SMS', 'sms_credits')}
+                        {col('אירועים', 'events_count')}
+                        {col('סבבי הודעות', 'rounds_count')}
+                        {col('שיחות', 'calls_count')}
+                        {col('רכישות ₪', 'purchase_total_ils')}
+                        {col('סטטוס', 'is_blocked')}
+                        <th style={{ padding: '10px 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-secondary)' }}>פעולות</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayUsers.length === 0 && (
+                        <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>לא נמצאו משתמשים</td></tr>
+                      )}
+                      {displayUsers.map(u => (
+                        <tr key={u.id} style={{ borderBottom: '1px solid var(--border-light)', background: u.is_blocked ? 'rgba(239,68,68,.04)' : 'transparent' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{u.full_name || '—'}{u.is_admin && <span style={{ marginRight: 4, fontSize: 10, background: 'var(--gold-500)', color: '#fff', borderRadius: 4, padding: '1px 5px' }}>מפתח</span>}</td>
+                          <td style={{ padding: '10px 12px', color: 'var(--text-secondary)', direction: 'ltr', textAlign: 'left' }}>{u.email}</td>
+                          <td style={{ padding: '10px 12px' }}><span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: PLAN_BADGE[u.plan] + '22', color: PLAN_BADGE[u.plan] }}>{planLabel[u.plan] || u.plan}</span></td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-primary)' }}>{u.call_credits}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-primary)' }}>{u.sms_credits}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>{u.events_count}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>{u.rounds_count}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>{u.calls_count}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', color: 'var(--text-secondary)' }}>₪{u.purchase_total_ils.toFixed(2)}</td>
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: u.is_blocked ? 'var(--red-500)22' : 'var(--emerald-500)22', color: u.is_blocked ? 'var(--red-500)' : 'var(--emerald-500)' }}>{u.is_blocked ? 'חסום' : 'פעיל'}</span>
+                          </td>
+                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                              <button onClick={() => openDetail(u)} title="פרטים" style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--text-secondary)' }}><Icon name="Eye" size={13} /></button>
+                              <button onClick={() => openAction(u, 'plan')} title="עדכן תוכנית" style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--gold-600)' }}><Icon name="Crown" size={13} /></button>
+                              <button onClick={() => openAction(u, 'credits')} title="קרדיטים" style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--blue-500)' }}><Icon name="Coins" size={13} /></button>
+                              {!u.is_admin && <button onClick={() => openAction(u, 'block')} title={u.is_blocked ? 'בטל חסימה' : 'חסום'} style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: u.is_blocked ? 'var(--emerald-500)' : 'var(--amber-500)' }}><Icon name={u.is_blocked ? 'Unlock' : 'Lock'} size={13} /></button>}
+                              {!u.is_admin && <button onClick={() => openAction(u, 'delete')} title="מחק משתמש" style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: 11, color: 'var(--red-500)' }}><Icon name="Trash2" size={13} /></button>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Modals */}
+          {actionModal && actionModal !== 'stats' && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => e.target === e.currentTarget && closeAction()}>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
+                <div style={{ fontWeight: 800, fontSize: 17, marginBottom: 18, color: 'var(--text-primary)' }}>
+                  {actionModal === 'plan' && 'עדכון תוכנית'}
+                  {actionModal === 'credits' && 'עדכון קרדיטים'}
+                  {actionModal === 'block' && (selectedUser?.is_blocked ? 'ביטול חסימה' : 'חסימת משתמש')}
+                  {actionModal === 'delete' && 'מחיקת משתמש'}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{selectedUser?.full_name} · {selectedUser?.email}</div>
+
+                {actionModal === 'plan' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>תוכנית</label>
+                      <select value={formPlan} onChange={e => setFormPlan(e.target.value)} style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border-default)', padding: '0 10px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                        <option value="free">Free</option>
+                        <option value="pro">Pro</option>
+                        <option value="enterprise">Enterprise</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>תאריך תפוגה (אופציונלי)</label>
+                      <input type="date" value={formExpiry} onChange={e => setFormExpiry(e.target.value)} style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border-default)', padding: '0 10px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+                )}
+
+                {actionModal === 'credits' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>סוג קרדיטים</label>
+                      <select value={formCreditCol} onChange={e => setFormCreditCol(e.target.value)} style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border-default)', padding: '0 10px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
+                        <option value="call_credits">שיחות</option>
+                        <option value="sms_credits">SMS</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>כמות (חיובי = הוספה, שלילי = הורדה)</label>
+                      <input type="number" value={formCreditDelta} onChange={e => setFormCreditDelta(e.target.value)} placeholder="לדוגמה: 10 או -5" style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border-default)', padding: '0 10px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>סיבה</label>
+                      <input value={formReason} onChange={e => setFormReason(e.target.value)} placeholder="סיבה לעדכון..." style={{ width: '100%', height: 40, borderRadius: 8, border: '1px solid var(--border-default)', padding: '0 10px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
+                )}
+
+                {(actionModal === 'block' || actionModal === 'delete') && (
+                  <div style={{ background: 'var(--red-500)11', border: '1px solid var(--red-500)44', borderRadius: 10, padding: 14, fontSize: 13, color: 'var(--text-primary)' }}>
+                    {actionModal === 'delete' ? 'פעולה זו תמחק את המשתמש לצמיתות כולל כל הנתונים שלו. לא ניתן לשחזר.' : (selectedUser?.is_blocked ? 'המשתמש יוכל להיכנס לאפליקציה שוב.' : 'המשתמש לא יוכל לבצע פעולות מוגבלות.')}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                  <button onClick={closeAction} style={{ flex: 1, height: 42, borderRadius: 10, border: '1px solid var(--border-default)', background: 'none', cursor: 'pointer', fontWeight: 600, color: 'var(--text-secondary)' }}>ביטול</button>
+                  <button onClick={doAction} disabled={actionLoading} style={{ flex: 1, height: 42, borderRadius: 10, border: 'none', cursor: actionLoading ? 'not-allowed' : 'pointer', fontWeight: 700, color: '#fff', background: actionModal === 'delete' ? 'var(--red-500)' : actionModal === 'block' ? (selectedUser?.is_blocked ? 'var(--emerald-500)' : 'var(--amber-500)') : 'linear-gradient(135deg, var(--gold-400), var(--gold-600))', opacity: actionLoading ? 0.7 : 1 }}>
+                    {actionLoading ? <Icon name="Loader2" size={18} style={{ animation: 'spin 1s linear infinite' }} /> : actionModal === 'delete' ? 'מחק לצמיתות' : actionModal === 'block' ? (selectedUser?.is_blocked ? 'בטל חסימה' : 'חסום') : 'שמור'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Detail Modal */}
+          {actionModal === 'stats' && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={e => e.target === e.currentTarget && closeAction()}>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 560, maxHeight: '85vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.3)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--text-primary)' }}>פרטי משתמש</div>
+                  <button onClick={closeAction} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Icon name="X" size={20} /></button>
+                </div>
+                {!detailData ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Icon name="Loader2" size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-tertiary)' }} /></div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                      {[
+                        ['שם', detailData.profile.full_name || '—'],
+                        ['אימייל', detailData.profile.email],
+                        ['טלפון', detailData.profile.phone || '—'],
+                        ['תוכנית', planLabel[detailData.profile.plan] || detailData.profile.plan],
+                        ['קרדיטים שיחה', detailData.profile.call_credits],
+                        ['קרדיטים SMS', detailData.profile.sms_credits],
+                        ['אירועים', detailData.events.length],
+                        ['שיחות', detailData.calls.length],
+                        ['סבבי הודעות', detailData.rounds.length],
+                      ].map(([label, value]) => (
+                        <div key={label} style={{ background: 'var(--bg-tertiary)', borderRadius: 10, padding: '10px 14px' }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 3 }}>{label}</div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', direction: label === 'אימייל' ? 'ltr' : 'rtl' }}>{String(value)}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontWeight: 700, marginBottom: 10, color: 'var(--text-primary)' }}>50 עסקאות אחרונות</div>
+                    {detailData.transactions.length === 0 ? (
+                      <div style={{ color: 'var(--text-tertiary)', fontSize: 13, textAlign: 'center', padding: 20 }}>אין עסקאות</div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {detailData.transactions.map(tx => (
+                          <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 8, background: 'var(--bg-tertiary)', fontSize: 12 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{tx.type}</span>
+                            <span style={{ color: 'var(--text-secondary)' }}>{tx.notes || '—'}</span>
+                            <span style={{ color: tx.type.startsWith('purchase') ? 'var(--emerald-500)' : 'var(--red-400)' }}>{tx.type.startsWith('purchase') ? '+' : '-'}{tx.amount}</span>
+                            <span style={{ color: 'var(--text-tertiary)' }}>{new Date(tx.created_at).toLocaleDateString('he-IL')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ============================================
     // Phase 6 — Updated App with all features
     // ============================================
     function App() {
-      const { isConfigured, saveConfig, user, loading, client } = useContext(SupabaseContext);
+      const { isConfigured, saveConfig, user, loading, client, isAdmin } = useContext(SupabaseContext);
       const [currentRoute, setCurrentRoute] = useState(ROUTES.EVENTS);
       const [selectedEvent, setSelectedEvent] = useState(null);
       const [showOnboarding, setShowOnboarding] = useState(false);
       const [passwordRecovery, setPasswordRecovery] = useState(false);
+      const [showAdminPanel, setShowAdminPanel] = useState(false);
 
       // Persist current route so returning from WhatsApp keeps the same screen
       useEffect(() => {
@@ -11028,7 +11487,8 @@ NOTIFY pgrst, 'reload schema';`;
           <PWAInstallBanner />
           {showOnboarding && user && <OnboardingModal onDone={doneOnboarding} />}
           {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} />}
-          <TopBar event={selectedEvent} onSettings={() => setCurrentRoute(ROUTES.SETTINGS)} currentRoute={currentRoute} onNavigate={setCurrentRoute} />
+          {isAdmin && showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
+          <TopBar event={selectedEvent} onSettings={() => setCurrentRoute(ROUTES.SETTINGS)} currentRoute={currentRoute} onNavigate={setCurrentRoute} onOpenAdmin={() => setShowAdminPanel(true)} />
           <main className="main-content">
             <ErrorBoundary key={currentRoute}>
               {renderPage()}
