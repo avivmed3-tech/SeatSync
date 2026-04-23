@@ -13,17 +13,29 @@ serve(async (req) => {
   }
 
   try {
+    // Extract the JWT from the Authorization header and pass it explicitly to
+    // getUser() so the auth server validates it server-side. This avoids the
+    // "UNSUPPORTED JWT ALGORITHM ES256" error that occurs when the edge runtime
+    // tries to verify an ES256-signed JWT locally (verify_jwt=false in config.toml
+    // disables runtime verification; we validate here instead).
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const token = authHeader.replace('Bearer ', '')
+    if (!token) throw new Error('Unauthorized')
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: authHeader } },
+      }
     )
 
-    // Get the User making the request
+    // Get the User making the request — validates the JWT on Supabase's auth server
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser()
+    } = await supabaseClient.auth.getUser(token)
 
     if (userError || !user) throw new Error('Unauthorized')
 
