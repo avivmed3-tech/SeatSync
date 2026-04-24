@@ -172,7 +172,7 @@
     }
     /* 3D COVERFLOW CAROUSEL CSS */
     .carousel-section {
-      height: 400vh;
+      height: 600vh; /* Increased from 400vh to slow down the scroll */
       position: relative;
       background: transparent;
       z-index: 10;
@@ -2485,8 +2485,12 @@
         let progress = -rect.top / scrollRange;
         progress = Math.max(0, Math.min(1, progress));
         
+        // Create a buffer at the start and end (15% each) so first and last cards stay centered longer
+        let adjustedProgress = (progress - 0.15) / 0.70;
+        adjustedProgress = Math.max(0, Math.min(1, adjustedProgress));
+        
         const N = carouselItems.length;
-        const itemProgress = progress * (N - 1);
+        const itemProgress = adjustedProgress * (N - 1);
         
         // Handle RTL layout flow
         const isRTL = document.documentElement.dir === 'rtl';
