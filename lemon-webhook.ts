@@ -50,13 +50,18 @@ Deno.serve(async (req) => {
     const signature = req.headers.get('x-signature') || ''
     const webhookSecret = Deno.env.get('LEMON_WEBHOOK_SECRET')
 
-    // 1. Verify signature
-    if (webhookSecret) {
-      const valid = await verifySignature(rawBody, signature, webhookSecret)
-      if (!valid) {
-        console.error('❌ Invalid webhook signature')
-        return new Response('Invalid signature', { status: 401, headers: corsHeaders })
-      }
+    // 1. Verify signature — fail closed: 500 if secret not configured, 401 if mismatch
+    if (!webhookSecret) {
+      console.error('❌ LEMON_WEBHOOK_SECRET not configured')
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      })
+    }
+    const valid = await verifySignature(rawBody, signature, webhookSecret)
+    if (!valid) {
+      console.error('❌ Invalid webhook signature')
+      return new Response('Invalid signature', { status: 401, headers: corsHeaders })
     }
 
     const payload = JSON.parse(rawBody)

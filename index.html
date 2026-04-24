@@ -52,9 +52,295 @@
       --gradient-gold: linear-gradient(135deg, #F5C518 0%, #B38D06 100%);
     }
 
+    html[data-theme="light"] #navbar {
+      background: rgba(255, 255, 255, 0.85) !important;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+    }
+    html[data-theme="light"] .nav-logo-text {
+      color: #18181B !important;
+    }
+    html[data-theme="light"] .btn-ghost {
+      color: #504840 !important;
+    }
+    html[data-theme="light"] .btn-ghost:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: #18181B !important;
+    }
+
+    html[data-theme="light"] {
+      --gold: #B38D06;
+      --gold-dark: #967605;
+      --gold-vivid: #D4A808;
+      --gold-light: rgba(212, 168, 8, 0.2);
+      --bg: #FDFCF9;
+      --card: #FFFFFF;
+      --card-raised: #F5F3ED;
+      --text: #18181B;
+      --text2: #504840;
+      --text3: #8A7A60;
+      --border: rgba(212, 168, 8, 0.3);
+      --border-subtle: rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 10px 40px -10px rgba(0, 0, 0, 0.05);
+      --shadow-gold: 0 0 40px rgba(212, 168, 8, 0.15);
+      --gradient-dark: linear-gradient(135deg, #FFFFFF 0%, #FDFCF9 100%);
+    }
+    
+    html[data-theme="light"] .noise-overlay { opacity: 0.02; }
+    html[data-theme="light"] .bg-canvas { background: var(--bg); }
+    html[data-theme="light"] .vignette { background: radial-gradient(ellipse at center, transparent 38%, rgba(255, 255, 255, 0.7) 100%); }
+    html[data-theme="light"] .bg-grid {
+      background-image:
+        linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    }
+    
+    .hero-voxr {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 0 20px;
+      z-index: 2;
+    }
+    .hero-voxr-title {
+      font-size: clamp(60px, 15vw, 160px);
+      font-weight: 900;
+      font-family: 'Playfair Display', serif;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      padding-bottom: 0.2em; /* Fix Y clipping */
+      padding-right: 0.1em;
+      background: linear-gradient(to right, var(--gold-vivid), #fff, var(--gold-vivid));
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: textShine 3s linear infinite;
+      letter-spacing: -3px;
+    }
+    html[data-theme="light"] .hero-voxr-title {
+      background: linear-gradient(to right, var(--gold-dark), #000, var(--gold-dark));
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+    }
+    @keyframes textShine { to { background-position: 200% center; } }
+    .hero-voxr-subtitle {
+      font-size: clamp(18px, 2.5vw, 26px);
+      color: var(--text2);
+      max-width: 700px;
+      margin-bottom: 50px;
+      font-weight: 500;
+    }
+    .hero-voxr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 28px;
+      border-radius: 50px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      font-weight: 700;
+      margin-bottom: 40px;
+      box-shadow: 0 0 40px rgba(245, 197, 24, 0.15);
+    }
+    html[data-theme="light"] .hero-voxr-badge { background: rgba(0,0,0,0.03); }
+    .voxr-badge-dot {
+      width: 10px; height: 10px;
+      background: var(--gold-vivid);
+      border-radius: 50%;
+      box-shadow: 0 0 15px var(--gold-vivid);
+      animation: pulseDot 2s infinite;
+    }
+    @keyframes pulseDot {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.5); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .sticky-journey {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 100px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 100px;
+    }
+    /* 3D COVERFLOW CAROUSEL CSS */
+    .carousel-section {
+      height: 400vh;
+      position: relative;
+      background: transparent;
+      z-index: 10;
+    }
+    .carousel-sticky {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      perspective: 1500px;
+    }
+    .carousel-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-style: preserve-3d;
+    }
+    .carousel-item {
+      position: absolute;
+      width: 85vw;
+      height: 75vh;
+      max-width: 1500px;
+      max-height: 850px;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 40px;
+      padding: 0;
+      box-shadow: var(--shadow-lg), 0 40px 80px rgba(0,0,0,0.8);
+      display: block; /* Removed flex */
+      will-change: transform, opacity;
+      transform-origin: center center;
+      overflow: hidden;
+    }
+    html[data-theme="light"] .carousel-item {
+       box-shadow: var(--shadow-lg), 0 30px 60px rgba(0,0,0,0.08);
+    }
+    .carousel-item::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: var(--gradient-gold);
+      opacity: 0.9;
+      z-index: 10;
+    }
+    .carousel-item .carousel-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .carousel-item .carousel-bg img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      animation: kenBurns 25s infinite alternate linear;
+    }
+    @keyframes kenBurns {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.15); }
+    }
+    .carousel-item .feature-split-text {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 80px;
+      color: #fff !important; /* Always white over image */
+      text-align: right;
+    }
+    html[data-theme="light"] .carousel-item .feature-split-text {
+      /* Keep text white even in light mode because background is an image */
+      color: #fff !important;
+    }
+    .carousel-item .feature-split-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .carousel-item .feature-split-title {
+      font-size: clamp(32px, 4vw, 56px);
+      margin-bottom: 20px;
+      color: #fff !important;
+      text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+    }
+    .carousel-item .feature-split-p {
+      font-size: clamp(18px, 1.5vw, 24px);
+      color: rgba(255,255,255,0.85) !important;
+      max-width: 800px;
+      line-height: 1.6;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+    }
+    @media (max-width: 900px) {
+      .carousel-item { height: 85vh; width: 90vw; }
+      .carousel-item .feature-split-text { padding: 40px 30px; justify-content: flex-end; background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0) 100%); }
+    }
+
+    /* 3D FLYING ENVELOPES CSS */
+    .flying-envelopes-container {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+      perspective: 800px;
+    }
+    .flying-envelope {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 45px;
+      height: 30px;
+      background: linear-gradient(135deg, var(--gold-vivid) 0%, var(--gold-dark) 100%);
+      border-radius: 4px;
+      box-shadow: 0 0 15px rgba(245, 197, 24, 0.6);
+      opacity: 0;
+      transform-style: preserve-3d;
+      animation: flyOutward linear forwards;
+    }
+    html[data-theme="light"] .flying-envelope {
+      background: linear-gradient(135deg, var(--gold-dark) 0%, #000 100%);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+    }
+    .flying-envelope::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.5) 0%, transparent 100%);
+      border-radius: 4px;
+      clip-path: polygon(0 0, 50% 50%, 100% 0);
+    }
+    @keyframes flyOutward {
+      0% {
+        opacity: 0;
+        transform: translate3d(-50%, -50%, -800px) rotateZ(var(--rot)) scale(0.1);
+      }
+      20% {
+        opacity: 1;
+      }
+      80% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+        transform: translate3d(calc(-50% + var(--tx)), calc(-50% + var(--ty)), 400px) rotateZ(var(--rot)) rotateX(45deg) scale(2.5);
+      }
+    }
+
     html {
       scroll-behavior: smooth;
-      overflow-x: hidden;
+      /* overflow-x: hidden removed */
     }
 
     body {
@@ -63,7 +349,7 @@
       color: var(--text);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
+      /* overflow-x: hidden removed */
     }
 
     /* ── CANVAS PARTICLE LAYER ── */
@@ -1705,113 +1991,101 @@
       <span class="nav-logo-text">SeatSync</span>
     </div>
     <div class="nav-actions">
+      <button id="themeToggle" class="btn btn-ghost" style="font-size: 20px; padding: 4px 10px; cursor: pointer; border: none; background: transparent;">🌞</button>
       <a href="#features" class="btn btn-ghost">פיצ'רים</a>
       <a href="#faq" class="btn btn-ghost">שאלות נפוצות</a>
       <a href="app.html" class="btn btn-primary">כניסה למערכת</a>
     </div>
   </nav>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-bg"></div>
-
-    <!-- Floating sparkles -->
-    <div class="sparkle s1"></div>
-    <div class="sparkle s2"></div>
-    <div class="sparkle s3"></div>
-    <div class="sparkle s4"></div>
-    <div class="sparkle s5"></div>
-    <div class="sparkle s6"></div>
-    <div class="sparkle s7"></div>
-    <div class="sparkle s8"></div>
-
-    <div class="hero-badge reveal" style="position:relative;">✦ ניהול אירועים ברמה אחרת</div>
-    <h1 class="reveal delay-100">
-      תכנון וניהול מוזמנים<br />
-      <span>שמרגיש פשוט נכון.</span>
-    </h1>
-    <p class="reveal delay-200">
-      SeatSync מביאה את עוצמת הטכנולוגיה לאירוע שלכם. שליחת הודעות אישיות,
-      אישורי הגעה אוטומטיים והושבה חכמה בממשק עברי מדהים.
+  <!-- HERO VOXR STYLE -->
+  <div class="hero-voxr">
+    <div class="hero-voxr-badge reveal">
+      <div class="voxr-badge-dot"></div>
+      SeatSync 2.0 זמין עכשיו
+    </div>
+    <h1 class="hero-voxr-title reveal delay-100">SeatSync</h1>
+    <p class="hero-voxr-subtitle reveal delay-200">
+      הדור הבא של ניהול אירועים. <br/>
+      אישורי הגעה, סידורי הושבה חכמים ובוט AI שמדבר עם האורחים שלכם.
     </p>
-    <div class="hero-actions reveal delay-300">
-      <a href="app.html" class="btn btn-primary btn-lg">התחילו בחינם כעת</a>
-    </div>
-    <div class="hero-image-wrapper reveal delay-300 img-zoomable" style="transition-delay: 500ms;" data-img="images/image3.png" data-caption="דשבורד SeatSync — סטטיסטיקות בזמן אמת">
-      <img src="images/image3.png" alt="SeatSync Dashboard" />
-      <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+    
+    <!-- FLYING ENVELOPES 3D -->
+    <div class="flying-envelopes-container" id="flyingEnvelopes"></div>
+
     </div>
 
-    <!-- Hero image caption -->
-    <div class="hero-img-caption reveal" style="transition-delay: 650ms;">
-      <div class="hero-img-caption-inner">
-        <div class="hero-caption-stat">
-          <span class="hero-caption-icon">📊</span>
-          <div>
-            <div class="hero-caption-label">דשבורד חכם</div>
-            <div class="hero-caption-desc">סטטיסטיקות אישורים, מפות הושבה ופעילות בזמן אמת — הכל במבט אחד</div>
-          </div>
-        </div>
-        <div class="hero-caption-divider"></div>
-        <div class="hero-caption-stat">
-          <span class="hero-caption-icon">⚡</span>
-          <div>
-            <div class="hero-caption-label">עדכון בזמן אמת</div>
-            <div class="hero-caption-desc">כשאורח מאשר הגעה, הדשבורד מתעדכן אוטומטית ללא רענון</div>
-          </div>
-        </div>
-        <div class="hero-caption-divider"></div>
-        <div class="hero-caption-stat">
-          <span class="hero-caption-icon">🎯</span>
-          <div>
-            <div class="hero-caption-label">פילוח מתקדם</div>
-            <div class="hero-caption-desc">גרפים, סינון לפי קבוצה וסטטוס, ותובנות על מהלך האירוע</div>
-          </div>
-        </div>
-      </div>
+    <div class="hero-actions reveal delay-400" style="margin-top: 40px;">
+      <a href="app.html" class="btn btn-primary btn-lg" style="font-size: 20px; padding: 18px 40px; border-radius: 50px; box-shadow: 0 0 30px rgba(245, 197, 24, 0.3);">התחילו בחינם עכשיו</a>
     </div>
-
-    <!-- Scroll indicator -->
     <div class="scroll-indicator reveal" style="transition-delay: 900ms;">
       <div class="scroll-line"></div>
-      <span>גלול</span>
+      <span>גלול לגלות</span>
     </div>
   </div>
 
   <!-- SECTION DIVIDER -->
   <div class="section-divider" aria-hidden="true"></div>
 
-  <!-- STORY 1: RSVP -->
-  <section id="features">
-    <div class="feature-split reveal">
-      <div class="feature-split-text">
-        <div class="feature-split-icon">💌</div>
-        <h2 class="feature-split-title">הזמנות מרשימות לאורחים שלכם</h2>
-        <p class="feature-split-p">
-          שלחו לכל אורח הודעת WhatsApp אישית בלחיצת כפתור, עם קישור יחיד במיוחד עבורו.
-          האורחים יגיעו למסך RSVP יפהפה ומותאם למובייל, שם יוכלו לאשר הגעה, לציין כמות אורחים
-          ואפילו לעדכן על רגישויות למזון. הכל זורם ישירות לדשבורד שלכם בזמן אמת.
-        </p>
-      </div>
-      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/image5.png" data-caption="מסך RSVP מותאם למובייל">
-        <img src="images/image5.png" alt="RSVP UI" />
-        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
-      </div>
-    </div>
+  <!-- 3D COVERFLOW CAROUSEL -->
+  <section id="features" class="carousel-section">
+    <div class="carousel-sticky">
+      <div class="carousel-container" id="carouselContainer">
+        
+        <!-- Item 1: RSVP -->
+        <div class="carousel-item">
+          <div class="carousel-bg"><img src="images/bg_rsvp.png" alt="RSVP UI" /></div>
+          <div class="feature-split-text">
+            <div class="feature-split-icon">💌</div>
+            <h2 class="feature-split-title">ניהול אישורי הגעה מתקדם</h2>
+            <p class="feature-split-p">
+              שלחו לכל אורח הודעת WhatsApp אישית. האורחים מגיעים למסך RSVP מרהיב שם הם מאשרים הגעה בקליק.
+              הכל מתעדכן בדשבורד שלכם בזמן אמת בלי שום מאמץ.
+            </p>
+          </div>
+        </div>
 
-    <div class="feature-split reverse reveal">
-      <div class="feature-split-text">
-        <div class="feature-split-icon">🪑</div>
-        <h2 class="feature-split-title">סידור הושבה חכם ופשוט</h2>
-        <p class="feature-split-p">
-          קחו את מפת האולם בידיים שלכם. הממשק החדשני שלנו מאפשר סידור שולחנות וירטואלי אלגנטי.
-          פשוט גררו אורחים מהרשימה אל השולחנות, ראו היכן חסר מקום, ומבטחים שלא שכחתם אף אחד.
-          האפקטיביות שבגרפיקה מבטיחה ניהול חלק לקראת יום האירוע.
-        </p>
-      </div>
-      <div class="feature-split-image reveal delay-200 img-zoomable" data-img="images/image7.png" data-caption="ממשק הושבה אינטראקטיבי">
-        <img src="images/image7.png" alt="Seating Chart UI" />
-        <div class="img-zoom-hint">🔍 לחץ להגדלה</div>
+        <!-- Item 2: Seating -->
+        <div class="carousel-item">
+          <div class="carousel-bg"><img src="images/bg_seating.png" alt="Seating Chart" /></div>
+          <div class="feature-split-text">
+            <div class="feature-split-icon">🪑</div>
+            <h2 class="feature-split-title">הושבה חכמה באינטראקציה מלאה</h2>
+            <p class="feature-split-p">
+              ממשק גרירה ושחרור (Drag & Drop) המאפשר לכם לסדר שולחנות וירטואליים במהירות.
+              תדעו מיד מי יושב איפה, איפה חסר מקום, ואיך נראה אולם האירועים שלכם מלמעלה.
+            </p>
+          </div>
+        </div>
+
+        <!-- Item 3: Invitation Design -->
+        <div class="carousel-item">
+          <div class="carousel-bg"><img src="images/bg_invitation.png" alt="Invitation Design" /></div>
+          <div class="feature-split-text">
+            <div class="feature-split-icon">✨</div>
+            <h2 class="feature-split-title">עיצוב הזמנות מרהיבות</h2>
+            <p class="feature-split-p">
+              המערכת כוללת כלי לעיצוב הזמנות דיגיטליות ברמה הגבוהה ביותר.
+              בחרו מתוך עשרות תבניות פרימיום, התאימו את הצבעים והטקסט, ושלחו לאורחים
+              חוויה חזותית שעושה חשק להגיע לאירוע.
+            </p>
+          </div>
+        </div>
+
+        <!-- Item 4: AI Bot -->
+        <div class="carousel-item">
+          <div class="carousel-bg"><img src="images/bg_bot.png" alt="AI Phone Bot" /></div>
+          <div class="feature-split-text">
+            <div class="feature-split-icon">🤖</div>
+            <h2 class="feature-split-title">בוט AI טלפוני (חדש!)</h2>
+            <p class="feature-split-p">
+              אורחים שלא ענו לווטסאפ? תנו ל-AI שלנו לעשות את העבודה.
+              הבוט החכם מתקשר לאורחים בקול אנושי, מברר אם הם מגיעים,
+              ומעדכן את הסטטוס שלהם ישירות במערכת באופן אוטומטי לחלוטין.
+            </p>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
@@ -2173,6 +2447,104 @@
 
   <script>
     /* ══════════════════════════════════════════
+       8. THEME TOGGLE & STICKY SCROLL EFFECTS
+    ══════════════════════════════════════════ */
+    document.addEventListener("DOMContentLoaded", () => {
+      const themeToggle = document.getElementById('themeToggle');
+      const rootHtml = document.documentElement;
+      if (localStorage.getItem('seatsync-theme') === 'light') {
+        rootHtml.setAttribute('data-theme', 'light');
+        if (themeToggle) themeToggle.textContent = '🌙';
+      }
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          if (rootHtml.getAttribute('data-theme') === 'light') {
+            rootHtml.removeAttribute('data-theme');
+            localStorage.setItem('seatsync-theme', 'dark');
+            themeToggle.textContent = '🌞';
+          } else {
+            rootHtml.setAttribute('data-theme', 'light');
+            localStorage.setItem('seatsync-theme', 'light');
+            themeToggle.textContent = '🌙';
+          }
+        });
+      }
+      // 3D COVERFLOW CAROUSEL LOGIC
+      const carouselSection = document.getElementById('features');
+      const carouselItems = document.querySelectorAll('.carousel-item');
+      
+      function renderCarousel() {
+        if (!carouselSection || carouselItems.length === 0) return;
+        
+        const rect = carouselSection.getBoundingClientRect();
+        const scrollRange = rect.height - window.innerHeight;
+        
+        // Progress of scroll through the section
+        let progress = -rect.top / scrollRange;
+        progress = Math.max(0, Math.min(1, progress));
+        
+        const N = carouselItems.length;
+        const itemProgress = progress * (N - 1);
+        
+        // Handle RTL layout flow
+        const isRTL = document.documentElement.dir === 'rtl';
+        const directionMultiplier = isRTL ? -1 : 1;
+        
+        carouselItems.forEach((item, i) => {
+          const diff = i - itemProgress;
+          
+          const isMobile = window.innerWidth <= 900;
+          const zDepth = isMobile ? 800 : 1200;
+          const xSpread = isMobile ? window.innerWidth * 0.85 : window.innerWidth * 0.7;
+          
+          const translateZ = -Math.abs(diff) * zDepth;
+          const translateX = diff * xSpread * directionMultiplier;
+          const rotateY = -Math.sign(diff) * Math.min(Math.abs(diff) * 60, 75) * directionMultiplier;
+          
+          const opacity = Math.max(0, 1 - Math.abs(diff) * 0.5);
+          const scale = Math.max(0.4, 1 - Math.abs(diff) * 0.15);
+          
+          item.style.transform = `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`;
+          item.style.opacity = opacity;
+          item.style.zIndex = Math.round(100 - Math.abs(diff) * 10);
+        });
+      }
+
+      renderCarousel();
+      window.addEventListener('scroll', renderCarousel, { passive: true });
+      window.addEventListener('resize', renderCarousel, { passive: true });
+    });
+
+    /* ══════════════════════════════════════════
+       9. 3D FLYING ENVELOPES (Hero Background)
+    ══════════════════════════════════════════ */
+    const envelopesContainer = document.getElementById('flyingEnvelopes');
+    if (envelopesContainer) {
+      function spawnEnvelope() {
+        const env = document.createElement('div');
+        env.className = 'flying-envelope';
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 800 + Math.random() * 400;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        const rot = Math.random() * 360;
+        
+        env.style.setProperty('--tx', `${tx}px`);
+        env.style.setProperty('--ty', `${ty}px`);
+        env.style.setProperty('--rot', `${rot}deg`);
+        
+        const duration = 2.5 + Math.random() * 2;
+        env.style.animationDuration = `${duration}s`;
+        
+        envelopesContainer.appendChild(env);
+        setTimeout(() => env.remove(), duration * 1000);
+      }
+      
+      setInterval(spawnEnvelope, 150);
+    }
+
+    /* ══════════════════════════════════════════
        1. CANVAS PARTICLE SYSTEM (gold floating dots)
     ══════════════════════════════════════════ */
     const canvas = document.getElementById('particleCanvas');
@@ -2187,21 +2559,22 @@
     window.addEventListener('resize', resizeCanvas, { passive: true });
 
     function createParticle() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       return {
         x:          Math.random() * canvas.width,
         y:          Math.random() * canvas.height,
-        size:       Math.random() * 1.8 + 0.4,
-        speedX:     (Math.random() - 0.5) * 0.35,
-        speedY:     -(Math.random() * 0.28 + 0.08),
+        size:       Math.random() * 2.5 + 0.8,
+        speedX:     (Math.random() - 0.5) * 0.8,
+        speedY:     -(Math.random() * 0.6 + 0.2),
         opacity:    0,
-        maxOpacity: Math.random() * 0.45 + 0.08,
+        maxOpacity: Math.random() * 0.7 + 0.2,
         life:       0,
-        maxLife:    Math.random() * 320 + 140,
-        color:      Math.random() > 0.5 ? '212,168,8' : '245,197,24',
+        maxLife:    Math.random() * 250 + 100,
+        color:      isLight ? (Math.random() > 0.5 ? '180,140,10' : '150,110,5') : (Math.random() > 0.5 ? '212,168,8' : '245,197,24'),
       };
     }
 
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 200; i++) {
       const p = createParticle();
       p.life = Math.random() * p.maxLife;
       particles.push(p);
