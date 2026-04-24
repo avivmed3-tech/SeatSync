@@ -204,27 +204,20 @@
       max-width: 1500px;
       max-height: 850px;
       background: #000;
-      border: 1px solid rgba(212, 168, 8, 0.4);
+      border: 2px solid rgba(212, 168, 8, 0.6);
       border-radius: 40px;
       padding: 0;
-      box-shadow: 0 0 30px rgba(212, 168, 8, 0.2), 0 40px 80px rgba(0,0,0,0.9);
+      box-shadow: 0 0 50px rgba(212, 168, 8, 0.35), 0 40px 100px rgba(0,0,0,0.9);
       display: block; /* Removed flex */
       will-change: transform, opacity;
       transform-origin: center center;
       overflow: hidden;
     }
     html[data-theme="light"] .carousel-item {
-       border: 1px solid rgba(212, 168, 8, 0.6);
-       box-shadow: 0 0 40px rgba(212, 168, 8, 0.25), 0 30px 60px rgba(0,0,0,0.15);
+       border: 2px solid rgba(212, 168, 8, 0.8);
+       box-shadow: 0 0 60px rgba(212, 168, 8, 0.4), 0 30px 60px rgba(0,0,0,0.15);
     }
-    .carousel-item::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0; height: 4px;
-      background: var(--gradient-gold);
-      opacity: 0.9;
-      z-index: 10;
-    }
+    /* Removed ::before top border to make borders uniform */
     .carousel-item .carousel-bg {
       position: absolute;
       inset: 0;
