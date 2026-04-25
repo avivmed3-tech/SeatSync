@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&family=Frank+Ruhl+Libre:wght@400;500;700;900&display=swap"
     rel="stylesheet" />
 
   <style>
@@ -223,16 +223,23 @@
       inset: 0;
       z-index: 1;
       overflow: hidden;
+      background: #080808;
     }
-    .carousel-item .carousel-bg img {
+    .carousel-item .carousel-bg .bg-blur {
+      position: absolute;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      animation: kenBurns 25s infinite alternate linear;
+      filter: blur(50px) brightness(0.4);
+      transform: scale(1.2);
+      z-index: 0;
     }
-    @keyframes kenBurns {
-      0% { transform: scale(1); }
-      100% { transform: scale(1.15); }
+    .carousel-item .carousel-bg .bg-main {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      z-index: 1;
     }
     .carousel-item .feature-split-text {
       position: absolute;
@@ -1999,22 +2006,19 @@
 
   <!-- HERO VOXR STYLE -->
   <div class="hero-voxr">
-    <div class="hero-voxr-badge reveal">
-      <div class="voxr-badge-dot"></div>
-      SeatSync 2.0 זמין עכשיו
+    <h1 class="visually-hidden" style="display:none;">SeatSync</h1>
+    
+    <div style="position: relative; z-index: 1; margin-top: 8vh; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 900px; padding: 0 20px;">
+       <p id="typewriter-text" style="font-family: 'Frank Ruhl Libre', 'Playfair Display', serif; font-size: clamp(26px, 3.5vw, 38px); font-weight: 700; color: #F5C518; text-shadow: 0 0 15px rgba(245, 197, 24, 0.8), 0 0 30px rgba(212, 168, 8, 0.6), 0 4px 10px rgba(0,0,0,0.9); margin: 0; line-height: 1.4; text-align: center; direction: rtl;"></p>
     </div>
-    <h1 class="hero-voxr-title reveal delay-100">SeatSync</h1>
-    <p class="hero-voxr-subtitle reveal delay-200">
-      הדור הבא של ניהול אירועים. <br/>
-      אישורי הגעה, סידורי הושבה חכמים ובוט AI שמדבר עם האורחים שלכם.
-    </p>
+
+    <div style="flex-grow: 1;"></div>
+    <video autoplay muted playsinline class="reveal delay-100" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; mix-blend-mode: screen; pointer-events: none; z-index: 0; opacity: 0.9;" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
     
     <!-- FLYING ENVELOPES 3D -->
     <div class="flying-envelopes-container" id="flyingEnvelopes"></div>
 
-    </div>
-
-    <div class="hero-actions reveal delay-400" style="margin-top: 40px;">
+    <div class="hero-actions reveal delay-400" style="margin-top: 20px; margin-bottom: 15vh; position: relative; z-index: 1;">
       <a href="app.html" class="btn btn-primary btn-lg" style="font-size: 20px; padding: 18px 40px; border-radius: 50px; box-shadow: 0 0 30px rgba(245, 197, 24, 0.3);">התחילו בחינם עכשיו</a>
     </div>
     <div class="scroll-indicator reveal" style="transition-delay: 900ms;">
@@ -2033,7 +2037,10 @@
         
         <!-- Item 1: RSVP -->
         <div class="carousel-item">
-          <div class="carousel-bg"><img src="images/bg_rsvp.png" alt="RSVP UI" /></div>
+          <div class="carousel-bg">
+            <img src="images/he_rsvp.png" class="bg-blur" alt="RSVP Blur" />
+            <img src="images/he_rsvp.png" class="bg-main" alt="RSVP UI" />
+          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">💌</div>
             <h2 class="feature-split-title">ניהול אישורי הגעה מתקדם</h2>
@@ -2046,7 +2053,10 @@
 
         <!-- Item 2: Seating -->
         <div class="carousel-item">
-          <div class="carousel-bg"><img src="images/bg_seating.png" alt="Seating Chart" /></div>
+          <div class="carousel-bg">
+            <img src="images/he_seating.png" class="bg-blur" alt="Seating Blur" />
+            <img src="images/he_seating.png" class="bg-main" alt="Seating Chart" />
+          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🪑</div>
             <h2 class="feature-split-title">הושבה חכמה באינטראקציה מלאה</h2>
@@ -2059,7 +2069,10 @@
 
         <!-- Item 3: Invitation Design -->
         <div class="carousel-item">
-          <div class="carousel-bg"><img src="images/bg_invitation.png" alt="Invitation Design" /></div>
+          <div class="carousel-bg">
+            <img src="images/he_invitation.png" class="bg-blur" alt="Invitation Blur" />
+            <img src="images/he_invitation.png" class="bg-main" alt="Invitation Design" />
+          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">✨</div>
             <h2 class="feature-split-title">עיצוב הזמנות מרהיבות</h2>
@@ -2073,7 +2086,10 @@
 
         <!-- Item 4: AI Bot -->
         <div class="carousel-item">
-          <div class="carousel-bg"><img src="images/bg_bot.png" alt="AI Phone Bot" /></div>
+          <div class="carousel-bg">
+            <img src="images/he_bot.png" class="bg-blur" alt="AI Bot Blur" />
+            <img src="images/he_bot.png" class="bg-main" alt="AI Phone Bot" />
+          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🤖</div>
             <h2 class="feature-split-title">בוט AI טלפוני (חדש!)</h2>
@@ -2795,6 +2811,27 @@
         `;
       }
     }, { passive: true });
+
+    /* ══════════════════════════════════════════
+       11. TYPEWRITER EFFECT FOR HERO
+    ══════════════════════════════════════════ */
+    const twText = "הדור הבא של ניהול אירועים.\nאישורי הגעה, סידורי הושבה חכמים ובוט AI שמדבר עם האורחים שלכם.";
+    const twElement = document.getElementById('typewriter-text');
+    if (twElement) {
+      let twIndex = 0;
+      function typeWriter() {
+        if (twIndex < twText.length) {
+          if (twText.charAt(twIndex) === '\n') {
+            twElement.innerHTML += '<br/>';
+          } else {
+            twElement.innerHTML += twText.charAt(twIndex);
+          }
+          twIndex++;
+          setTimeout(typeWriter, 35 + Math.random() * 40);
+        }
+      }
+      setTimeout(typeWriter, 800);
+    }
   </script>
 
 </body>
