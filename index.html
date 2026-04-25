@@ -1961,6 +1961,125 @@
       color: var(--text2);
       line-height: 1.8;
     }
+
+    /* ══════════════════════════════════════════
+       MOBILE RESPONSIVE — PRIMARY BREAKPOINT
+    ══════════════════════════════════════════ */
+    @media (max-width: 768px) {
+
+      /* ── NAV ── */
+      nav {
+        padding: 0 16px;
+        height: 58px;
+      }
+      .nav-logo-text { display: none; }
+      .nav-actions { gap: 4px; }
+      .nav-actions .btn-ghost { display: none; } /* hide text links, keep only CTA */
+      .nav-actions .btn-primary {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+      #themeToggle { display: inline-flex !important; }
+
+      /* ── HERO VIDEO SECTION ── */
+      .hero-voxr {
+        padding: 0 16px;
+        overflow: hidden;
+      }
+      .hero-voxr video {
+        object-position: center center;
+      }
+      #typewriter-text {
+        font-size: clamp(18px, 5vw, 26px) !important;
+        line-height: 1.5 !important;
+        padding: 0 8px;
+      }
+      /* push typewriter text down from nav */
+      .hero-voxr > div:first-of-type {
+        margin-top: 10vh !important;
+      }
+      .hero-actions {
+        margin-bottom: 8vh !important;
+      }
+      .hero-actions .btn-lg {
+        font-size: 16px !important;
+        padding: 14px 28px !important;
+      }
+      .scroll-indicator { display: none; }
+
+      /* ── CAROUSEL ── */
+      .carousel-section { height: 400vh; }
+      .carousel-item {
+        width: 92vw !important;
+        height: 68vh !important;
+        border-radius: 24px !important;
+      }
+      .carousel-item .feature-split-text {
+        padding: 28px !important;
+      }
+      .feature-split-title { font-size: 22px !important; }
+      .feature-split-p { font-size: 14px !important; }
+      .feature-split-icon { width: 44px !important; height: 44px !important; font-size: 22px !important; }
+
+      /* ── GENERAL SECTIONS ── */
+      section { padding: 60px 16px; }
+      .section-title { font-size: clamp(26px, 7vw, 36px); }
+      .section-sub { font-size: 15px; }
+
+      /* ── FEATURE SPLIT ── */
+      .feature-split, .feature-split.reverse {
+        flex-direction: column;
+        gap: 32px;
+        margin-bottom: 60px;
+      }
+      .feature-split-text { max-width: 100%; text-align: right; }
+      .feature-split-image { width: 100%; }
+
+      /* ── TIMELINE ── */
+      .timeline-container::before { display: none; }
+      .timeline-step, .timeline-step:nth-child(even) {
+        flex-direction: column;
+        margin-bottom: 48px;
+      }
+      .timeline-content { width: 100%; margin-right: 0; padding: 20px; }
+      .timeline-image { width: 100%; height: 200px; margin-right: 0; transform: none !important; }
+      .timeline-num { display: none; }
+      .timeline-title { font-size: 22px; }
+
+      /* ── MARQUEE ── */
+      .marquee-item { width: 240px; height: 180px; }
+
+      /* ── PRICING ── */
+      .pricing-grid { grid-template-columns: 1fr; gap: 16px; }
+      .price-card { padding: 28px 20px; }
+      .price-amount { font-size: 40px; }
+
+      /* ── CTA SECTION ── */
+      .cta-section { padding: 80px 16px; }
+      .cta-section h2 { font-size: clamp(28px, 8vw, 40px); }
+      .cta-section p { font-size: 15px; }
+
+      /* ── FAQ ── */
+      .faq-question { padding: 18px 20px; font-size: 15px; }
+      .faq-answer p { padding: 0 20px 18px; }
+
+      /* ── HERO CAPTION STATS ── */
+      .hero-img-caption-inner { flex-direction: column; gap: 16px; padding: 16px; }
+      .hero-caption-stat { padding: 0; }
+      .hero-caption-divider { width: 100%; height: 1px; align-self: auto; }
+
+      /* ── STICKY JOURNEY ── */
+      .sticky-journey { padding: 60px 16px; gap: 60px; }
+    }
+
+    /* ── EXTRA SMALL (iPhone SE etc) ── */
+    @media (max-width: 390px) {
+      #typewriter-text {
+        font-size: 16px !important;
+      }
+      .carousel-item { height: 60vh !important; }
+      .feature-split-title { font-size: 18px !important; }
+    }
   </style>
 </head>
 
