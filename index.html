@@ -360,7 +360,7 @@
 
     html {
       scroll-behavior: smooth;
-      overflow-x: hidden;
+      overflow-x: clip;
       max-width: 100%;
     }
 
@@ -370,7 +370,7 @@
       color: var(--text);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
-      overflow-x: hidden;
+      overflow-x: clip;
       max-width: 100%;
     }
 
@@ -1981,7 +1981,7 @@
        MOBILE RESPONSIVE
     ══════════════════════════════════════════ */
     @media (max-width: 768px) {
-      html, body { overflow-x: hidden !important; }
+      html, body { overflow-x: clip !important; }
 
       /* Nav */
       nav { padding: 0 12px !important; height: 56px !important; }
@@ -2103,7 +2103,7 @@
     </div>
 
     <div style="flex-grow: 1;"></div>
-    <video autoplay muted loop playsinline class="hero-bg-video" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
+    <video autoplay muted playsinline class="hero-bg-video" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
     
     <!-- FLYING ENVELOPES 3D -->
     <div class="flying-envelopes-container" id="flyingEnvelopes"></div>
