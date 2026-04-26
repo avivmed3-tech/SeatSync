@@ -107,6 +107,20 @@
       overflow: hidden;
       z-index: 2;
     }
+    .hero-bg-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      mix-blend-mode: screen;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.9;
+    }
     .hero-voxr-title {
       font-size: clamp(60px, 15vw, 160px);
       font-weight: 900;
@@ -1975,20 +1989,21 @@
       .nav-logo-text { display: none !important; }
       .nav-actions .btn-primary { padding: 8px 14px !important; font-size: 13px !important; }
 
-      /* Hero */
-      .hero-voxr { padding: 0 16px !important; }
-      #typewriter-text { font-size: 18px !important; line-height: 1.6 !important; }
+      /* Hero — keep zero horizontal padding so the bg video fills the full width */
+      .hero-voxr { padding: 0 !important; }
+      .hero-bg-video { object-fit: contain !important; opacity: 1 !important; }
+      #typewriter-text { font-size: 20px !important; line-height: 1.6 !important; }
       .hero-voxr .hero-actions .btn-lg { font-size: 16px !important; padding: 14px 28px !important; }
       .scroll-indicator { display: none !important; }
       .flying-envelopes-container { display: none !important; }
 
       /* Carousel */
-      .carousel-section { height: 400vh; }
-      .carousel-item { width: 90vw !important; height: 65vh !important; border-radius: 20px !important; }
-      .carousel-item .feature-split-text { padding: 24px !important; }
-      .carousel-item .feature-split-title { font-size: 20px !important; }
-      .carousel-item .feature-split-p { font-size: 13px !important; }
-      .carousel-item .feature-split-icon { width: 40px !important; height: 40px !important; font-size: 20px !important; }
+      .carousel-section { height: 500vh; }
+      .carousel-item { width: 90vw !important; height: 70vh !important; border-radius: 20px !important; }
+      .carousel-item .feature-split-text { padding: 22px !important; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0) 100%) !important; }
+      .carousel-item .feature-split-title { font-size: 22px !important; margin-bottom: 10px !important; }
+      .carousel-item .feature-split-p { font-size: 14px !important; line-height: 1.5 !important; }
+      .carousel-item .feature-split-icon { width: 44px !important; height: 44px !important; font-size: 22px !important; margin-bottom: 12px !important; border-radius: 12px !important; }
 
       /* Feature Split */
       .feature-split, .feature-split.reverse { flex-direction: column !important; gap: 32px; }
@@ -2032,8 +2047,9 @@
     }
 
     @media (max-width: 390px) {
-      #typewriter-text { font-size: 15px !important; }
-      .carousel-item { height: 55vh !important; }
+      #typewriter-text { font-size: 17px !important; }
+      .carousel-item { height: 65vh !important; }
+      .carousel-item .feature-split-title { font-size: 19px !important; }
     }
   </style>
 </head>
@@ -2087,7 +2103,7 @@
     </div>
 
     <div style="flex-grow: 1;"></div>
-    <video autoplay muted playsinline style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; mix-blend-mode: screen; pointer-events: none; z-index: 0; opacity: 0.9;" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
+    <video autoplay muted loop playsinline class="hero-bg-video" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
     
     <!-- FLYING ENVELOPES 3D -->
     <div class="flying-envelopes-container" id="flyingEnvelopes"></div>
