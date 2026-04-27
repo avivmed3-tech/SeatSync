@@ -1992,7 +1992,6 @@
       /* Hero — keep zero horizontal padding so the bg video fills the full width */
       .hero-voxr { padding: 0 !important; }
       .hero-bg-video { object-fit: contain !important; opacity: 1 !important; }
-      #typewriter-text { font-size: 20px !important; line-height: 1.6 !important; }
       .hero-voxr .hero-actions .btn-lg { font-size: 16px !important; padding: 14px 28px !important; }
       .scroll-indicator { display: none !important; }
       .flying-envelopes-container { display: none !important; }
@@ -2047,7 +2046,6 @@
     }
 
     @media (max-width: 390px) {
-      #typewriter-text { font-size: 17px !important; }
       .carousel-item { height: 65vh !important; }
       .carousel-item .feature-split-title { font-size: 19px !important; }
     }
@@ -2097,10 +2095,6 @@
   <!-- HERO VOXR STYLE -->
   <div class="hero-voxr">
     <h1 class="visually-hidden" style="display:none;">SeatSync</h1>
-    
-    <div style="position: relative; z-index: 1; margin-top: 8vh; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 900px; padding: 0 20px;">
-       <p id="typewriter-text" style="font-family: 'Frank Ruhl Libre', 'Playfair Display', serif; font-size: clamp(26px, 3.5vw, 38px); font-weight: 700; color: #F5C518; text-shadow: 0 0 15px rgba(245, 197, 24, 0.8), 0 0 30px rgba(212, 168, 8, 0.6), 0 4px 10px rgba(0,0,0,0.9); margin: 0; line-height: 1.4; text-align: center; direction: rtl;"></p>
-    </div>
 
     <div style="flex-grow: 1;"></div>
     <video autoplay muted playsinline class="hero-bg-video" src="video/אנימציית_טקסט_SeatSync_מזהב.mp4"></video>
@@ -2902,26 +2896,6 @@
       }
     }, { passive: true });
 
-    /* ══════════════════════════════════════════
-       11. TYPEWRITER EFFECT FOR HERO
-    ══════════════════════════════════════════ */
-    const twText = "הדור הבא של ניהול אירועים.\nאישורי הגעה, סידורי הושבה חכמים ובוט AI שמדבר עם האורחים שלכם.";
-    const twElement = document.getElementById('typewriter-text');
-    if (twElement) {
-      let twIndex = 0;
-      function typeWriter() {
-        if (twIndex < twText.length) {
-          if (twText.charAt(twIndex) === '\n') {
-            twElement.innerHTML += '<br/>';
-          } else {
-            twElement.innerHTML += twText.charAt(twIndex);
-          }
-          twIndex++;
-          setTimeout(typeWriter, 35 + Math.random() * 40);
-        }
-      }
-      setTimeout(typeWriter, 800);
-    }
   </script>
 
 </body>
