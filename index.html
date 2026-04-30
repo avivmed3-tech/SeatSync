@@ -2049,82 +2049,6 @@
       .carousel-item { height: 65vh !important; }
       .carousel-item .feature-split-title { font-size: 19px !important; }
     }
-
-    /* ── DEVICE SHOWCASE SECTION ── */
-    .devices-section {
-      padding: 100px 20px 80px;
-      max-width: 1300px;
-      margin: 0 auto;
-      text-align: center;
-    }
-
-    .devices-grid {
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 32px;
-      margin-top: 64px;
-      padding: 40px 20px 20px;
-    }
-
-    .device-item {
-      transition: transform 0.4s ease, filter 0.4s ease;
-    }
-
-    .device-laptop {
-      flex: 0 0 auto;
-      width: 52%;
-      max-width: 560px;
-      z-index: 2;
-    }
-
-    .device-phone {
-      flex: 0 0 auto;
-      width: 16%;
-      max-width: 190px;
-      transform: rotate(3deg) translateY(28px);
-      z-index: 1;
-    }
-
-    .device-tablet {
-      flex: 0 0 auto;
-      width: 26%;
-      max-width: 300px;
-      transform: rotate(-2.5deg) translateY(18px);
-      z-index: 1;
-    }
-
-    .device-item img {
-      width: 100%;
-      height: auto;
-      display: block;
-      filter: drop-shadow(0 24px 50px rgba(0, 0, 0, 0.65));
-      transition: filter 0.4s ease;
-    }
-
-    .device-item:hover img {
-      filter: drop-shadow(0 36px 70px rgba(212, 168, 8, 0.3));
-    }
-
-    .device-laptop:hover  { transform: translateY(-10px); }
-    .device-phone:hover   { transform: rotate(3deg) translateY(18px); }
-    .device-tablet:hover  { transform: rotate(-2.5deg) translateY(8px); }
-
-    @media (max-width: 900px) {
-      .devices-section { padding: 60px 16px 48px; }
-      .devices-grid { gap: 20px; }
-      .device-laptop { width: 58%; }
-      .device-phone  { width: 18%; }
-      .device-tablet { width: 28%; }
-    }
-
-    @media (max-width: 640px) {
-      .devices-grid { flex-direction: column; align-items: center; gap: 28px; }
-      .device-laptop { width: 92%; max-width: 400px; }
-      .device-phone  { width: 58%; max-width: 220px; transform: none; order: -1; }
-      .device-tablet { width: 86%; max-width: 340px; transform: none; }
-      .device-laptop:hover, .device-phone:hover, .device-tablet:hover { transform: translateY(-8px); }
-    }
   </style>
 </head>
 
@@ -2186,31 +2110,6 @@
       <span>גלול לגלות</span>
     </div>
   </div>
-
-  <!-- SECTION DIVIDER -->
-  <div class="section-divider" aria-hidden="true"></div>
-
-  <!-- DEVICE SHOWCASE SECTION -->
-  <section class="devices-section">
-    <div class="section-label reveal">הפלטפורמה שלנו</div>
-    <h2 class="section-title reveal delay-100">חוויה מושלמת בכל מכשיר</h2>
-    <p class="section-sub reveal delay-200">מניהול הזמנות ב-MacBook ועד אישור הגעה מהטלפון — SeatSync עובד בצורה מושלמת בכל מקום.</p>
-
-    <div class="devices-grid">
-      <!-- Phone – RSVP invitation -->
-      <div class="device-item device-phone reveal delay-100">
-        <img src="images/phone-mockup.png" alt="SeatSync הזמנה דיגיטלית ב-iPhone" />
-      </div>
-      <!-- Laptop – main dashboard -->
-      <div class="device-item device-laptop reveal delay-200">
-        <img src="images/laptop-mockup.png" alt="SeatSync דשבורד ניהול אירועים ב-MacBook" />
-      </div>
-      <!-- Tablet – seating chart -->
-      <div class="device-item device-tablet reveal delay-300">
-        <img src="images/dashboard-mockup.png" alt="SeatSync מפת ישיבה בטאבלט" />
-      </div>
-    </div>
-  </section>
 
   <!-- SECTION DIVIDER -->
   <div class="section-divider" aria-hidden="true"></div>
