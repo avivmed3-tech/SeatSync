@@ -6,17 +6,17 @@ const features = [
   {
     title: "ניהול מוזמנים אוטומטי",
     description: "סנכרון מלא, אישורי הגעה ישירות מהווטסאפ של האורחים ועדכונים בזמן אמת.",
-    video: "/videos/event-management-flow.mp4",
+    video: "/videos/clip-rsvp.mp4",
   },
   {
     title: "סידורי הושבה חכמים",
     description: "ממשק ויזואלי לגרירה ושחרור. מונע טעויות, חוסך שעות ומבטיח שכולם מרוצים.",
-    video: "/videos/event-management-flow.mp4",
+    video: "/videos/clip-seating.mp4",
   },
   {
     title: "הזמנות יוקרתיות",
     description: "עיצובים מרהיבים, מותאמים אישית עם אנימציות שנשלחות ישירות לנייד.",
-    video: "/videos/seatsync-text-gold.mp4",
+    video: "/videos/clip-invitation.mp4",
   },
   {
     title: "תזכורות ודיוור",
