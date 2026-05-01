@@ -1091,160 +1091,152 @@
       }
     }
 
-    /* ── HOW IT WORKS / BENTO GRID ── */
-    .how-section {
-      background: rgba(255, 255, 255, 0.02);
+    /* ── HOW IT WORKS / ZOOM-SCROLL ── */
+    .zoom-scroll-wrap {
+      position: relative;
+      width: 100%;
+      height: 500vh;
+      background: var(--bg);
       border-top: 1px solid var(--border-subtle);
       border-bottom: 1px solid var(--border-subtle);
-      position: relative;
     }
 
-    .how-section::before {
-      content: '';
+    .zoom-scroll-stage {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .zoom-scroll-header {
       position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: radial-gradient(ellipse at center, rgba(212, 168, 8, 0.04) 0%, transparent 70%);
+      top: 0; left: 0; right: 0;
+      z-index: 30;
+      text-align: center;
+      padding: 48px 24px 0;
       pointer-events: none;
     }
-
-    /* ── HOW IT WORKS / TIMELINE ── */
-    .timeline-container {
-      max-width: 1100px;
-      margin: 0 auto;
-      position: relative;
-      padding: 60px 24px;
+    .zoom-scroll-header .section-label,
+    .zoom-scroll-header .section-title,
+    .zoom-scroll-header .section-sub {
+      text-shadow: 0 2px 16px rgba(0,0,0,0.6);
+    }
+    .zoom-scroll-header .section-sub {
+      max-width: 640px;
+      margin: 8px auto 0;
     }
 
-    .timeline-container::before {
+    .zoom-step {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100vh;
+      opacity: 0;
+      transform: scale(0.85);
+      transform-origin: center center;
+      will-change: transform, opacity;
+      pointer-events: none;
+    }
+    .zoom-step.is-active { pointer-events: auto; }
+
+    .zoom-step-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    .zoom-step-bg::after {
       content: '';
       position: absolute;
-      top: 0; bottom: 0; left: 50%;
-      width: 2px;
-      background: linear-gradient(180deg, transparent, rgba(212,168,8,0.5), transparent);
-      transform: translateX(-50%);
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        rgba(8,8,8,0.55) 0%,
+        rgba(8,8,8,0.45) 40%,
+        rgba(8,8,8,0.75) 100%
+      );
     }
 
-    .timeline-step {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 120px;
-      position: relative;
-    }
-
-    .timeline-step:nth-child(even) {
-      flex-direction: row-reverse;
-    }
-
-    .timeline-step:last-child {
-      margin-bottom: 0;
-    }
-
-    .timeline-content {
-      width: 42%;
-      padding: 40px;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid rgba(255,255,255,0.05);
-      border-radius: 24px;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      position: relative;
-      z-index: 2;
-      transition: border-color 0.4s;
-    }
-    
-    .timeline-content:hover {
-      border-color: rgba(212, 168, 8, 0.4);
-    }
-
-    .timeline-num {
+    .zoom-step-content {
       position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 56px; height: 56px;
-      background: var(--bg);
-      border: 2px solid var(--gold);
-      border-radius: 50%;
-      display: flex;
+      bottom: 0; left: 0; right: 0;
+      padding: 0 8vw 14vh;
+      z-index: 2;
+      text-align: right;
+      direction: rtl;
+    }
+
+    .zoom-step-num {
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      font-weight: 800;
+      width: 72px; height: 72px;
+      border-radius: 50%;
+      background: rgba(8,8,8,0.55);
+      border: 2px solid var(--gold);
       color: var(--gold);
-      z-index: 3;
-      box-shadow: 0 0 30px rgba(212,168,8,0.2);
+      font-family: 'Playfair Display', serif;
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      box-shadow: 0 0 30px rgba(212,168,8,0.35);
+      backdrop-filter: blur(6px);
     }
 
-    .timeline-image {
-      width: 48%;
-      height: 320px;
-      border-radius: 24px;
-      overflow: hidden;
-      position: relative;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
-      transform: perspective(1000px) rotateY(-8deg);
-      transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-    }
-    .timeline-step:nth-child(even) .timeline-image {
-      transform: perspective(1000px) rotateY(8deg);
-    }
-    .timeline-step:hover .timeline-image {
-      transform: perspective(1000px) rotateY(0deg) translateY(-8px);
-    }
-
-    .timeline-image img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      transition: transform 0.6s ease;
-    }
-    .timeline-step:hover .timeline-image img {
-      transform: scale(1.05);
-    }
-
-    .timeline-title {
-      font-size: 28px;
+    .zoom-step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(32px, 5vw, 56px);
       font-weight: 800;
       color: var(--text);
-      margin-bottom: 16px;
-      font-family: 'Playfair Display', serif;
+      line-height: 1.1;
+      margin: 0 0 16px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.7);
     }
 
-    .timeline-text {
-      font-size: 17px;
-      color: var(--text2);
-      line-height: 1.8;
+    .zoom-step-desc {
+      font-size: clamp(15px, 1.4vw, 19px);
+      line-height: 1.7;
+      color: var(--text);
+      opacity: 0.92;
+      max-width: 620px;
+      text-shadow: 0 2px 14px rgba(0,0,0,0.7);
     }
 
-    @media (max-width: 900px) {
-      .timeline-container::before {
-        left: auto;
-        right: 48px;
-        transform: translateX(50%);
-      }
-      .timeline-step, .timeline-step:nth-child(even) {
-        flex-direction: column;
-        align-items: stretch;
-        margin-bottom: 80px;
-      }
-      .timeline-content {
-        margin-right: 80px;
-        width: auto;
-        padding: 24px;
-      }
-      .timeline-image {
-        margin-right: 80px;
-        margin-top: 24px;
-        width: auto;
-        height: 240px;
-        transform: none !important;
-      }
-      .timeline-num {
-        left: auto; right: 48px;
-        top: 0;
-        transform: translate(50%, 0);
-      }
+    .zoom-progress {
+      position: absolute;
+      top: 50%;
+      left: 32px;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 25;
+    }
+    .zoom-progress span {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      transition: background 0.4s, transform 0.4s;
+    }
+    .zoom-progress span.active {
+      background: var(--gold);
+      transform: scale(1.6);
+    }
+
+    @media (max-width: 768px) {
+      .zoom-scroll-header { padding: 32px 16px 0; }
+      .zoom-step-content { padding: 0 6vw 10vh; }
+      .zoom-step-num { width: 56px; height: 56px; font-size: 20px; margin-bottom: 14px; }
+      .zoom-progress { left: 14px; gap: 10px; }
+      .zoom-progress span { width: 6px; height: 6px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .zoom-scroll-wrap { height: auto; }
+      .zoom-scroll-stage { position: relative; height: auto; }
+      .zoom-step { position: relative; height: 90vh; opacity: 1; transform: none; }
     }
 
     /* ── INFINITE MARQUEE ── */
@@ -2010,13 +2002,6 @@
       .feature-split-image { width: 100% !important; transform: none !important; }
       .feature-split-icon { margin: 0 auto 24px !important; }
 
-      /* Timeline */
-      .timeline-container::before { display: none !important; }
-      .timeline-step, .timeline-step:nth-child(even) { flex-direction: column !important; margin-bottom: 48px; }
-      .timeline-content { width: 100% !important; margin-right: 0 !important; padding: 20px !important; }
-      .timeline-image { width: 100% !important; height: 200px !important; margin-right: 0 !important; transform: none !important; }
-      .timeline-num { display: none !important; }
-
       /* Sections */
       section { padding: 60px 16px; }
       .section-title { font-size: clamp(24px, 7vw, 34px) !important; }
@@ -2245,71 +2230,62 @@
   <div class="section-divider" aria-hidden="true"></div>
 
   <!-- HOW IT WORKS (BENTO GRID) -->
-  <section class="how-section" style="position:relative;">
-    <div class="section-label reveal">תהליך עבודה</div>
-    <h2 class="section-title reveal delay-100">מארגנים אירוע ב-4 צעדים</h2>
-    <p class="section-sub reveal delay-200">בלי אקסלים מסובכים, בלי ניירות שאובדים. רק התהליך הנקי ביותר לדאוג שהאירוע יהיה מושלם.</p>
+  <!-- HOW IT WORKS — ZOOM SCROLL -->
+  <section class="zoom-scroll-wrap" id="how-it-works" dir="rtl" aria-label="תהליך עבודה ב-4 צעדים">
+    <div class="zoom-scroll-stage">
 
-    <div class="timeline-container">
-      
+      <div class="zoom-scroll-header">
+        <div class="section-label">תהליך עבודה</div>
+        <h2 class="section-title">מארגנים אירוע ב-4 צעדים</h2>
+        <p class="section-sub">בלי אקסלים מסובכים, בלי ניירות שאובדים. רק התהליך הנקי ביותר לדאוג שהאירוע יהיה מושלם.</p>
+      </div>
+
       <!-- Step 1 -->
-      <div class="timeline-step">
-        <div class="timeline-num reveal delay-100">01</div>
-        <div class="timeline-content reveal-right delay-200">
-          <div class="timeline-title">מקימים אירוע בקליק</div>
-          <p class="timeline-text">
-            הגדירו את השם, התאריך והמיקום בשניות, והתחילו לייבא אורחים ישירות מהוואטסאפ או מקובץ אקסל.
-            המערכת תסדר ותארגן את הרשימות בצורה חכמה ומדויקת.
-          </p>
-        </div>
-        <div class="timeline-image reveal-left delay-300">
-          <img src="images/step1.png" alt="Setup Event" />
+      <div class="zoom-step" data-step="0" style="z-index:4;">
+        <div class="zoom-step-bg" style="background-image:url('https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1600&q=80&auto=format&fit=crop');"></div>
+        <div class="zoom-step-content">
+          <div class="zoom-step-num">01</div>
+          <h3 class="zoom-step-title">מקימים אירוע בקליק</h3>
+          <p class="zoom-step-desc">הגדירו את השם, התאריך והמיקום בשניות, והתחילו לייבא אורחים ישירות מהוואטסאפ או מקובץ אקסל. המערכת תסדר ותארגן את הרשימות בצורה חכמה ומדויקת.</p>
         </div>
       </div>
 
       <!-- Step 2 -->
-      <div class="timeline-step">
-        <div class="timeline-num reveal delay-100">02</div>
-        <div class="timeline-content reveal-left delay-200">
-          <div class="timeline-title">הזמנות מרשימות</div>
-          <p class="timeline-text">
-            משתמשים בתבניות אוטומטיות לווטסאפ ושולחים הזמנות אישיות לכולם בלחיצה. 
-            כל אורח מקבל חווית RSVP מותאמת אישית ישירות לנייד שלו עם עיצוב יוקרתי.
-          </p>
-        </div>
-        <div class="timeline-image reveal-right delay-300">
-          <img src="images/step2.png" alt="Send Invites" />
+      <div class="zoom-step" data-step="1" style="z-index:3;">
+        <div class="zoom-step-bg" style="background-image:url('https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=1600&q=80&auto=format&fit=crop');"></div>
+        <div class="zoom-step-content">
+          <div class="zoom-step-num">02</div>
+          <h3 class="zoom-step-title">הזמנות מרשימות</h3>
+          <p class="zoom-step-desc">משתמשים בתבניות אוטומטיות לווטסאפ ושולחים הזמנות אישיות לכולם בלחיצה. כל אורח מקבל חווית RSVP מותאמת אישית ישירות לנייד שלו עם עיצוב יוקרתי.</p>
         </div>
       </div>
 
       <!-- Step 3 -->
-      <div class="timeline-step">
-        <div class="timeline-num reveal delay-100">03</div>
-        <div class="timeline-content reveal-right delay-200">
-          <div class="timeline-title">אישורים ועדכונים אונליין</div>
-          <p class="timeline-text">
-            הכל מתעדכן בזמן אמת בדשבורד החכם שלכם. תדעו במדויק מי מגיע, כמה מלווים,
-            ואפילו אם קיימות רגישויות למזון. אין פערים, אין ניחושים.
-          </p>
-        </div>
-        <div class="timeline-image reveal-left delay-300">
-          <img src="images/step3.png" alt="Track RSVPs" />
+      <div class="zoom-step" data-step="2" style="z-index:2;">
+        <div class="zoom-step-bg" style="background-image:url('https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1600&q=80&auto=format&fit=crop');"></div>
+        <div class="zoom-step-content">
+          <div class="zoom-step-num">03</div>
+          <h3 class="zoom-step-title">אישורים ועדכונים אונליין</h3>
+          <p class="zoom-step-desc">הכל מתעדכן בזמן אמת בדשבורד החכם שלכם. תדעו במדויק מי מגיע, כמה מלווים, ואפילו אם קיימות רגישויות למזון. אין פערים, אין ניחושים.</p>
         </div>
       </div>
 
       <!-- Step 4 -->
-      <div class="timeline-step">
-        <div class="timeline-num reveal delay-100">04</div>
-        <div class="timeline-content reveal-left delay-200">
-          <div class="timeline-title">הושבה בלחיצת כפתור</div>
-          <p class="timeline-text">
-            שבצו את כל האורחים שאישרו הגעה במפת שולחנות וירטואלית ואינטראקטיבית.
-            בסיום, ייצאו את הרשימה המדויקת ושלחו ישירות לאולם ולמנהל האירוע.
-          </p>
+      <div class="zoom-step" data-step="3" style="z-index:1;">
+        <div class="zoom-step-bg" style="background-image:url('https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=1600&q=80&auto=format&fit=crop');"></div>
+        <div class="zoom-step-content">
+          <div class="zoom-step-num">04</div>
+          <h3 class="zoom-step-title">הושבה בלחיצת כפתור</h3>
+          <p class="zoom-step-desc">שבצו את כל האורחים שאישרו הגעה במפת שולחנות וירטואלית ואינטראקטיבית. בסיום, ייצאו את הרשימה המדויקת ושלחו ישירות לאולם ולמנהל האירוע.</p>
         </div>
-        <div class="timeline-image reveal-right delay-300">
-          <img src="images/step4.png" alt="Seating Chart" />
-        </div>
+      </div>
+
+      <!-- Progress indicator -->
+      <div class="zoom-progress" aria-hidden="true">
+        <span data-dot="0"></span>
+        <span data-dot="1"></span>
+        <span data-dot="2"></span>
+        <span data-dot="3"></span>
       </div>
 
     </div>
@@ -2895,6 +2871,74 @@
         `;
       }
     }, { passive: true });
+
+    /* ── Zoom-scroll "4 steps" animation ── */
+    (function initZoomScroll() {
+      const wrap  = document.querySelector('.zoom-scroll-wrap');
+      if (!wrap) return;
+
+      const steps = Array.from(wrap.querySelectorAll('.zoom-step'));
+      const dots  = Array.from(wrap.querySelectorAll('.zoom-progress span'));
+      const N     = steps.length;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduce) {
+        steps.forEach(s => { s.style.opacity = 1; s.style.transform = 'none'; });
+        return;
+      }
+
+      let raf = 0;
+      function update() {
+        raf = 0;
+        const rect   = wrap.getBoundingClientRect();
+        const vh     = window.innerHeight;
+        const travel = wrap.offsetHeight - vh;
+        const scrolled = Math.min(Math.max(-rect.top, 0), travel);
+        const p = travel > 0 ? scrolled / travel : 0;
+
+        const stepFloat = p * N;
+        const idx = Math.min(Math.floor(stepFloat), N - 1);
+        const t   = Math.min(Math.max(stepFloat - idx, 0), 1);
+
+        const ease = t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+        for (let i = 0; i < N; i++) {
+          const el = steps[i];
+          let scale, opacity;
+          if (i < idx) {
+            scale = 1.6; opacity = 0;
+          } else if (i === idx) {
+            if (i === N - 1) {
+              scale = 1; opacity = 1;
+            } else {
+              scale   = 1 + 0.6 * ease;
+              opacity = 1 - ease;
+            }
+          } else if (i === idx + 1) {
+            scale   = 0.85 + 0.15 * ease;
+            opacity = ease;
+          } else {
+            scale = 0.85; opacity = 0;
+          }
+          el.style.opacity   = opacity.toFixed(3);
+          el.style.transform = 'scale(' + scale.toFixed(4) + ')';
+          el.classList.toggle('is-active', i === idx);
+        }
+
+        const activeDot = (t > 0.5 && idx < N - 1) ? idx + 1 : idx;
+        dots.forEach((d, i) => d.classList.toggle('active', i === activeDot));
+      }
+
+      function onScroll() {
+        if (!raf) raf = requestAnimationFrame(update);
+      }
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+      update();
+    })();
 
   </script>
 
