@@ -1,5 +1,4 @@
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
-import { MessageSquare } from "lucide-react";
 import { MouseEvent, useEffect, useRef } from "react";
 
 const features = [
@@ -11,18 +10,18 @@ const features = [
   {
     title: "סידורי הושבה חכמים",
     description: "ממשק ויזואלי לגרירה ושחרור. מונע טעויות, חוסך שעות ומבטיח שכולם מרוצים.",
-    video: "/videos/clip-seating.mp4",
+    video: "/videos/seating-video.mp4",
   },
   {
     title: "הזמנות יוקרתיות",
     description: "עיצובים מרהיבים, מותאמים אישית עם אנימציות שנשלחות ישירות לנייד.",
-    video: "/videos/clip-invitation.mp4",
+    video: "/videos/invitation-design.mp4",
   },
   {
-    title: "תזכורות ודיוור",
-    description: "מערכת חכמה לשליחת Save the Date, הזמנות ותזכורות ניווט לווייז בלחיצה אחת.",
-    icon: <MessageSquare className="w-8 h-8 text-gold-vivid" />,
-  }
+    title: "בוט AI חכם",
+    description: "עוזר AI קולי ששולח הזמנות, עונה לאורחים ומנהל את כל התקשורת אוטומטית.",
+    video: "/videos/aibot-voice.mp4",
+  },
 ];
 
 function VideoThumbnail({ src }: { src: string }) {
@@ -85,13 +84,7 @@ function MagicCard({ feature, index }: { feature: any, index: number }) {
       />
 
       <div className="relative z-10">
-        {feature.video ? (
-          <VideoThumbnail src={feature.video} />
-        ) : (
-          <div className="w-20 h-20 rounded-3xl bg-background border border-border shadow-xl flex items-center justify-center mb-8 transform group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500">
-            {feature.icon}
-          </div>
-        )}
+        <VideoThumbnail src={feature.video} />
         <h3 className="text-3xl font-bold mb-4 font-serif">{feature.title}</h3>
         <p className="text-foreground/60 text-lg leading-relaxed font-medium">
           {feature.description}
