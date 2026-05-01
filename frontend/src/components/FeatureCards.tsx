@@ -1,29 +1,55 @@
 import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
-import { CheckCircle, Users, Sparkles, MessageSquare } from "lucide-react";
-import { MouseEvent } from "react";
+import { MouseEvent, useEffect, useRef } from "react";
 
 const features = [
   {
     title: "ניהול מוזמנים אוטומטי",
     description: "סנכרון מלא, אישורי הגעה ישירות מהווטסאפ של האורחים ועדכונים בזמן אמת.",
-    icon: <Users className="w-8 h-8 text-gold-vivid" />,
+    video: "/videos/clip-rsvp.mp4",
   },
   {
     title: "סידורי הושבה חכמים",
     description: "ממשק ויזואלי לגרירה ושחרור. מונע טעויות, חוסך שעות ומבטיח שכולם מרוצים.",
-    icon: <CheckCircle className="w-8 h-8 text-gold-vivid" />,
+    video: "/videos/seating-video.mp4",
   },
   {
     title: "הזמנות יוקרתיות",
     description: "עיצובים מרהיבים, מותאמים אישית עם אנימציות שנשלחות ישירות לנייד.",
-    icon: <Sparkles className="w-8 h-8 text-gold-vivid" />,
+    video: "/videos/invitation-design.mp4",
   },
   {
-    title: "תזכורות ודיוור",
-    description: "מערכת חכמה לשליחת Save the Date, הזמנות ותזכורות ניווט לווייז בלחיצה אחת.",
-    icon: <MessageSquare className="w-8 h-8 text-gold-vivid" />,
-  }
+    title: "בוט AI חכם",
+    description: "עוזר AI קולי ששולח הזמנות, עונה לאורחים ומנהל את כל התקשורת אוטומטית.",
+    video: "/videos/aibot-voice.mp4",
+  },
 ];
+
+function VideoThumbnail({ src }: { src: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (mq.matches) {
+      videoRef.current?.pause();
+    }
+  }, []);
+
+  return (
+    <div className="w-full aspect-video rounded-2xl overflow-hidden bg-background border border-border shadow-xl mb-8 group-hover:scale-[1.02] group-hover:-translate-y-1 transition-all duration-500">
+      <video
+        ref={videoRef}
+        src={src}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        aria-hidden="true"
+        className="w-full h-full object-cover"
+      />
+    </div>
+  );
+}
 
 function MagicCard({ feature, index }: { feature: any, index: number }) {
   const mouseX = useMotionValue(0);
@@ -56,11 +82,9 @@ function MagicCard({ feature, index }: { feature: any, index: number }) {
           `,
         }}
       />
-      
+
       <div className="relative z-10">
-        <div className="w-20 h-20 rounded-3xl bg-background border border-border shadow-xl flex items-center justify-center mb-8 transform group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-500">
-          {feature.icon}
-        </div>
+        <VideoThumbnail src={feature.video} />
         <h3 className="text-3xl font-bold mb-4 font-serif">{feature.title}</h3>
         <p className="text-foreground/60 text-lg leading-relaxed font-medium">
           {feature.description}
@@ -74,7 +98,7 @@ export function FeatureCards() {
   return (
     <section className="py-40 px-4 max-w-7xl mx-auto relative z-10" dir="rtl">
       <div className="text-center mb-24">
-        <motion.h2 
+        <motion.h2
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
@@ -82,7 +106,7 @@ export function FeatureCards() {
         >
           חווית ניהול מליגה <span className="bg-gradient-gold bg-clip-text text-transparent">אחרת</span>
         </motion.h2>
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
