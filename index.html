@@ -1142,10 +1142,11 @@
 
     .zoom-step-bg {
       position: absolute;
-      inset: -15%;
-      background-size: cover;
+      inset: 0;
+      background-size: contain;
       background-position: center;
       background-repeat: no-repeat;
+      background-color: var(--bg);
     }
     .zoom-step-bg::after {
       content: '';
