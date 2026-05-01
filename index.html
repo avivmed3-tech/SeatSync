@@ -96,8 +96,8 @@
     
     .hero-voxr {
       position: relative;
-      min-height: 100vh;
-      min-height: 100svh;
+      min-height: calc(100vh - 72px);
+      min-height: calc(100svh - 72px);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -116,6 +116,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center center;
       mix-blend-mode: screen;
       pointer-events: none;
       z-index: 0;
@@ -1983,7 +1984,11 @@
       .nav-actions .btn-primary { padding: 8px 14px !important; font-size: 13px !important; }
 
       /* Hero — keep zero horizontal padding so the bg video fills the full width */
-      .hero-voxr { padding: 0 !important; }
+      .hero-voxr {
+        padding: 0 !important;
+        min-height: calc(100vh - 56px) !important;
+        min-height: calc(100svh - 56px) !important;
+      }
       .hero-bg-video { object-fit: contain !important; opacity: 1 !important; }
       .hero-voxr .hero-actions .btn-lg { font-size: 16px !important; padding: 14px 28px !important; }
       .scroll-indicator { display: none !important; }
