@@ -217,9 +217,9 @@
     .carousel-item {
       position: absolute;
       width: 78vw;
-      height: 80vh;
-      max-width: 1200px;
-      max-height: 850px;
+      height: 90vh;
+      max-width: 1280px;
+      max-height: 980px;
       background: #000;
       border: 2px solid rgba(212, 168, 8, 0.6);
       border-radius: 40px;
@@ -261,6 +261,11 @@
       height: 100%;
       object-fit: contain;
       z-index: 1;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: high-quality;
+      transform: translateZ(0);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
     }
     .carousel-item .carousel-bg iframe.bg-main {
       border: 0;
@@ -2149,8 +2154,8 @@
             </p>
           </div>
           <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
+            <video class="bg-blur" autoplay muted loop playsinline preload="auto" src="video/cards/seating-video.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="auto" src="video/cards/seating-video.mp4"></video>
           </div>
         </div>
 
@@ -2166,8 +2171,8 @@
             </p>
           </div>
           <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
+            <video class="bg-blur" autoplay muted loop playsinline preload="auto" src="video/cards/invitation-design.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="auto" src="video/cards/invitation-design.mp4"></video>
           </div>
         </div>
 
@@ -2183,8 +2188,8 @@
             </p>
           </div>
           <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
+            <video class="bg-blur" autoplay muted loop playsinline preload="auto" src="video/cards/aibot-voice.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="auto" src="video/cards/aibot-voice.mp4"></video>
           </div>
         </div>
 
