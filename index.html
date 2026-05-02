@@ -258,6 +258,15 @@
       object-fit: contain;
       z-index: 1;
     }
+    .carousel-item .carousel-bg iframe.bg-main {
+      border: 0;
+      object-fit: cover;
+      pointer-events: none;
+    }
+    .carousel-item .carousel-bg video.bg-main,
+    .carousel-item .carousel-bg video.bg-blur {
+      pointer-events: none;
+    }
     .carousel-item .feature-split-text {
       position: absolute;
       inset: 0;
@@ -2113,8 +2122,7 @@
         <!-- Item 1: RSVP -->
         <div class="carousel-item">
           <div class="carousel-bg">
-            <img src="images/he_rsvp.png" class="bg-blur" alt="RSVP Blur" />
-            <img src="images/he_rsvp.png" class="bg-main" alt="RSVP UI" />
+            <iframe src="video/cards/rsvp-preview.html" class="bg-main" loading="lazy" title="RSVP Preview"></iframe>
           </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">💌</div>
@@ -2129,8 +2137,8 @@
         <!-- Item 2: Seating -->
         <div class="carousel-item">
           <div class="carousel-bg">
-            <img src="images/he_seating.png" class="bg-blur" alt="Seating Blur" />
-            <img src="images/he_seating.png" class="bg-main" alt="Seating Chart" />
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
           </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🪑</div>
@@ -2145,8 +2153,8 @@
         <!-- Item 3: Invitation Design -->
         <div class="carousel-item">
           <div class="carousel-bg">
-            <img src="images/he_invitation.png" class="bg-blur" alt="Invitation Blur" />
-            <img src="images/he_invitation.png" class="bg-main" alt="Invitation Design" />
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
           </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">✨</div>
@@ -2162,8 +2170,8 @@
         <!-- Item 4: AI Bot -->
         <div class="carousel-item">
           <div class="carousel-bg">
-            <img src="images/he_bot.png" class="bg-blur" alt="AI Bot Blur" />
-            <img src="images/he_bot.png" class="bg-main" alt="AI Phone Bot" />
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
           </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🤖</div>
