@@ -225,7 +225,8 @@
       border-radius: 40px;
       padding: 0;
       box-shadow: 0 0 50px rgba(212, 168, 8, 0.35), 0 40px 100px rgba(0,0,0,0.9);
-      display: block; /* Removed flex */
+      display: flex;
+      flex-direction: column;
       will-change: transform, opacity;
       transform-origin: center center;
       overflow: hidden;
@@ -236,8 +237,9 @@
     }
     /* Removed ::before top border to make borders uniform */
     .carousel-item .carousel-bg {
-      position: absolute;
-      inset: 0;
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
       z-index: 1;
       overflow: hidden;
       background: #080808;
@@ -255,12 +257,11 @@
       position: relative;
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      object-fit: cover;
       z-index: 1;
     }
     .carousel-item .carousel-bg iframe.bg-main {
       border: 0;
-      object-fit: cover;
       pointer-events: none;
     }
     .carousel-item .carousel-bg video.bg-main,
@@ -268,53 +269,52 @@
       pointer-events: none;
     }
     .carousel-item .feature-split-text {
-      position: absolute;
-      inset: 0;
+      position: relative;
       z-index: 2;
-      background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0) 100%);
+      flex: 0 0 auto;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.95), rgba(0,0,0,0.85));
       display: flex;
       flex-direction: column;
-      justify-content: flex-end;
-      padding: 80px;
-      color: #fff !important; /* Always white over image */
+      padding: 28px 48px;
+      color: #fff !important;
       text-align: right;
+      border-bottom: 1px solid rgba(212, 168, 8, 0.25);
     }
     html[data-theme="light"] .carousel-item .feature-split-text {
-      /* Keep text white even in light mode because background is an image */
       color: #fff !important;
     }
     .carousel-item .feature-split-icon {
-      font-size: 48px;
-      margin-bottom: 20px;
+      font-size: 28px;
+      margin-bottom: 10px;
       background: rgba(255,255,255,0.1);
       backdrop-filter: blur(10px);
-      width: 80px;
-      height: 80px;
+      width: 52px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 20px;
+      border-radius: 14px;
       border: 1px solid rgba(255,255,255,0.2);
     }
     .carousel-item .feature-split-title {
-      font-size: clamp(32px, 4vw, 56px);
-      margin-bottom: 20px;
+      font-size: clamp(22px, 2.4vw, 34px);
+      margin-bottom: 8px;
       color: #fff !important;
       text-shadow: 0 4px 20px rgba(0,0,0,0.8);
     }
     .carousel-item .feature-split-p {
-      font-size: clamp(18px, 1.5vw, 24px);
+      font-size: clamp(14px, 1.1vw, 18px);
       color: rgba(255,255,255,0.85) !important;
-      max-width: 800px;
-      line-height: 1.6;
+      max-width: 1100px;
+      line-height: 1.5;
       text-shadow: 0 2px 10px rgba(0,0,0,0.8);
     }
     @media (max-width: 900px) {
       .carousel-item { height: 70vh; width: 85vw; border-radius: 30px; }
-      .carousel-item .feature-split-text { padding: 30px 20px; justify-content: flex-end; background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0) 100%); }
-      .carousel-item .feature-split-title { font-size: clamp(24px, 6vw, 32px); margin-bottom: 12px; }
-      .carousel-item .feature-split-icon { width: 50px; height: 50px; font-size: 28px; margin-bottom: 12px; border-radius: 14px; }
-      .carousel-item .feature-split-p { font-size: clamp(15px, 4vw, 18px); }
+      .carousel-item .feature-split-text { padding: 18px 20px; background: linear-gradient(to bottom, rgba(0,0,0,0.95), rgba(0,0,0,0.85)); }
+      .carousel-item .feature-split-title { font-size: clamp(18px, 5vw, 24px); margin-bottom: 6px; }
+      .carousel-item .feature-split-icon { width: 38px; height: 38px; font-size: 20px; margin-bottom: 8px; border-radius: 10px; }
+      .carousel-item .feature-split-p { font-size: clamp(13px, 3.5vw, 15px); }
     }
 
     /* 3D FLYING ENVELOPES CSS */
@@ -2006,7 +2006,7 @@
       /* Carousel */
       .carousel-section { height: 500vh; }
       .carousel-item { width: 90vw !important; height: 70vh !important; border-radius: 20px !important; }
-      .carousel-item .feature-split-text { padding: 22px !important; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0) 100%) !important; }
+      .carousel-item .feature-split-text { padding: 18px 20px !important; background: linear-gradient(to bottom, rgba(0,0,0,0.95), rgba(0,0,0,0.85)) !important; }
       .carousel-item .feature-split-title { font-size: 22px !important; margin-bottom: 10px !important; }
       .carousel-item .feature-split-p { font-size: 14px !important; line-height: 1.5 !important; }
       .carousel-item .feature-split-icon { width: 44px !important; height: 44px !important; font-size: 22px !important; margin-bottom: 12px !important; border-radius: 12px !important; }
@@ -2121,9 +2121,6 @@
         
         <!-- Item 1: RSVP -->
         <div class="carousel-item">
-          <div class="carousel-bg">
-            <iframe src="video/cards/rsvp-preview.html" class="bg-main" loading="lazy" title="RSVP Preview"></iframe>
-          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">💌</div>
             <h2 class="feature-split-title">ניהול אישורי הגעה מתקדם</h2>
@@ -2132,14 +2129,13 @@
               הכל מתעדכן בדשבורד שלכם בזמן אמת בלי שום מאמץ.
             </p>
           </div>
+          <div class="carousel-bg">
+            <iframe src="video/cards/rsvp-preview.html" class="bg-main" loading="lazy" title="RSVP Preview"></iframe>
+          </div>
         </div>
 
         <!-- Item 2: Seating -->
         <div class="carousel-item">
-          <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
-          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🪑</div>
             <h2 class="feature-split-title">הושבה חכמה באינטראקציה מלאה</h2>
@@ -2148,14 +2144,14 @@
               תדעו מיד מי יושב איפה, איפה חסר מקום, ואיך נראה אולם האירועים שלכם מלמעלה.
             </p>
           </div>
+          <div class="carousel-bg">
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/seating-video.mp4"></video>
+          </div>
         </div>
 
         <!-- Item 3: Invitation Design -->
         <div class="carousel-item">
-          <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
-          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">✨</div>
             <h2 class="feature-split-title">עיצוב הזמנות מרהיבות</h2>
@@ -2165,14 +2161,14 @@
               חוויה חזותית שעושה חשק להגיע לאירוע.
             </p>
           </div>
+          <div class="carousel-bg">
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/invitation-design.mp4"></video>
+          </div>
         </div>
 
         <!-- Item 4: AI Bot -->
         <div class="carousel-item">
-          <div class="carousel-bg">
-            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
-            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
-          </div>
           <div class="feature-split-text">
             <div class="feature-split-icon">🤖</div>
             <h2 class="feature-split-title">בוט AI טלפוני (חדש!)</h2>
@@ -2181,6 +2177,10 @@
               הבוט החכם מתקשר לאורחים בקול אנושי, מברר אם הם מגיעים,
               ומעדכן את הסטטוס שלהם ישירות במערכת באופן אוטומטי לחלוטין.
             </p>
+          </div>
+          <div class="carousel-bg">
+            <video class="bg-blur" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
+            <video class="bg-main" autoplay muted loop playsinline preload="metadata" src="video/cards/aibot-voice.mp4"></video>
           </div>
         </div>
 
