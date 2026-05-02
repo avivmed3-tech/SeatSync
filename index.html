@@ -216,9 +216,9 @@
     }
     .carousel-item {
       position: absolute;
-      width: 85vw;
-      height: 75vh;
-      max-width: 1500px;
+      width: 78vw;
+      height: 80vh;
+      max-width: 1200px;
       max-height: 850px;
       background: #000;
       border: 2px solid rgba(212, 168, 8, 0.6);
@@ -243,15 +243,16 @@
       min-height: 0;
       z-index: 1;
       overflow: hidden;
-      background: #080808;
+      background: radial-gradient(circle at center, #14141f 0%, #050505 80%);
     }
     .carousel-item .carousel-bg .bg-blur {
       position: absolute;
       width: 100%;
       height: 100%;
       object-fit: cover;
-      filter: blur(50px) brightness(0.4);
-      transform: scale(1.2);
+      filter: blur(40px) brightness(0.7) saturate(1.3);
+      transform: scale(1.3);
+      opacity: 0.85;
       z-index: 0;
     }
     .carousel-item .carousel-bg .bg-main {
@@ -272,13 +273,13 @@
     .carousel-item .feature-split-text {
       position: relative;
       z-index: 2;
-      flex: 0 0 36%;
-      max-width: 480px;
+      flex: 0 0 30%;
+      max-width: 380px;
       background: linear-gradient(180deg, #0a0a0a 0%, #050505 100%);
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 40px 48px;
+      padding: 36px 36px;
       color: #fff !important;
       text-align: right;
       border-left: 1px solid rgba(212, 168, 8, 0.25);
